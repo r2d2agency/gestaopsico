@@ -38,12 +38,28 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
+      let loggedUser;
       if (isRegister) {
         await register({ name, email, password, planId: selectedPlanId || undefined });
         toast({ title: "Conta criada com sucesso!" });
       } else {
         await login(email, password);
         toast({ title: "Login realizado!" });
+      }
+      // Get fresh user from localStorage token to check role
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          if (payload.role === "patient") {
+            navigate("/portal");
+            return;
+          }
+          if (payload.role === "superadmin") {
+            navigate("/admin");
+            return;
+          }
+        } catch {}
       }
       navigate("/dashboard");
     } catch (err: unknown) {
