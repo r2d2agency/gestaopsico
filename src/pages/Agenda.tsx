@@ -64,6 +64,15 @@ export default function Agenda() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const attendMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.attend(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Comparecimento registrado e conta a receber gerada!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const goDay = (dir: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + dir);
