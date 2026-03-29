@@ -9,9 +9,20 @@ const prisma = new PrismaClient();
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const name = req.body?.name?.trim();
+    const email = req.body?.email?.trim()?.toLowerCase();
+    const password = req.body?.password;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return res.status(400).json({ error: 'Email já cadastrado' });
+    if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
@@ -22,7 +33,12 @@ router.post('/register', async (req, res) => {
     const token = generateToken(user.id);
     res.status(201).json({ user, token });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar conta', details: err.message });
+    if (err?.code === 'P2002') {
+      return res.status(409).json({ error: 'Email já cadastrado' });
+    }
+
+    console.error('register error:', err);
+    res.status(500).json({ error: 'Erro interno ao criar conta' });
   }
 });
 
