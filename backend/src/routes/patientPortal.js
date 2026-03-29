@@ -92,7 +92,12 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       organizationId
         ? prisma.organizationSetting.findUnique({
             where: { organizationId },
-            select: { allowPatientBooking: true, businessName: true, logo: true, primaryColor: true, accentColor: true, secondaryColor: true }
+            select: {
+              allowPatientBooking: true, businessName: true, logo: true,
+              primaryColor: true, accentColor: true, secondaryColor: true,
+              patientBookingStartHour: true, patientBookingEndHour: true,
+              sessionDuration: true, bookingWeekdays: true
+            }
           })
         : null,
       organizationId

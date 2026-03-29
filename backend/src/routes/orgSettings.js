@@ -95,7 +95,10 @@ router.put('/', async (req, res) => {
     const {
       logo, primaryColor, secondaryColor, accentColor,
       businessName, businessPhone, businessEmail, businessAddress,
-      allowPatientBooking, portalSlug
+      allowPatientBooking, portalSlug,
+      scheduleStartHour, scheduleEndHour,
+      patientBookingStartHour, patientBookingEndHour,
+      sessionDuration, bookingWeekdays
     } = req.body;
 
     const data = {};
@@ -108,6 +111,12 @@ router.put('/', async (req, res) => {
     if (businessEmail !== undefined) data.businessEmail = businessEmail;
     if (businessAddress !== undefined) data.businessAddress = businessAddress;
     if (allowPatientBooking !== undefined) data.allowPatientBooking = allowPatientBooking;
+    if (scheduleStartHour !== undefined) data.scheduleStartHour = Number(scheduleStartHour);
+    if (scheduleEndHour !== undefined) data.scheduleEndHour = Number(scheduleEndHour);
+    if (patientBookingStartHour !== undefined) data.patientBookingStartHour = Number(patientBookingStartHour);
+    if (patientBookingEndHour !== undefined) data.patientBookingEndHour = Number(patientBookingEndHour);
+    if (sessionDuration !== undefined) data.sessionDuration = Number(sessionDuration);
+    if (bookingWeekdays !== undefined) data.bookingWeekdays = bookingWeekdays;
 
     // Handle portal slug - save to organization table
     if (portalSlug !== undefined) {
