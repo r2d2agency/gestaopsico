@@ -45,6 +45,7 @@ app.use('/api/financeiro', financialRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/setup', setupRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 PsicoGest API rodando na porta ${PORT}`);
