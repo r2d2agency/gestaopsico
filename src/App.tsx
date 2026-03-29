@@ -3,7 +3,10 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Pacientes from "./pages/Pacientes";
 import Agenda from "./pages/Agenda";
@@ -27,32 +30,35 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          {/* Admin / Superadmin */}
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/organizacoes" element={<AdminOrganizations />} />
-            <Route path="/admin/usuarios" element={<AdminUsers />} />
-            <Route path="/admin/planos" element={<AdminPlans />} />
-            <Route path="/admin/agentes-ia" element={<AdminAiAgents />} />
-            <Route path="/admin/provedores-ia" element={<AdminAiProviders />} />
-          </Route>
-          {/* App normal */}
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/pacientes" element={<Pacientes />} />
-            <Route path="/agenda" element={<Agenda />} />
-            <Route path="/financeiro" element={<Financeiro />} />
-            <Route path="/assistente-ia" element={<AiAssistant />} />
-            <Route path="/casais" element={<Dashboard />} />
-            <Route path="/consultas" element={<Dashboard />} />
-            <Route path="/prontuarios" element={<Dashboard />} />
-            <Route path="/relatorios" element={<Dashboard />} />
-            <Route path="/configuracoes" element={<Dashboard />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            {/* Admin / Superadmin */}
+            <Route element={<ProtectedRoute requiredRole="superadmin"><AdminLayout /></ProtectedRoute>}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/organizacoes" element={<AdminOrganizations />} />
+              <Route path="/admin/usuarios" element={<AdminUsers />} />
+              <Route path="/admin/planos" element={<AdminPlans />} />
+              <Route path="/admin/agentes-ia" element={<AdminAiAgents />} />
+              <Route path="/admin/provedores-ia" element={<AdminAiProviders />} />
+            </Route>
+            {/* App normal */}
+            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/pacientes" element={<Pacientes />} />
+              <Route path="/agenda" element={<Agenda />} />
+              <Route path="/financeiro" element={<Financeiro />} />
+              <Route path="/assistente-ia" element={<AiAssistant />} />
+              <Route path="/casais" element={<Dashboard />} />
+              <Route path="/consultas" element={<Dashboard />} />
+              <Route path="/prontuarios" element={<Dashboard />} />
+              <Route path="/relatorios" element={<Dashboard />} />
+              <Route path="/configuracoes" element={<Dashboard />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
