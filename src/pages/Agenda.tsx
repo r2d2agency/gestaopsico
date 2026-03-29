@@ -398,6 +398,8 @@ export default function Agenda() {
           selectedDate={selectedDate}
           aptsByDate={aptsByDate}
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
         />
       ) : viewMode === "week" ? (
         <WeekView
@@ -406,12 +408,16 @@ export default function Agenda() {
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
           businessHours={businessHours}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
         />
       ) : (
         <DayView
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
           businessHours={businessHours}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
         />
       )}
 
