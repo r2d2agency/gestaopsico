@@ -5,6 +5,36 @@ const { authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// PUBLIC: GET /api/org-settings/portal/:slug - get org branding by portal slug (no auth)
+router.get('/portal/:slug', async (req, res) => {
+  try {
+    const org = await prisma.organization.findFirst({
+      where: { portalSlug: req.params.slug, status: 'active' },
+      select: { id: true, name: true, portalSlug: true, logo: true }
+    });
+
+    if (!org) {
+      return res.status(404).json({ error: 'Clínica não encontrada' });
+    }
+
+    const settings = await prisma.organizationSetting.findUnique({
+      where: { organizationId: org.id }
+    });
+
+    res.json({
+      organizationId: org.id,
+      businessName: settings?.businessName || org.name,
+      logo: settings?.logo || org.logo,
+      primaryColor: settings?.primaryColor,
+      secondaryColor: settings?.secondaryColor,
+      accentColor: settings?.accentColor,
+      portalSlug: org.portalSlug,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar clínica', details: err.message });
+  }
+});
+
 router.use(authMiddleware);
 
 // GET /api/org-settings - get organization settings (white-label)

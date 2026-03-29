@@ -38,6 +38,7 @@ import PatientAppointments from "./pages/patient/PatientAppointments";
 import PatientFinancial from "./pages/patient/PatientFinancial";
 import NotFound from "./pages/NotFound";
 import HelpPage from "./pages/HelpPage";
+import PortalLogin from "./pages/PortalLogin";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/p/:slug" element={<PortalLogin />} />
             {/* Admin / Superadmin */}
             <Route element={<ProtectedRoute requiredRole="superadmin"><AdminLayout /></ProtectedRoute>}>
               <Route path="/admin" element={<AdminDashboard />} />

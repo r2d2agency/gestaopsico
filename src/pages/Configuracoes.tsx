@@ -316,7 +316,7 @@ export default function Configuracoes() {
                 <Label className="flex items-center gap-1"><Link2 className="w-3 h-3" />Link do Portal (slug)</Label>
                 <div className="flex gap-2 mt-1">
                   <div className="flex items-center bg-muted rounded-md px-3 text-xs text-muted-foreground whitespace-nowrap border border-border">
-                    {window.location.origin}/portal/
+                    {window.location.origin}/p/
                   </div>
                   <Input
                     value={form.portalSlug || ""}
@@ -328,14 +328,14 @@ export default function Configuracoes() {
                 {form.portalSlug && (
                   <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded-lg">
                     <span className="text-xs text-muted-foreground truncate flex-1">
-                      {window.location.origin}/portal/{form.portalSlug}
+                      {window.location.origin}/p/{form.portalSlug}
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2"
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/portal/${form.portalSlug}`);
+                        navigator.clipboard.writeText(`${window.location.origin}/p/${form.portalSlug}`);
                         toast({ title: "Link copiado!" });
                       }}
                     >
