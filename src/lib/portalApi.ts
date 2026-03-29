@@ -84,6 +84,8 @@ export interface TestQuestion {
   type: "scale" | "multiple_choice" | "text";
   options: string[];
   orderNum?: number;
+  weight?: number;
+  reverseScored?: boolean;
 }
 
 export interface TestTemplate {
@@ -92,6 +94,12 @@ export interface TestTemplate {
   description?: string;
   category?: string;
   isActive: boolean;
+  isPreset?: boolean;
+  scoringRules?: {
+    type: string;
+    ranges?: { min: number; max: number; label: string }[];
+    reverseItems?: number[];
+  };
   questions: TestQuestion[];
   _count?: { questions: number; assignments: number };
   createdAt: string;
@@ -107,7 +115,17 @@ export interface TestAssignment {
   responses: { questionId: string; answer: string }[];
   assignedAt: string;
   completedAt?: string;
+  score?: number;
+  classification?: string;
   _count?: { responses: number };
+}
+
+export interface PresetTest {
+  title: string;
+  description: string;
+  category: string;
+  scoringRules: any;
+  questions: { text: string; type: string; options: string[]; reverseScored?: boolean }[];
 }
 
 export const testsApi = {
@@ -120,10 +138,22 @@ export const testsApi = {
     apiRequest<TestTemplate>("/tests/templates", { method: "POST", body: data }),
   updateTemplate: (id: string, data: Partial<TestTemplate>) =>
     apiRequest<TestTemplate>(`/tests/templates/${id}`, { method: "PUT", body: data }),
+  deleteTemplate: (id: string) =>
+    apiRequest(`/tests/templates/${id}`, { method: "DELETE" }),
   assignTest: (templateId: string, patientId: string) =>
     apiRequest("/tests/assign", { method: "POST", body: { templateId, patientId } }),
   getResults: (assignmentId: string) =>
     apiRequest<TestAssignment>(`/tests/assignments/${assignmentId}/results`),
+  // Presets
+  listPresets: () =>
+    apiRequest<PresetTest[]>("/tests/presets"),
+  importPreset: (presetIndex: number) =>
+    apiRequest<TestTemplate>("/tests/import-preset", { method: "POST", body: { presetIndex } }),
+  // JSON import/export
+  importJson: (data: any) =>
+    apiRequest<TestTemplate>("/tests/import-json", { method: "POST", body: data }),
+  exportTemplate: (id: string) =>
+    apiRequest<any>(`/tests/templates/${id}/export`),
   // Patient
   myTests: () =>
     apiRequest<TestAssignment[]>("/tests/my"),
