@@ -39,6 +39,7 @@ import PatientFinancial from "./pages/patient/PatientFinancial";
 import NotFound from "./pages/NotFound";
 import HelpPage from "./pages/HelpPage";
 import PortalLogin from "./pages/PortalLogin";
+import Mensagens from "./pages/Mensagens";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const App = () => (
               <Route path="/assistente-ia" element={<AiAssistant />} />
               <Route path="/secretaria-ia" element={<SecretarySettings />} />
               <Route path="/notificacoes" element={<Notifications />} />
+              <Route path="/mensagens" element={<Mensagens />} />
               <Route path="/testes" element={<TestManager />} />
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/consultas" element={<Dashboard />} />

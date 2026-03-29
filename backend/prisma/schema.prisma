@@ -417,10 +417,12 @@ model PatientPortalMessage {
   patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   professionalId String   @map("professional_id") @db.Uuid
   professional   User     @relation("portalMessageProfessional", fields: [professionalId], references: [id], onDelete: Cascade)
+  sender         String   @default("patient") @db.VarChar(20)
   type           String   @db.VarChar(20)
   content        String
   fileName       String?  @map("file_name") @db.VarChar(255)
   mimeType       String?  @map("mime_type") @db.VarChar(100)
+  readAt         DateTime? @map("read_at")
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@index([patientId, createdAt])
