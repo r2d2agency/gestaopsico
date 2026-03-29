@@ -292,6 +292,7 @@ router.post('/messages', authMiddleware, async (req, res) => {
       data: {
         patientId: patient.id,
         professionalId: patient.professionalId,
+        sender: 'patient',
         type,
         content,
         fileName: fileName || null,
