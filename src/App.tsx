@@ -26,6 +26,7 @@ import SecretarySettings from "./pages/SecretarySettings";
 import Notifications from "./pages/Notifications";
 import Configuracoes from "./pages/Configuracoes";
 import TestManager from "./pages/TestManager";
+import CasaisPage from "./pages/CasaisPage";
 import PatientDashboard from "./pages/PatientDashboard";
 import PatientMood from "./pages/PatientMood";
 import PatientTests from "./pages/PatientTests";
@@ -72,7 +73,7 @@ const App = () => (
               <Route path="/secretaria-ia" element={<SecretarySettings />} />
               <Route path="/notificacoes" element={<Notifications />} />
               <Route path="/testes" element={<TestManager />} />
-              <Route path="/casais" element={<Dashboard />} />
+              <Route path="/casais" element={<CasaisPage />} />
               <Route path="/consultas" element={<Dashboard />} />
               <Route path="/prontuarios" element={<Dashboard />} />
               <Route path="/relatorios" element={<Dashboard />} />
