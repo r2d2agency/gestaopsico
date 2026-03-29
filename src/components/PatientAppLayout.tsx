@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { patientPortalApi } from "@/lib/portalApi";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
+import { hexToHsl } from "@/lib/utils";
 
 const tabs = [
   { to: "/portal", icon: Home, label: "Início" },
@@ -30,10 +31,10 @@ export default function PatientAppLayout() {
   // Apply clinic colors + favicon + manifest dynamically
   useEffect(() => {
     if (primaryColor) {
-      document.documentElement.style.setProperty("--primary", primaryColor);
+      document.documentElement.style.setProperty("--primary", hexToHsl(primaryColor));
     }
     if (accentColor) {
-      document.documentElement.style.setProperty("--accent", accentColor);
+      document.documentElement.style.setProperty("--accent", hexToHsl(accentColor));
     }
 
     // Dynamic favicon from clinic logo

@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { orgSettingsApi } from "@/lib/portalApi";
 import { toast } from "@/hooks/use-toast";
+import { hexToHsl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -33,10 +34,10 @@ export default function AppLayout() {
   // Apply org colors to the system
   useEffect(() => {
     if (orgSettings?.primaryColor) {
-      document.documentElement.style.setProperty("--primary", orgSettings.primaryColor);
+      document.documentElement.style.setProperty("--primary", hexToHsl(orgSettings.primaryColor));
     }
     if (orgSettings?.accentColor) {
-      document.documentElement.style.setProperty("--accent", orgSettings.accentColor);
+      document.documentElement.style.setProperty("--accent", hexToHsl(orgSettings.accentColor));
     }
     return () => {
       document.documentElement.style.removeProperty("--primary");
