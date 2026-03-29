@@ -1,7 +1,14 @@
 import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Link2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { orgSettingsApi } from "@/lib/portalApi";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip, TooltipContent, TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AppLayout() {
   const { user } = useAuth();
@@ -11,6 +18,25 @@ export default function AppLayout() {
     .join("")
     .slice(0, 2)
     .toUpperCase() || "??";
+
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings"],
+    queryFn: () => orgSettingsApi.get(),
+  });
+
+  const portalSlug = orgSettings?.portalSlug;
+  const portalUrl = portalSlug
+    ? `${window.location.origin}/p/${portalSlug}`
+    : null;
+
+  const copyPortalLink = () => {
+    if (portalUrl) {
+      navigator.clipboard.writeText(portalUrl);
+      toast({ title: "Link do portal copiado!", description: portalUrl });
+    } else {
+      toast({ title: "Slug não configurado", description: "Configure o slug do portal em Configurações > Dados da Clínica", variant: "destructive" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,6 +52,19 @@ export default function AppLayout() {
             />
           </div>
           <div className="flex items-center gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative" onClick={copyPortalLink}>
+                  <Link2 className="w-5 h-5 text-muted-foreground" />
+                  {portalSlug && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{portalSlug ? "Copiar link do portal" : "Configure o slug do portal"}</p>
+              </TooltipContent>
+            </Tooltip>
             <button className="relative p-2 rounded-lg hover:bg-muted transition-colors">
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
