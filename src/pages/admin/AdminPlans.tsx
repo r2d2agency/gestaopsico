@@ -6,43 +6,48 @@ import { Button } from "@/components/ui/button";
 const plans = [
   {
     id: "basic",
-    name: "Básico",
-    price: "R$ 79,90",
+    name: "Essencial",
+    price: "R$ 89,00",
+    priceWithSecretary: "R$ 289,00",
     period: "/mês",
     features: [
-      "1 profissional",
-      "Até 50 pacientes",
-      "Agenda e prontuários",
-      "Financeiro básico",
+      "Até 30 pacientes",
+      "Agenda e prontuário",
+      "Sessões online",
+      "IA para análise de anotações",
+      "Suporte por e-mail",
     ],
     recommended: false,
   },
   {
     id: "professional",
     name: "Profissional",
-    price: "R$ 149,90",
+    price: "R$ 149,00",
+    priceWithSecretary: "R$ 349,00",
     period: "/mês",
     features: [
-      "Até 5 profissionais",
       "Pacientes ilimitados",
-      "Teleconsulta integrada",
-      "Relatórios avançados",
-      "IA para prontuários",
+      "Assistente de IA (GPT, Claude, Gemini)",
+      "Agentes personalizáveis",
+      "Terapia de casal",
+      "Financeiro completo",
+      "Suporte prioritário",
     ],
     recommended: true,
   },
   {
     id: "enterprise",
-    name: "Enterprise",
-    price: "R$ 349,90",
+    name: "Clínica",
+    price: "R$ 349,00",
+    priceWithSecretary: "R$ 549,00",
     period: "/mês",
     features: [
-      "Profissionais ilimitados",
+      "Até 10 profissionais",
+      "Tudo do Profissional",
+      "Painel administrativo",
+      "Agentes de IA ilimitados",
       "Multi-unidades",
-      "API personalizada",
-      "Suporte prioritário",
-      "Customizações",
-      "SLA 99.9%",
+      "Suporte dedicado + SLA",
     ],
     recommended: false,
   },
@@ -87,6 +92,9 @@ export default function AdminPlans() {
             <div className="mb-6">
               <span className="text-3xl font-display font-bold text-foreground">{plan.price}</span>
               <span className="text-muted-foreground text-sm">{plan.period}</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                Com Secretária IA: <span className="font-semibold text-primary">{plan.priceWithSecretary}</span>{plan.period}
+              </p>
             </div>
 
             <ul className="space-y-2 mb-6">

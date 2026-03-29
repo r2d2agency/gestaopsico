@@ -16,14 +16,29 @@ import {
   MessageCircle,
   Lock,
   Headphones,
+  Bot,
+  Zap,
 } from "lucide-react";
+import { useState } from "react";
 
 const features = [
   {
     icon: Calendar,
     title: "Agenda Inteligente",
-    desc: "Organize sessões individuais e de casal com confirmação automática e lembretes.",
+    desc: "Organize sessões individuais e de casal com confirmação automática e lembretes via WhatsApp.",
     color: "bg-primary/10 text-primary",
+  },
+  {
+    icon: MessageCircle,
+    title: "Secretária IA no WhatsApp",
+    desc: "Um agente de IA que agenda, remarca e responde seus pacientes 24h pelo WhatsApp. Nunca perca um agendamento.",
+    color: "bg-success/10 text-success",
+  },
+  {
+    icon: Brain,
+    title: "IA Clínica Personalizada",
+    desc: "Agentes de IA que analisam anotações, sugerem abordagens terapêuticas e geram insights. Escolha entre GPT, Claude ou Gemini.",
+    color: "bg-lavender/10 text-lavender",
   },
   {
     icon: Video,
@@ -32,21 +47,21 @@ const features = [
     color: "bg-info/10 text-info",
   },
   {
-    icon: Brain,
-    title: "IA Clínica",
-    desc: "Agentes de IA que analisam anotações, sugerem abordagens e geram insights clínicos.",
-    color: "bg-lavender/10 text-lavender",
-  },
-  {
     icon: FileText,
-    title: "Prontuário Psicológico",
-    desc: "Evolução clínica estruturada, anotações de sessão e exportação segura em PDF.",
+    title: "Prontuário + IA",
+    desc: "Suba suas anotações e a IA analisa, organiza e sugere intervenções clínicas automaticamente.",
     color: "bg-warm/10 text-warm",
   },
   {
+    icon: Sparkles,
+    title: "Agentes Personalizáveis",
+    desc: "Seu admin cria agentes de IA e você personaliza o prompt para seu estilo terapêutico. Use GPT, Claude ou Gemini.",
+    color: "bg-rose/10 text-rose",
+  },
+  {
     icon: DollarSign,
-    title: "Financeiro Simplificado",
-    desc: "Controle de honorários, recibos automáticos e relatórios de faturamento.",
+    title: "Financeiro + Cobrança WhatsApp",
+    desc: "Controle de honorários, recibos automáticos e cobranças enviadas direto pelo WhatsApp.",
     color: "bg-success/10 text-success",
   },
   {
@@ -91,30 +106,69 @@ const plans = [
   {
     name: "Essencial",
     price: "R$ 89",
+    priceWithSecretary: "R$ 289",
     period: "/mês",
-    desc: "Para psicólogos que estão começando",
-    features: ["Até 30 pacientes", "Agenda e prontuário", "Sessões online", "Suporte por e-mail"],
+    desc: "Para psicólogos autônomos",
+    features: [
+      "Até 30 pacientes",
+      "Agenda e prontuário",
+      "Sessões online",
+      "IA para análise de anotações",
+      "Suporte por e-mail",
+    ],
+    secretaryFeatures: [
+      "Secretária IA no WhatsApp",
+      "Agendamento automático 24h",
+      "Lembretes e cobranças via WhatsApp",
+    ],
     highlighted: false,
   },
   {
     name: "Profissional",
     price: "R$ 149",
+    priceWithSecretary: "R$ 349",
     period: "/mês",
-    desc: "Para quem quer crescer com inteligência",
-    features: ["Pacientes ilimitados", "Assistente de IA", "Terapia de casal", "Financeiro completo", "Suporte prioritário"],
+    desc: "Para quem quer crescer com IA",
+    features: [
+      "Pacientes ilimitados",
+      "Assistente de IA (GPT, Claude, Gemini)",
+      "Agentes personalizáveis",
+      "Terapia de casal",
+      "Financeiro completo",
+      "Suporte prioritário",
+    ],
+    secretaryFeatures: [
+      "Secretária IA no WhatsApp",
+      "Agendamento automático 24h",
+      "Relatórios e alertas via WhatsApp",
+    ],
     highlighted: true,
   },
   {
     name: "Clínica",
     price: "R$ 349",
+    priceWithSecretary: "R$ 549",
     period: "/mês",
-    desc: "Para clínicas com múltiplos profissionais",
-    features: ["Até 10 profissionais", "Tudo do Profissional", "Painel administrativo", "Agentes de IA personalizados", "Suporte dedicado"],
+    desc: "Para clínicas com equipe",
+    features: [
+      "Até 10 profissionais",
+      "Tudo do Profissional",
+      "Painel administrativo",
+      "Agentes de IA ilimitados",
+      "Multi-unidades",
+      "Suporte dedicado + SLA",
+    ],
+    secretaryFeatures: [
+      "Secretária IA no WhatsApp",
+      "Múltiplos números WhatsApp",
+      "Bot inteligente por profissional",
+    ],
     highlighted: false,
   },
 ];
 
 export default function LandingPage() {
+  const [withSecretary, setWithSecretary] = useState(false);
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Header */}
@@ -337,6 +391,50 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* AI Secretary Section */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium border border-success/20">
+                <Bot className="w-4 h-4" /> Novidade
+              </span>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mt-4">
+                Sua <span className="text-primary">Secretária IA</span> no WhatsApp
+              </h2>
+              <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
+                Um agente inteligente que trabalha 24 horas no seu WhatsApp. Agenda, remarca, cobra e responde seus pacientes automaticamente.
+              </p>
+            </motion.div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: MessageCircle, title: "Agendamento Automático", desc: "Pacientes marcam e remarcam sessões pelo WhatsApp a qualquer hora. A IA consulta sua agenda em tempo real.", color: "text-primary" },
+              { icon: Zap, title: "Lembretes e Cobranças", desc: "Envio automático de lembretes de sessão, cobranças pendentes e confirmações de pagamento via WhatsApp.", color: "text-success" },
+              { icon: Brain, title: "Alertas Inteligentes", desc: "Receba no seu WhatsApp: agenda do dia, relatórios financeiros, novos agendamentos e alertas de inadimplência.", color: "text-lavender" },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-card rounded-2xl p-7 border border-border shadow-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className={`w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-5 ${item.color}`}>
+                  <item.icon className="w-7 h-7" />
+                </div>
+                <h3 className="font-display font-semibold text-foreground text-lg">{item.title}</h3>
+                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <p className="text-sm text-muted-foreground mb-4">Disponível como add-on em qualquer plano por <span className="font-bold text-foreground">+R$ 200/mês</span></p>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section id="testimonials" className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
@@ -381,6 +479,18 @@ export default function LandingPage() {
               Invista no seu consultório
             </h2>
             <p className="text-muted-foreground mt-3">Comece grátis, escale quando quiser.</p>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <span className={`text-sm font-medium ${!withSecretary ? "text-foreground" : "text-muted-foreground"}`}>Sem Secretária IA</span>
+              <button
+                onClick={() => setWithSecretary(!withSecretary)}
+                className={`relative w-14 h-7 rounded-full transition-colors ${withSecretary ? "bg-primary" : "bg-muted-foreground/30"}`}
+              >
+                <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-primary-foreground shadow transition-transform ${withSecretary ? "translate-x-7" : "translate-x-0.5"}`} />
+              </button>
+              <span className={`text-sm font-medium ${withSecretary ? "text-foreground" : "text-muted-foreground"}`}>
+                Com Secretária IA <span className="text-xs text-primary">(+R$200)</span>
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan, i) => (
@@ -404,10 +514,15 @@ export default function LandingPage() {
                 <h3 className="font-display font-bold text-lg text-foreground">{plan.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{plan.desc}</p>
                 <div className="mt-5 mb-6">
-                  <span className="text-4xl font-display font-extrabold text-foreground">{plan.price}</span>
+                  <span className="text-4xl font-display font-extrabold text-foreground">
+                    {withSecretary ? plan.priceWithSecretary : plan.price}
+                  </span>
                   <span className="text-muted-foreground text-sm">{plan.period}</span>
+                  {withSecretary && (
+                    <p className="text-xs text-primary mt-1">Inclui Secretária IA no WhatsApp</p>
+                  )}
                 </div>
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-3 mb-4">
                   {plan.features.map((f, fi) => (
                     <li key={fi} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <CheckCircle className="w-4 h-4 text-success shrink-0" />
@@ -415,6 +530,21 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
+                {withSecretary && (
+                  <div className="border-t border-border pt-4 mb-4">
+                    <p className="text-xs font-medium text-primary mb-2 flex items-center gap-1">
+                      <Bot className="w-3.5 h-3.5" /> Secretária IA
+                    </p>
+                    <ul className="space-y-2">
+                      {plan.secretaryFeatures.map((f, fi) => (
+                        <li key={fi} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
                   <Link to="/dashboard">Começar Grátis</Link>
                 </Button>
