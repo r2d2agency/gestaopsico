@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppointments } from "@/hooks/useAppointments";
