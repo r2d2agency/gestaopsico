@@ -768,10 +768,12 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
           <span className="text-[10px] font-medium text-muted-foreground">Profissionais:</span>
           {Array.from(professionalColorMap.entries()).map(([profId, idx]) => {
             const color = PROFESSIONAL_COLORS[idx % PROFESSIONAL_COLORS.length];
+            const prof = professionals.find((p: any) => p.id === profId);
+            const name = prof?.name || `Prof. ${idx + 1}`;
             return (
               <span key={profId} className="flex items-center gap-1 text-[10px]">
                 <span className={cn("w-2.5 h-2.5 rounded-full", color.dot)} />
-                <span className={color.text}>{profId.slice(0, 8)}</span>
+                <span className={color.text}>{name}</span>
               </span>
             );
           })}
