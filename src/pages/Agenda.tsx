@@ -32,10 +32,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
+import { orgSettingsApi } from "@/lib/portalApi";
 
 type ViewMode = "day" | "week" | "month";
 
-const BUSINESS_HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h-19h
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-green-500",
