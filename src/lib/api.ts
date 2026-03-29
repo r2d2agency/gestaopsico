@@ -131,6 +131,14 @@ export interface Patient {
   phone: string;
   email: string;
   address?: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  whatsapp_valid?: boolean;
   gender: string;
   emergency_contact?: string;
   clinical_notes?: string;
