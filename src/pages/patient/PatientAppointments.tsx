@@ -36,6 +36,13 @@ export default function PatientAppointments() {
     queryFn: () => patientPortalApi.appointments(),
   });
 
+  const { data: dashboardData } = useQuery({
+    queryKey: ["patient-dashboard"],
+    queryFn: () => patientPortalApi.dashboard(),
+  });
+
+  const allowBooking = dashboardData?.allowBooking ?? false;
+
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
 
   const { data: availability, isLoading: loadingSlots } = useQuery({
