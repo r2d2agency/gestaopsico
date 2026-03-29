@@ -163,24 +163,75 @@ export default function Agenda() {
     createMutation.mutate(payload);
   };
 
+  const blockCategories = [
+    { value: "personal", label: "Compromisso pessoal", icon: Coffee },
+    { value: "vacation", label: "Férias", icon: Plane },
+    { value: "congress", label: "Congresso / Evento", icon: GraduationCap },
+    { value: "family", label: "Familiar", icon: Home },
+    { value: "health", label: "Saúde / Doença", icon: Stethoscope },
+    { value: "work", label: "Reunião / Trabalho", icon: Briefcase },
+  ];
+
   const handleBlock = () => {
     if (!blockTime) {
-      toast({ title: "Selecione o horário", variant: "destructive" });
+      toast({ title: "Selecione o horário inicial", variant: "destructive" });
       return;
     }
-    const data: any = {
-      date: dateStr,
+
+    const catLabel = blockCategories.find(c => c.value === blockCategory)?.label || blockCategory;
+    const note = blockReason ? `[${catLabel}] ${blockReason}` : catLabel;
+
+    const baseData: any = {
       time: blockTime,
       duration: blockDuration,
-      notes: blockReason || "Compromisso pessoal",
+      notes: note,
     };
     if (canCreateForOthers && selectedProfessional) {
-      data.professional_id = selectedProfessional;
+      baseData.professional_id = selectedProfessional;
     }
-    blockMutation.mutate(data);
+
+    if (blockMode === "single") {
+      // Single day block
+      blockMutation.mutate({ ...baseData, date: dateStr });
+    } else if (blockMode === "period") {
+      // Block a date range (e.g. vacation)
+      if (!blockStartDate || !blockEndDate) {
+        toast({ title: "Selecione data inicial e final", variant: "destructive" });
+        return;
+      }
+      const days = eachDayOfInterval({ start: blockStartDate, end: blockEndDate });
+      days.forEach((day) => {
+        blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") });
+      });
+    } else if (blockMode === "recurring") {
+      // Recurring blocks (daily/weekly) within a date range
+      if (!blockStartDate || !blockEndDate) {
+        toast({ title: "Selecione o período de recorrência", variant: "destructive" });
+        return;
+      }
+      const days = eachDayOfInterval({ start: blockStartDate, end: blockEndDate });
+      const filtered = days.filter((day) => {
+        if (blockRecurrence === "daily") return true;
+        if (blockRecurrence === "weekly") return blockWeekdays.includes(day.getDay());
+        if (blockRecurrence === "monthly") return day.getDate() === blockStartDate.getDate();
+        return true;
+      });
+      filtered.forEach((day) => {
+        blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") });
+      });
+    }
   };
 
-  const confirmed = appointments.filter((a: any) => a.status === "scheduled" || a.status === "completed").length;
+  const resetBlock = () => {
+    setBlockOpen(false);
+    setBlockReason("");
+    setBlockTime("");
+    setBlockEndTime("");
+    setBlockCategory("personal");
+    setBlockMode("single");
+    setBlockStartDate(undefined);
+    setBlockEndDate(undefined);
+  };
   const pending = appointments.filter((a: any) => a.status === "pending").length;
   const cancelled = appointments.filter((a: any) => a.status === "cancelled").length;
   const blocked = appointments.filter((a: any) => a.status === "blocked" || a.type === "blocked").length;
