@@ -640,31 +640,10 @@ export default function Pacientes() {
               Defina e-mail e senha para {accessPatient?.name} acessar o portal do paciente
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <Label className="text-xs text-muted-foreground">Link do Portal</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Input readOnly value={portalUrl} className="text-xs" />
-                <Button variant="outline" size="sm" onClick={() => {
-                  navigator.clipboard.writeText(portalUrl);
-                  toast({ title: "Link copiado!" });
-                }}>
-                  <Copy className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <Label>E-mail de Login</Label>
-              <Input type="email" value={accessEmail} onChange={e => setAccessEmail(e.target.value)} placeholder="paciente@email.com" />
-            </div>
-            <div>
-              <Label>Senha</Label>
-              <Input type="password" value={accessPassword} onChange={e => setAccessPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAccessOpen(false)}>Cancelar</Button>
-            <Button onClick={() => {
+          <form
+            className="space-y-4 py-2"
+            onSubmit={(e) => {
+              e.preventDefault();
               if (!accessPatient || !accessEmail || accessPassword.length < 6) {
                 toast({ title: "Preencha e-mail e senha (mín. 6 caracteres)", variant: "destructive" });
                 return;
@@ -674,10 +653,35 @@ export default function Pacientes() {
                 email: accessEmail,
                 password: accessPassword,
               });
-            }} disabled={createAccessMutation.isPending}>
-              {createAccessMutation.isPending ? "Criando..." : "Criar Acesso"}
-            </Button>
-          </DialogFooter>
+            }}
+          >
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <Label className="text-xs text-muted-foreground">Link do Portal</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input readOnly value={portalUrl} className="text-xs" />
+                <Button type="button" variant="outline" size="sm" onClick={() => {
+                  navigator.clipboard.writeText(portalUrl);
+                  toast({ title: "Link copiado!" });
+                }}>
+                  <Copy className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label>E-mail de Login</Label>
+              <Input type="email" value={accessEmail} onChange={e => setAccessEmail(e.target.value)} placeholder="paciente@email.com" autoComplete="username" />
+            </div>
+            <div>
+              <Label>Senha</Label>
+              <Input type="password" value={accessPassword} onChange={e => setAccessPassword(e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAccessOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={createAccessMutation.isPending}>
+                {createAccessMutation.isPending ? "Criando..." : "Criar Acesso"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
