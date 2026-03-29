@@ -211,8 +211,8 @@ export default function PatientDashboardPage() {
       {/* Quick Links */}
       <div className="grid grid-cols-1 gap-2">
         {[
-          { to: "/portal/consultas", icon: Calendar, label: "Minhas Consultas", desc: "Ver histórico completo" },
-          { to: "/portal/financeiro", icon: CreditCard, label: "Financeiro", desc: "Pagamentos e faturas" },
+          { to: `${basePath}/consultas`, icon: Calendar, label: "Minhas Consultas", desc: "Ver histórico completo" },
+          { to: `${basePath}/financeiro`, icon: CreditCard, label: "Financeiro", desc: "Pagamentos e faturas" },
         ].map((link, i) => (
           <Link key={link.to} to={link.to}>
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.05 }}>

@@ -14,17 +14,20 @@ import {
   Bot,
   Bell,
   ClipboardList,
-  Smile,
-  CreditCard,
   Shield,
   HelpCircle,
   MessageSquare,
+  Building2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { orgSettingsApi } from "@/lib/portalApi";
 
 type NavItem = { icon: typeof LayoutDashboard; label: string; path: string; roles?: string[] };
 
-// roles: undefined = all professional roles can see
+const APP_NAME = "PsicoGest";
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "1.0.0";
+
 const allNav: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Pacientes", path: "/pacientes", roles: ["admin", "professional", "psychologist", "superadmin"] },
@@ -36,31 +39,31 @@ const allNav: NavItem[] = [
   { icon: ClipboardList, label: "Testes", path: "/testes", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Sparkles, label: "Assistente IA", path: "/assistente-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Bot, label: "Secretária IA", path: "/secretaria-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
-  { icon: MessageSquare, label: "Mensagens", path: "/mensagens", roles: ["admin", "professional", "psychologist", "superadmin"] },
+  { icon: MessageSquare, label: "Mensagens", path: "/mensagens", roles: ["admin", "professional", "psychologist", "secretary", "secretary_financial", "superadmin"] },
   { icon: Bell, label: "Notificações", path: "/notificacoes" },
   { icon: BarChart3, label: "Relatórios", path: "/relatorios", roles: ["admin", "professional", "psychologist", "financial", "secretary_financial", "superadmin"] },
   { icon: HelpCircle, label: "Ajuda", path: "/ajuda" },
 ];
 
-// Patient nav is handled by PatientAppLayout bottom tabs, not sidebar
 const patientNav: NavItem[] = [];
 
 export default function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings"],
+    queryFn: () => orgSettingsApi.get(),
+    enabled: !!user && user.role !== "patient",
+  });
 
   const isPatient = user?.role === "patient";
   const role = user?.role || "professional";
-
   const userRoles = role === "secretary_financial" ? ["secretary_financial", "secretary", "financial"] : [role];
 
   const navItems = isPatient
     ? patientNav
-    : allNav.filter((item) => {
-        if (!item.roles) return true;
-        return userRoles.some(r => item.roles!.includes(r));
-      });
+    : allNav.filter((item) => !item.roles || userRoles.some((r) => item.roles!.includes(r)));
 
   const handleLogout = () => {
     logout();
@@ -78,17 +81,22 @@ export default function AppSidebar() {
     patient: "Portal do Paciente",
   };
 
+  const clinicName = orgSettings?.businessName || APP_NAME;
+  const clinicLogo = orgSettings?.logo || "";
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col">
       <div className="flex items-center gap-3 px-6 py-6 border-b border-sidebar-border">
-        <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-display font-bold text-sm">PG</span>
-        </div>
-        <div>
-          <h1 className="font-display font-bold text-sm text-sidebar-primary">PsicoGest</h1>
-          <p className="text-xs text-sidebar-foreground/60">
-            {roleLabel[role] || "Gestão Clínica"}
-          </p>
+        {clinicLogo ? (
+          <img src={clinicLogo} alt={clinicName} className="w-10 h-10 rounded-xl object-contain bg-sidebar-accent p-1 border border-sidebar-border" />
+        ) : (
+          <div className="w-10 h-10 rounded-xl bg-sidebar-accent flex items-center justify-center border border-sidebar-border">
+            <Building2 className="w-5 h-5 text-sidebar-primary" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1 className="font-display font-bold text-sm text-sidebar-primary truncate">{clinicName}</h1>
+          <p className="text-xs text-sidebar-foreground/60 truncate">{roleLabel[role] || "Gestão Clínica"}</p>
         </div>
       </div>
 
@@ -138,6 +146,11 @@ export default function AppSidebar() {
           <LogOut className="w-5 h-5 shrink-0" />
           Sair
         </button>
+      </div>
+
+      <div className="px-6 py-4 border-t border-sidebar-border">
+        <p className="text-xs font-medium text-sidebar-primary">{APP_NAME}</p>
+        <p className="text-[11px] text-sidebar-foreground/60">v{APP_VERSION}</p>
       </div>
     </aside>
   );

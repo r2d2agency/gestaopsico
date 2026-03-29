@@ -108,15 +108,19 @@ export interface TestTemplate {
 export interface TestAssignment {
   id: string;
   templateId: string;
-  template: { title: string; description?: string; category?: string };
+  template: { title: string; description?: string; category?: string; questions?: TestQuestion[] };
   patientId: string;
   patient?: { id: string; name: string };
   status: "pending" | "completed";
   responses: { questionId: string; answer: string }[];
   assignedAt: string;
   completedAt?: string;
-  score?: number;
-  classification?: string;
+  score?: number | null;
+  classification?: string | null;
+  clinicalRecordId?: string | null;
+  professionalAssessment?: string | null;
+  professionalConclusion?: string | null;
+  aiInterpretation?: string | null;
   _count?: { responses: number };
 }
 
@@ -142,8 +146,12 @@ export const testsApi = {
     apiRequest(`/tests/templates/${id}`, { method: "DELETE" }),
   assignTest: (templateId: string, patientId?: string, coupleId?: string) =>
     apiRequest("/tests/assign", { method: "POST", body: { templateId, patientId, coupleId } }),
+  listAssignments: () =>
+    apiRequest<TestAssignment[]>("/tests/assignments"),
   getResults: (assignmentId: string) =>
     apiRequest<TestAssignment>(`/tests/assignments/${assignmentId}/results`),
+  updateClinicalNote: (assignmentId: string, data: { professionalAssessment?: string; professionalConclusion?: string }) =>
+    apiRequest<TestAssignment>(`/tests/assignments/${assignmentId}/clinical-note`, { method: "PATCH", body: data }),
   // Presets
   listPresets: () =>
     apiRequest<PresetTest[]>("/tests/presets"),
@@ -200,6 +208,9 @@ export interface PatientDashboard {
   patientName: string;
   allowBooking?: boolean;
   clinicName?: string | null;
+  clinicLogo?: string | null;
+  primaryColor?: string | null;
+  accentColor?: string | null;
 }
 
 export interface PatientPortalMessage {
