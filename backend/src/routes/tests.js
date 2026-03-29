@@ -410,14 +410,7 @@ router.post('/assign', async (req, res) => {
     });
     if (!template) return res.status(404).json({ error: 'Teste não encontrado' });
 
-    // Build patient lookup: professional sees own patients, admin/secretary see org patients
-    const patientWhere = (pid) => {
-      if (currentUser.role === 'admin' || currentUser.role === 'secretary') {
-        return { id: pid, ...(currentUser.organizationId ? { professionalId: { in: prisma.$queryRawUnsafe(`SELECT id FROM users WHERE organization_id = '${currentUser.organizationId}'`).then ? undefined : undefined } } : {}) };
-      }
-      return { id: pid, professionalId: req.userId };
-    };
-
+    // Look up patient by id, check org match or direct ownership
     // Simplified: look up patient by id, check org match or direct ownership
     const findPatient = async (pid) => {
       const p = await prisma.patient.findFirst({
