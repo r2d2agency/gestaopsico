@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon, Upload,
-  UserPlus, Users, Power, PowerOff, Shield,
+  UserPlus, Users, Power, PowerOff, Shield, CalendarIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
