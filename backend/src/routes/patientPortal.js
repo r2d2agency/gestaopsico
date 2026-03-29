@@ -176,7 +176,7 @@ router.get('/availability', authMiddleware, async (req, res) => {
     });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
-    const targetDate = new Date(date);
+    const targetDate = new Date(date + 'T00:00:00.000Z');
     const dayOfWeek = targetDate.getDay(); // 0=Sunday
 
     // Don't allow weekends
@@ -237,7 +237,7 @@ router.post('/book', authMiddleware, async (req, res) => {
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
     // Check if slot is still available
-    const targetDate = new Date(date);
+    const targetDate = new Date(date + 'T00:00:00.000Z');
     const existing = await prisma.appointment.findFirst({
       where: {
         professionalId: patient.professionalId,
