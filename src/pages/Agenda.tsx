@@ -679,9 +679,13 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate }: {
 }
 
 // ========== WEEK VIEW ==========
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
+  onSelectDate: (d: Date) => void;
+  onAttend: (id: string) => void;
+  businessHours: number[];
+}) {
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
 }) {
@@ -719,7 +723,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend }: {
       </div>
       {/* Time grid */}
       <div className="max-h-[600px] overflow-y-auto">
-        {BUSINESS_HOURS.map(hour => (
+        {businessHours.map(hour => (
           <div key={hour} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
             <div className="p-1.5 text-[11px] text-muted-foreground text-right pr-3 border-r border-border font-mono">
               {String(hour).padStart(2, "0")}:00
