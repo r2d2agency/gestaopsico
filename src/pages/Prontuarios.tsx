@@ -25,8 +25,8 @@ import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 
 const EMPTY_FORM = {
-  patientId: "", coupleId: "", appointmentId: "", type: "individual" as const,
-  date: new Date().toISOString().split("T")[0], modality: "in_person",
+  patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
+  date: new Date().toISOString().split("T")[0], modality: "in_person" as string,
   content: "", complaint: "", keyPoints: "", clinicalObservations: "",
   interventions: "", evolution: "", nextSteps: "", privateNotes: "", aiContent: "",
 };
