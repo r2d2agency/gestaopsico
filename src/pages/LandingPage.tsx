@@ -226,6 +226,7 @@ export default function LandingPage() {
             <a href="#benefits" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Benefícios</a>
             <a href="#testimonials" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Depoimentos</a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Planos</a>
+            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
