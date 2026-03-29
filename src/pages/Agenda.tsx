@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
@@ -70,6 +70,28 @@ const emptyConsulta: Partial<Consulta> = {
   payment_status: "pending", mode: "in_person", notes: "",
 };
 
+// Full day hours (6am to 22pm) - scrollable
+const ALL_HOURS = Array.from({ length: 17 }, (_, i) => i + 6);
+
+// Distinct colors for professionals
+const PROFESSIONAL_COLORS = [
+  { bg: "bg-blue-500/10", border: "border-l-blue-500", text: "text-blue-700", dot: "bg-blue-500" },
+  { bg: "bg-emerald-500/10", border: "border-l-emerald-500", text: "text-emerald-700", dot: "bg-emerald-500" },
+  { bg: "bg-violet-500/10", border: "border-l-violet-500", text: "text-violet-700", dot: "bg-violet-500" },
+  { bg: "bg-amber-500/10", border: "border-l-amber-500", text: "text-amber-700", dot: "bg-amber-500" },
+  { bg: "bg-rose-500/10", border: "border-l-rose-500", text: "text-rose-700", dot: "bg-rose-500" },
+  { bg: "bg-cyan-500/10", border: "border-l-cyan-500", text: "text-cyan-700", dot: "bg-cyan-500" },
+  { bg: "bg-orange-500/10", border: "border-l-orange-500", text: "text-orange-700", dot: "bg-orange-500" },
+  { bg: "bg-indigo-500/10", border: "border-l-indigo-500", text: "text-indigo-700", dot: "bg-indigo-500" },
+];
+
+function getProfessionalColor(professionalId: string, profMap: Map<string, number>) {
+  if (!profMap.has(professionalId)) {
+    profMap.set(professionalId, profMap.size);
+  }
+  return PROFESSIONAL_COLORS[profMap.get(professionalId)! % PROFESSIONAL_COLORS.length];
+}
+
 export default function Agenda() {
   const { user } = useAuth();
   const role = user?.role || "professional";
@@ -122,17 +144,33 @@ export default function Agenda() {
     queryFn: () => orgSettingsApi.get(),
   });
 
+  const businessStartHour = orgSettings?.scheduleStartHour ?? 8;
+  const businessEndHour = orgSettings?.scheduleEndHour ?? 19;
+
   const businessHours = useMemo(() => {
-    const start = orgSettings?.scheduleStartHour ?? 8;
-    const end = orgSettings?.scheduleEndHour ?? 19;
-    return Array.from({ length: end - start + 1 }, (_, i) => i + start);
-  }, [orgSettings]);
+    return Array.from({ length: businessEndHour - businessStartHour + 1 }, (_, i) => i + businessStartHour);
+  }, [businessStartHour, businessEndHour]);
+
 
   const queryParams: Record<string, string> = { ...dateRange };
   if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
     queryParams.professional_id = selectedProfessional;
   }
   const { data: appointments = [], isLoading } = useAppointments(queryParams);
+
+  // Build a stable map of professional ID -> color index
+  const professionalColorMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (Array.isArray(professionals)) {
+      professionals.forEach((p: any, i: number) => map.set(p.id, i));
+    }
+    appointments.forEach((apt: any) => {
+      if (apt.professionalId && !map.has(apt.professionalId)) {
+        map.set(apt.professionalId, map.size);
+      }
+    });
+    return map;
+  }, [professionals, appointments]);
 
   const { data: couples = [] } = useQuery<Casal[]>({
     queryKey: ["couples"],
@@ -360,6 +398,8 @@ export default function Agenda() {
           selectedDate={selectedDate}
           aptsByDate={aptsByDate}
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
         />
       ) : viewMode === "week" ? (
         <WeekView
@@ -368,12 +408,17 @@ export default function Agenda() {
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
           businessHours={businessHours}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
+          professionals={professionals}
         />
       ) : (
         <DayView
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
           businessHours={businessHours}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
         />
       )}
 
@@ -616,10 +661,12 @@ export default function Agenda() {
 }
 
 // ========== MONTH VIEW ==========
-function MonthView({ selectedDate, aptsByDate, onSelectDate }: {
+function MonthView({ selectedDate, aptsByDate, onSelectDate, professionalColorMap, showProfessionalColors }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
+  professionalColorMap: Map<string, number>;
+  showProfessionalColors: boolean;
 }) {
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
@@ -659,9 +706,17 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate }: {
               <div className="mt-0.5 space-y-0.5">
                 {apts.slice(0, 3).map((apt: any, j: number) => {
                   const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
+                  const proColor = showProfessionalColors && apt.professionalId
+                    ? getProfessionalColor(apt.professionalId, professionalColorMap)
+                    : null;
                   return (
-                    <div key={j} className={cn("text-[10px] px-1 py-0.5 rounded truncate", `${statusColors[aptStatus]}/10 text-foreground`)}>
-                      <span className={cn("inline-block w-1.5 h-1.5 rounded-full mr-1", statusColors[aptStatus])} />
+                    <div key={j} className={cn(
+                      "text-[10px] px-1 py-0.5 rounded truncate",
+                      proColor ? `${proColor.bg} ${proColor.text}` : `${statusColors[aptStatus]}/10 text-foreground`
+                    )}>
+                      <span className={cn("inline-block w-1.5 h-1.5 rounded-full mr-1",
+                        proColor ? proColor.dot : statusColors[aptStatus]
+                      )} />
                       {apt.time} {apt.type === "blocked" ? "Bloq." : apt.patient?.name?.split(" ")[0] || "—"}
                     </div>
                   );
@@ -679,20 +734,51 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate }: {
 }
 
 // ========== WEEK VIEW ==========
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
   businessHours: number[];
+  professionalColorMap: Map<string, number>;
+  showProfessionalColors: boolean;
+  professionals?: any[];
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  // Only show weekdays (Mon-Fri) for cleaner business view, but keep Sat for possible schedules
   const displayDays = weekDays.filter((_, i) => i < 6); // Mon-Sat
+
+  // Auto-scroll to first business hour
+  useEffect(() => {
+    if (scrollRef.current && businessHours.length > 0) {
+      const firstBizHour = businessHours[0];
+      const rowIndex = ALL_HOURS.indexOf(firstBizHour);
+      if (rowIndex > 0) {
+        scrollRef.current.scrollTop = rowIndex * 48; // 48px per row
+      }
+    }
+  }, [businessHours]);
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
+      {/* Professional color legend */}
+      {showProfessionalColors && professionalColorMap.size > 1 && (
+        <div className="flex items-center gap-3 px-3 py-2 border-b border-border bg-muted/30 flex-wrap">
+          <span className="text-[10px] font-medium text-muted-foreground">Profissionais:</span>
+          {Array.from(professionalColorMap.entries()).map(([profId, idx]) => {
+            const color = PROFESSIONAL_COLORS[idx % PROFESSIONAL_COLORS.length];
+            const prof = professionals.find((p: any) => p.id === profId);
+            const name = prof?.name || `Prof. ${idx + 1}`;
+            return (
+              <span key={profId} className="flex items-center gap-1 text-[10px]">
+                <span className={cn("w-2.5 h-2.5 rounded-full", color.dot)} />
+                <span className={color.text}>{name}</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
       {/* Day headers */}
       <div className="grid border-b border-border" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
         <div className="p-2 border-r border-border" />
@@ -718,64 +804,94 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
           );
         })}
       </div>
-      {/* Time grid */}
-      <div className="max-h-[600px] overflow-y-auto">
-        {businessHours.map(hour => (
-          <div key={hour} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
-            <div className="p-1.5 text-[11px] text-muted-foreground text-right pr-3 border-r border-border font-mono">
-              {String(hour).padStart(2, "0")}:00
+      {/* Time grid - ALL hours, scrollable */}
+      <div ref={scrollRef} className="max-h-[600px] overflow-y-auto">
+        {ALL_HOURS.map(hour => {
+          const isBusinessHour = businessHours.includes(hour);
+          return (
+            <div key={hour} className={cn(
+              "grid border-b border-border last:border-b-0",
+              !isBusinessHour && "opacity-40 bg-muted/20"
+            )} style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
+              <div className="p-1.5 text-[11px] text-muted-foreground text-right pr-3 border-r border-border font-mono">
+                {String(hour).padStart(2, "0")}:00
+              </div>
+              {displayDays.map((day, di) => {
+                const key = format(day, "yyyy-MM-dd");
+                const hourApts = (aptsByDate[key] || []).filter((a: any) => {
+                  if (!a.time) return false;
+                  const h = parseInt(a.time.split(":")[0], 10);
+                  return h === hour;
+                });
+                return (
+                  <div key={di} className={cn("min-h-[48px] p-0.5 border-r border-border last:border-r-0 relative", isToday(day) && "bg-primary/[0.02]")}>
+                    {hourApts.map((apt: any, j: number) => {
+                      const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
+                      const proColor = showProfessionalColors && apt.professionalId
+                        ? getProfessionalColor(apt.professionalId, professionalColorMap)
+                        : null;
+                      return (
+                        <div
+                          key={j}
+                          className={cn(
+                            "text-[10px] px-1.5 py-1 rounded border-l-2 mb-0.5 truncate cursor-pointer hover:opacity-80",
+                            proColor
+                              ? `${proColor.bg} ${proColor.border}`
+                              : statusBgColors[aptStatus] || "bg-muted border-l-muted-foreground"
+                          )}
+                          title={`${apt.time} - ${apt.type === "blocked" ? apt.notes || "Bloqueado" : apt.patient?.name || "—"}`}
+                        >
+                          <span className="font-medium">{apt.time}</span>{" "}
+                          {apt.type === "blocked" ? "Bloq." : apt.patient?.name?.split(" ")[0] || "—"}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
-            {displayDays.map((day, di) => {
-              const key = format(day, "yyyy-MM-dd");
-              const hourApts = (aptsByDate[key] || []).filter((a: any) => {
-                if (!a.time) return false;
-                const h = parseInt(a.time.split(":")[0], 10);
-                return h === hour;
-              });
-              return (
-                <div key={di} className={cn("min-h-[48px] p-0.5 border-r border-border last:border-r-0 relative", isToday(day) && "bg-primary/[0.02]")}>
-                  {hourApts.map((apt: any, j: number) => {
-                    const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
-                    return (
-                      <div
-                        key={j}
-                        className={cn(
-                          "text-[10px] px-1.5 py-1 rounded border-l-2 mb-0.5 truncate cursor-pointer hover:opacity-80",
-                          statusBgColors[aptStatus] || "bg-muted border-l-muted-foreground"
-                        )}
-                        title={`${apt.time} - ${apt.type === "blocked" ? apt.notes || "Bloqueado" : apt.patient?.name || "—"}`}
-                      >
-                        <span className="font-medium">{apt.time}</span>{" "}
-                        {apt.type === "blocked" ? "Bloq." : apt.patient?.name?.split(" ")[0] || "—"}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // ========== DAY VIEW ==========
-function DayView({ appointments, onAttend, businessHours }: {
+function DayView({ appointments, onAttend, businessHours, professionalColorMap, showProfessionalColors }: {
   appointments: any[];
   onAttend: (id: string) => void;
   businessHours: number[];
+  professionalColorMap: Map<string, number>;
+  showProfessionalColors: boolean;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to first business hour
+  useEffect(() => {
+    if (scrollRef.current && businessHours.length > 0) {
+      const firstBizHour = businessHours[0];
+      const rowIndex = ALL_HOURS.indexOf(firstBizHour);
+      if (rowIndex > 0) {
+        scrollRef.current.scrollTop = rowIndex * 56; // ~56px per row
+      }
+    }
+  }, [businessHours]);
+
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
-      <div className="max-h-[600px] overflow-y-auto">
-        {businessHours.map(hour => {
+      <div ref={scrollRef} className="max-h-[600px] overflow-y-auto">
+        {ALL_HOURS.map(hour => {
+          const isBusinessHour = businessHours.includes(hour);
           const hourApts = appointments.filter((a: any) => {
             if (!a.time) return false;
             return parseInt(a.time.split(":")[0], 10) === hour;
           });
           return (
-            <div key={hour} className="flex border-b border-border last:border-b-0">
+            <div key={hour} className={cn(
+              "flex border-b border-border last:border-b-0",
+              !isBusinessHour && "opacity-40 bg-muted/20"
+            )}>
               <div className="w-16 shrink-0 p-2 text-right pr-3 border-r border-border text-xs text-muted-foreground font-mono">
                 {String(hour).padStart(2, "0")}:00
               </div>
@@ -783,6 +899,9 @@ function DayView({ appointments, onAttend, businessHours }: {
                 {hourApts.map((apt: any, i: number) => {
                   const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
                   const patientName = apt.patient?.name || (apt.type === "blocked" ? apt.notes || "Bloqueado" : "Paciente");
+                  const proColor = showProfessionalColors && apt.professionalId
+                    ? getProfessionalColor(apt.professionalId, professionalColorMap)
+                    : null;
                   return (
                     <motion.div
                       key={apt.id}
@@ -791,7 +910,9 @@ function DayView({ appointments, onAttend, businessHours }: {
                       transition={{ delay: i * 0.03 }}
                       className={cn(
                         "flex items-center justify-between p-2.5 rounded-lg border-l-3 transition-shadow hover:shadow-md",
-                        statusBgColors[aptStatus] || "bg-muted border-l-muted-foreground"
+                        proColor
+                          ? `${proColor.bg} ${proColor.border}`
+                          : statusBgColors[aptStatus] || "bg-muted border-l-muted-foreground"
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -817,6 +938,11 @@ function DayView({ appointments, onAttend, businessHours }: {
                                 {apt.mode === "video" ? <Video className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
                                 {apt.mode === "video" ? "Online" : "Presencial"}
                               </span>
+                              {showProfessionalColors && proColor && apt.professional?.name && (
+                                <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", proColor.bg, proColor.text)}>
+                                  {apt.professional.name.split(" ")[0]}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
