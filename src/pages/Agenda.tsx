@@ -151,20 +151,6 @@ export default function Agenda() {
     return Array.from({ length: businessEndHour - businessStartHour + 1 }, (_, i) => i + businessStartHour);
   }, [businessStartHour, businessEndHour]);
 
-  // Build a stable map of professional ID -> color index
-  const professionalColorMap = useMemo(() => {
-    const map = new Map<string, number>();
-    if (Array.isArray(professionals)) {
-      professionals.forEach((p: any, i: number) => map.set(p.id, i));
-    }
-    // Also index from appointments
-    appointments.forEach((apt: any) => {
-      if (apt.professionalId && !map.has(apt.professionalId)) {
-        map.set(apt.professionalId, map.size);
-      }
-    });
-    return map;
-  }, [professionals, appointments]);
 
   const queryParams: Record<string, string> = { ...dateRange };
   if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
