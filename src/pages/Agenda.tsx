@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppointments } from "@/hooks/useAppointments";
@@ -60,6 +60,15 @@ export default function Agenda() {
       toast({ title: "Consulta agendada com sucesso!" });
       setDialogOpen(false);
       setForm({ ...emptyConsulta });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const attendMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.attend(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Comparecimento registrado e conta a receber gerada!" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -260,6 +269,14 @@ export default function Agenda() {
                       }`}>
                         {statusLabels[aptStatus] || aptStatus}
                       </span>
+                      {aptStatus !== "cancelled" && !apt.attended && (
+                        <Button size="sm" variant="outline" className="gap-1" onClick={(e) => { e.stopPropagation(); attendMutation.mutate(apt.id); }}>
+                          <UserCheck className="w-3.5 h-3.5" />Compareceu
+                        </Button>
+                      )}
+                      {apt.attended && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">✓ Presente</span>
+                      )}
                       {aptStatus !== "cancelled" && (
                         <Button size="sm" variant={apt.mode === "video" ? "default" : "outline"}>
                           {apt.mode === "video" ? "Iniciar Videochamada" : "Ver Detalhes"}

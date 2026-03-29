@@ -27,6 +27,13 @@ function mapPatient(p) {
     status: p.status,
     created_at: p.createdAt,
     professional_id: p.professionalId,
+    billing_mode: p.billingMode,
+    monthly_value: p.monthlyValue ? Number(p.monthlyValue) : null,
+    session_value: p.sessionValue ? Number(p.sessionValue) : null,
+    charge_notification_mode: p.chargeNotificationMode,
+    charge_day: p.chargeDay,
+    charge_time: p.chargeTime,
+    charge_enabled: p.chargeEnabled,
   };
 }
 
@@ -46,6 +53,14 @@ function mapInput(body) {
   if (body.medications !== undefined) data.medications = body.medications || null;
   if (body.allergies !== undefined) data.allergies = body.allergies || null;
   if (body.status !== undefined) data.status = body.status;
+  // Billing fields
+  if (body.billing_mode !== undefined) data.billingMode = body.billing_mode;
+  if (body.monthly_value !== undefined) data.monthlyValue = body.monthly_value ? parseFloat(body.monthly_value) : null;
+  if (body.session_value !== undefined) data.sessionValue = body.session_value ? parseFloat(body.session_value) : null;
+  if (body.charge_notification_mode !== undefined) data.chargeNotificationMode = body.charge_notification_mode;
+  if (body.charge_day !== undefined) data.chargeDay = body.charge_day ? parseInt(body.charge_day) : null;
+  if (body.charge_time !== undefined) data.chargeTime = body.charge_time;
+  if (body.charge_enabled !== undefined) data.chargeEnabled = Boolean(body.charge_enabled);
   return data;
 }
 

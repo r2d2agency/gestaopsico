@@ -97,4 +97,47 @@ router.post('/:id/cancel', async (req, res) => {
   }
 });
 
+// POST /api/consultas/:id/attend - mark attendance and auto-create receivable
+router.post('/:id/attend', async (req, res) => {
+  try {
+    const apt = await prisma.appointment.findFirst({
+      where: { id: req.params.id, professionalId: req.userId },
+      include: { patient: true }
+    });
+    if (!apt) return res.status(404).json({ error: 'Consulta não encontrada' });
+
+    await prisma.appointment.update({
+      where: { id: req.params.id },
+      data: { attended: true, status: 'completed' }
+    });
+
+    // Auto-create receivable based on patient billing mode
+    if (apt.patientId && apt.patient) {
+      const patient = apt.patient;
+      const value = patient.billingMode === 'monthly'
+        ? null // monthly billing is handled separately
+        : (patient.sessionValue ? Number(patient.sessionValue) : (apt.value ? Number(apt.value) : 0));
+
+      if (value && value > 0) {
+        await prisma.account.create({
+          data: {
+            professionalId: req.userId,
+            type: 'receivable',
+            description: `Sessão - ${patient.name}`,
+            value,
+            dueDate: apt.date,
+            category: 'Consulta',
+            patientId: apt.patientId,
+            status: 'pending'
+          }
+        });
+      }
+    }
+
+    res.json({ message: 'Comparecimento registrado e conta a receber gerada' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao registrar comparecimento', details: err.message });
+  }
+});
+
 module.exports = router;

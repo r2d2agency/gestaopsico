@@ -88,6 +88,7 @@ export const consultasApi = {
   create: (data: Partial<Consulta>) => apiRequest<Consulta>("/consultas", { method: "POST", body: data }),
   update: (id: string, data: Partial<Consulta>) => apiRequest<Consulta>(`/consultas/${id}`, { method: "PUT", body: data }),
   cancel: (id: string) => apiRequest(`/consultas/${id}/cancel`, { method: "POST" }),
+  attend: (id: string) => apiRequest(`/consultas/${id}/attend`, { method: "POST" }),
 };
 
 // Casais
@@ -137,6 +138,13 @@ export interface Patient {
   medications?: string;
   allergies?: string;
   status: "active" | "inactive";
+  billing_mode?: "per_session" | "monthly";
+  monthly_value?: number;
+  session_value?: number;
+  charge_notification_mode?: "whatsapp" | "email" | "sms";
+  charge_day?: number;
+  charge_time?: string;
+  charge_enabled?: boolean;
   created_at: string;
 }
 
@@ -152,6 +160,7 @@ export interface Consulta {
   status: "scheduled" | "completed" | "cancelled";
   payment_status: "pending" | "paid" | "overdue" | "cancelled";
   mode: "video" | "in_person";
+  attended?: boolean;
   notes?: string;
   patient?: Patient;
 }
