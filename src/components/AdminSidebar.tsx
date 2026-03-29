@@ -6,6 +6,8 @@ import {
   CreditCard,
   ArrowLeft,
   Shield,
+  Bot,
+  Key,
 } from "lucide-react";
 
 const navItems = [
@@ -13,6 +15,8 @@ const navItems = [
   { icon: Building2, label: "Organizações", path: "/admin/organizacoes" },
   { icon: Users, label: "Usuários", path: "/admin/usuarios" },
   { icon: CreditCard, label: "Planos", path: "/admin/planos" },
+  { icon: Bot, label: "Agentes de IA", path: "/admin/agentes-ia" },
+  { icon: Key, label: "Provedores IA", path: "/admin/provedores-ia" },
 ];
 
 export default function AdminSidebar() {
