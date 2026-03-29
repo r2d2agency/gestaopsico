@@ -6,6 +6,23 @@ const { superadminGuard } = require('../middleware/adminGuard');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Professionals list endpoint - accessible to secretary/admin without superadmin guard
+router.get('/professionals', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { organizationId: true } });
+    const where = { role: { in: ['professional', 'psychologist'] }, status: 'active' };
+    if (user?.organizationId) where.organizationId = user.organizationId;
+    const professionals = await prisma.user.findMany({
+      where,
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: 'asc' }
+    });
+    res.json(professionals);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar profissionais' });
+  }
+});
+
 router.use(authMiddleware);
 router.use(superadminGuard);
 
