@@ -211,12 +211,16 @@ export interface Prontuario {
   id: string;
   patient_id?: string;
   couple_id?: string;
+  appointment_id?: string;
   type: "individual" | "couple";
   date: string;
   content: string;
   ai_content?: string;
   professional_id: string;
   created_at: string;
+  patient?: { id: string; name: string };
+  couple?: { id: string; name: string };
+  appointment?: { id: string; date: string; time: string; type: string };
 }
 
 export interface Pagamento {
