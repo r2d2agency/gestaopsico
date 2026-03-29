@@ -158,7 +158,20 @@ export default function Agenda() {
   }
   const { data: appointments = [], isLoading } = useAppointments(queryParams);
 
-  const { data: couples = [] } = useQuery<Casal[]>({
+  // Build a stable map of professional ID -> color index
+  const professionalColorMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (Array.isArray(professionals)) {
+      professionals.forEach((p: any, i: number) => map.set(p.id, i));
+    }
+    appointments.forEach((apt: any) => {
+      if (apt.professionalId && !map.has(apt.professionalId)) {
+        map.set(apt.professionalId, map.size);
+      }
+    });
+    return map;
+  }, [professionals, appointments]);
+
     queryKey: ["couples"],
     queryFn: () => casaisApi.list(),
   });
