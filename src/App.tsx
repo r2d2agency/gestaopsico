@@ -9,6 +9,11 @@ import Pacientes from "./pages/Pacientes";
 import Agenda from "./pages/Agenda";
 import Financeiro from "./pages/Financeiro";
 import AppLayout from "./components/AppLayout";
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOrganizations from "./pages/admin/AdminOrganizations";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminPlans from "./pages/admin/AdminPlans";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +26,14 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          {/* Admin / Superadmin */}
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/organizacoes" element={<AdminOrganizations />} />
+            <Route path="/admin/usuarios" element={<AdminUsers />} />
+            <Route path="/admin/planos" element={<AdminPlans />} />
+          </Route>
+          {/* App normal */}
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/pacientes" element={<Pacientes />} />
