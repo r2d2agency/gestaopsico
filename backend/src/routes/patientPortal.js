@@ -14,10 +14,10 @@ router.post('/create-access', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'patientId, email e senha são obrigatórios' });
     }
 
-    // Verify access to this patient (professional owns it, or admin/secretary in same org)
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    // Verify access to this patient
+    const requester = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
     const patientWhere = { id: patientId };
-    if (!['superadmin', 'admin', 'secretary', 'secretary_financial'].includes(user?.role)) {
+    if (!['superadmin', 'admin', 'secretary', 'secretary_financial'].includes(requester?.role)) {
       patientWhere.professionalId = req.userId;
     }
     const patient = await prisma.patient.findFirst({ where: patientWhere });
