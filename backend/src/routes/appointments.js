@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const data = { ...req.body, professionalId: req.userId };
-    if (data.date) data.date = new Date(data.date);
+    if (data.date) data.date = new Date(String(data.date) + (String(data.date).includes('T') ? '' : 'T00:00:00.000Z'));
     const appointment = await prisma.appointment.create({
       data,
       include: { patient: { select: { id: true, name: true } } }
@@ -72,7 +72,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const data = { ...req.body };
-    if (data.date) data.date = new Date(data.date);
+    if (data.date) data.date = new Date(String(data.date) + (String(data.date).includes('T') ? '' : 'T00:00:00.000Z'));
     const appointment = await prisma.appointment.updateMany({
       where: { id: req.params.id, professionalId: req.userId },
       data
