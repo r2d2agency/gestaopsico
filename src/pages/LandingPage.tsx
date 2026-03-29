@@ -144,9 +144,10 @@ const plans = [
     desc: "Para psicólogos autônomos",
     features: [
       "Até 30 pacientes",
-      "Agenda e prontuário",
-      "Sessões online",
-      "IA para análise de anotações",
+      "Agenda e prontuário com IA",
+      "App do paciente (PWA)",
+      "Testes psicológicos prontos",
+      "Monitoramento de humor",
       "Suporte por e-mail",
     ],
     secretaryFeatures: [
@@ -165,9 +166,10 @@ const plans = [
     features: [
       "Pacientes ilimitados",
       "Assistente de IA (GPT, Claude, Gemini)",
-      "Agentes personalizáveis",
+      "App do paciente com sua marca",
+      "Testes + monitoramento de humor",
       "Terapia de casal",
-      "Financeiro completo",
+      "Financeiro completo + cobranças",
       "Suporte prioritário",
     ],
     secretaryFeatures: [
@@ -186,8 +188,8 @@ const plans = [
     features: [
       "Até 10 profissionais",
       "Tudo do Profissional",
-      "Painel administrativo",
-      "Agentes de IA ilimitados",
+      "Painel administrativo + RBAC",
+      "Secretária e financeiro dedicados",
       "Multi-unidades",
       "Suporte dedicado + SLA",
     ],
@@ -254,8 +256,9 @@ export default function LandingPage() {
               na era digital
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mt-8 max-w-2xl mx-auto leading-relaxed">
-              Agenda, sessões online, prontuário inteligente e assistente de IA — 
-              tudo pensado para psicólogos que querem focar no que realmente importa: seus pacientes.
+              Agenda, prontuário com IA, testes psicológicos, monitoramento de humor, 
+              app do paciente (PWA) e financeiro completo — 
+              tudo pensado para psicólogos e clínicas que querem focar no que realmente importa.
             </p>
             <div className="flex items-center justify-center gap-4 mt-10">
               <Button size="lg" className="gradient-primary border-0 shadow-glow text-base px-8 h-12" asChild>
