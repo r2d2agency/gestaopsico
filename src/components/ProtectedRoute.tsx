@@ -33,9 +33,11 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
     return <Navigate to={fallback} replace />;
   }
 
-  // Check allowed roles list
+  // Check allowed roles list (secretary_financial matches both secretary and financial)
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(user.role) && user.role !== "superadmin") {
+    const userRoles = user.role === "secretary_financial" ? ["secretary_financial", "secretary", "financial"] : [user.role];
+    const hasAccess = userRoles.some(r => allowedRoles.includes(r)) || user.role === "superadmin";
+    if (!hasAccess) {
       const fallback = user.role === "patient" ? "/portal" : "/dashboard";
       return <Navigate to={fallback} replace />;
     }

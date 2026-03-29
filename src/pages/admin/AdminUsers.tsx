@@ -53,6 +53,7 @@ const roleLabels: Record<string, string> = {
   professional: "Profissional",
   secretary: "Secretária",
   financial: "Financeiro",
+  secretary_financial: "Secretária + Financeiro",
   patient: "Paciente",
 };
 
@@ -62,6 +63,7 @@ const roleVariants: Record<string, "default" | "secondary" | "destructive" | "ou
   professional: "secondary",
   secretary: "outline",
   financial: "outline",
+  secretary_financial: "default",
   patient: "secondary",
 };
 
@@ -168,6 +170,7 @@ export default function AdminUsers() {
                       <SelectItem value="admin">Administrador</SelectItem>
                       <SelectItem value="secretary">Secretária</SelectItem>
                       <SelectItem value="financial">Financeiro</SelectItem>
+                      <SelectItem value="secretary_financial">Secretária + Financeiro</SelectItem>
                       <SelectItem value="superadmin">Superadmin</SelectItem>
                     </SelectContent>
                   </Select>
@@ -211,6 +214,7 @@ export default function AdminUsers() {
             <SelectItem value="admin">Administrador</SelectItem>
             <SelectItem value="secretary">Secretária</SelectItem>
             <SelectItem value="financial">Financeiro</SelectItem>
+            <SelectItem value="secretary_financial">Secretária + Financeiro</SelectItem>
             <SelectItem value="superadmin">Superadmin</SelectItem>
           </SelectContent>
         </Select>
