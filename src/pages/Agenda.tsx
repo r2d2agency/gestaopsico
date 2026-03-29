@@ -367,14 +367,27 @@ export default function Agenda() {
   }, [appointments]);
 
   const headerTitle = useMemo(() => {
-    if (viewMode === "day" || viewMode === "pipeline") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "day") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "pipeline") {
+      if (pipelineFilter === "today") return "Hoje — " + format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      if (pipelineFilter === "week") {
+        const s = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const e = endOfWeek(new Date(), { weekStartsOn: 1 });
+        return `${format(s, "dd MMM", { locale: ptBR })} — ${format(e, "dd MMM yyyy", { locale: ptBR })}`;
+      }
+      if (pipelineFilter === "month") return format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+      if (pipelineFilter === "custom" && pipelineCustomStart && pipelineCustomEnd) {
+        return `${format(pipelineCustomStart, "dd/MM/yyyy")} — ${format(pipelineCustomEnd, "dd/MM/yyyy")}`;
+      }
+      return "Pipeline";
+    }
     if (viewMode === "week") {
       const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
       const end = endOfWeek(selectedDate, { weekStartsOn: 1 });
       return `${format(start, "dd MMM", { locale: ptBR })} — ${format(end, "dd MMM yyyy", { locale: ptBR })}`;
     }
     return format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR });
-  }, [selectedDate, viewMode]);
+  }, [selectedDate, viewMode, pipelineFilter, pipelineCustomStart, pipelineCustomEnd]);
 
   const totalCount = appointments.length;
   const scheduledCount = appointments.filter((a: any) => a.status === "scheduled" || a.status === "confirmed").length;
