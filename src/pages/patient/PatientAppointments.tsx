@@ -42,6 +42,7 @@ export default function PatientAppointments() {
   });
 
   const allowBooking = dashboardData?.allowBooking ?? false;
+  const bookingWeekdays = (dashboardData?.bookingWeekdays || "1,2,3,4,5").split(",").map(Number);
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
 
@@ -234,7 +235,7 @@ export default function PatientAppointments() {
                 disabled={(date) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  return date < today || date.getDay() === 0 || date.getDay() === 6;
+                  return date < today || !bookingWeekdays.includes(date.getDay());
                 }}
                 locale={ptBR}
                 className={cn("p-3 pointer-events-auto rounded-xl border")}

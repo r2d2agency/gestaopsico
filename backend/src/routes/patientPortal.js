@@ -250,9 +250,17 @@ router.post('/book', authMiddleware, async (req, res) => {
 
     const patient = await prisma.patient.findUnique({
       where: { id: user.patientId },
-      select: { id: true, professionalId: true, sessionValue: true }
+      select: { id: true, professionalId: true, sessionValue: true, professional: { select: { organizationId: true } } }
     });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    // Load org settings for session duration
+    const orgId = user.organizationId || patient.professional?.organizationId;
+    const orgSettings = orgId ? await prisma.organizationSetting.findUnique({
+      where: { organizationId: orgId },
+      select: { sessionDuration: true }
+    }) : null;
+    const sessionDuration = orgSettings?.sessionDuration ?? 50;
 
     // Check if slot is still available
     const targetDate = new Date(date + 'T00:00:00.000Z');
@@ -273,7 +281,7 @@ router.post('/book', authMiddleware, async (req, res) => {
         type: 'individual',
         date: targetDate,
         time,
-        duration: 50,
+        duration: sessionDuration,
         value: patient.sessionValue || 0,
         status: 'scheduled',
         paymentStatus: 'pending',

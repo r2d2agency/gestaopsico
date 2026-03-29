@@ -221,6 +221,10 @@ export interface PatientDashboard {
   clinicLogo?: string | null;
   primaryColor?: string | null;
   accentColor?: string | null;
+  bookingStartHour?: number;
+  bookingEndHour?: number;
+  sessionDuration?: number;
+  bookingWeekdays?: string;
 }
 
 export interface PatientPortalMessage {
