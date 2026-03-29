@@ -410,6 +410,7 @@ export default function Agenda() {
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
+          professionals={professionals}
         />
       ) : (
         <DayView
