@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
@@ -310,7 +310,9 @@ export default function TestManager() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Teste Psicológico</DialogTitle>
-            <p className="text-sm text-muted-foreground">Defina as perguntas e opções de resposta</p>
+            <DialogDescription>
+              Defina as perguntas e opções de resposta.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
@@ -388,7 +390,9 @@ export default function TestManager() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enviar Teste</DialogTitle>
-            <p className="text-sm text-muted-foreground">Selecione o teste e para quem enviar</p>
+            <DialogDescription>
+              Selecione o teste e escolha o paciente ou casal que vai receber.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
@@ -455,7 +459,9 @@ export default function TestManager() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Importar Teste via JSON</DialogTitle>
-            <p className="text-sm text-muted-foreground">Cole o JSON do teste exportado</p>
+            <DialogDescription>
+              Cole o JSON do teste exportado para importar o conteúdo.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Textarea
