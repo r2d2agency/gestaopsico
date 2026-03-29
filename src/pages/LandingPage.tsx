@@ -257,16 +257,15 @@ export default function LandingPage() {
               <Sparkles className="w-4 h-4" /> Inteligência Artificial para Psicólogos
             </span>
             <h1 className="text-5xl md:text-7xl font-display font-extrabold text-foreground leading-[1.1] max-w-5xl mx-auto tracking-tight">
-              Seu consultório de{" "}
+              Toda sua rotina clínica{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-lavender to-rose">
-                psicologia
-              </span>{" "}
-              na era digital
+                organizada automaticamente
+              </span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mt-8 max-w-2xl mx-auto leading-relaxed">
-              Agenda, prontuário com IA, testes psicológicos, monitoramento de humor, 
-              app do paciente (PWA) e financeiro completo — 
-              tudo pensado para psicólogos e clínicas que querem focar no que realmente importa.
+              Não é só um acesso à inteligência artificial. É um ambiente completo que integra IA ao seu fluxo clínico — 
+              agenda, prontuário, testes, financeiro e app do paciente. 
+              Tudo conectado, sem copiar e colar.
             </p>
             <div className="flex items-center justify-center gap-4 mt-10">
               <Button size="lg" className="gradient-primary border-0 shadow-glow text-base px-8 h-12" asChild>
