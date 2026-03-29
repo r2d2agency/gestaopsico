@@ -40,11 +40,13 @@ export default function Prontuarios() {
     queryFn: () => prontuariosApi.listAll(filterPatientId ? { patientId: filterPatientId } : undefined),
   });
 
-  const { data: patientsData } = useQuery({
+  const { data: patients = [] } = useQuery({
     queryKey: ["pacientes-all"],
-    queryFn: () => pacientesApi.list({ page: 1 }),
+    queryFn: async () => {
+      const res = await pacientesApi.list();
+      return Array.isArray(res) ? res : (res as any).data ?? [];
+    },
   });
-  const patients = patientsData?.data || [];
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["consultas-for-prontuario", form.patientId],
@@ -128,7 +130,7 @@ export default function Prontuarios() {
               <Plus className="w-4 h-4 mr-2" /> Novo Prontuário
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Novo Prontuário</DialogTitle>
             </DialogHeader>
@@ -333,7 +335,7 @@ export default function Prontuarios() {
 
       {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
@@ -370,7 +372,7 @@ export default function Prontuarios() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Editar Prontuário</DialogTitle>
           </DialogHeader>

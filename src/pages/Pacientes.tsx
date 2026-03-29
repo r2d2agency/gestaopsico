@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Filter, MoreHorizontal, Phone, Trash2, Edit,
-  Key, Bell, DollarSign, Copy, Loader2, CheckCircle2, XCircle, MapPin
+  Key, Bell, DollarSign, Copy, Loader2, CheckCircle2, XCircle, MapPin, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { patientPortalApi, orgSettingsApi } from "@/lib/portalApi";
 import { pacientesApi, type Patient } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 // CPF validation (client-side)
 function isValidCPF(cpf: string): boolean {
@@ -82,6 +83,7 @@ const emptyForm = (): Partial<Patient> => ({
 
 export default function Pacientes() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -382,6 +384,9 @@ export default function Pacientes() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openBilling(p)}>
                           <DollarSign className="w-4 h-4 mr-2" />Cobrança e Notificação
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/prontuarios?patientId=${p.id}`)}>
+                          <FileText className="w-4 h-4 mr-2" />Prontuários
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
