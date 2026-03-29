@@ -8,6 +8,8 @@ import {
   PowerOff,
   Users,
   Shield,
+  ShieldCheck,
+  Crown,
   AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,8 +42,10 @@ import {
   useAdminUsers,
   useCreateUser,
   useToggleUserStatus,
+  useChangeUserRole,
   useOrganizations,
 } from "@/hooks/useAdmin";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 const roleLabels: Record<string, string> = {
   superadmin: "Superadmin",
@@ -68,6 +72,7 @@ export default function AdminUsers() {
   const { data: orgsData, error: orgsError } = useOrganizations();
   const createUser = useCreateUser();
   const toggleStatus = useToggleUserStatus();
+  const changeRole = useChangeUserRole();
 
   const [form, setForm] = useState({
     name: "",
@@ -232,6 +237,22 @@ export default function AdminUsers() {
                   <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {user.role !== "superadmin" && (
+                    <DropdownMenuItem className="gap-2" onClick={() => changeRole.mutate({ id: user.id, role: "superadmin" })}>
+                      <Crown className="w-4 h-4" /> Promover a Superadmin
+                    </DropdownMenuItem>
+                  )}
+                  {user.role !== "admin" && (
+                    <DropdownMenuItem className="gap-2" onClick={() => changeRole.mutate({ id: user.id, role: "admin" })}>
+                      <ShieldCheck className="w-4 h-4" /> Tornar Administrador
+                    </DropdownMenuItem>
+                  )}
+                  {user.role !== "professional" && (
+                    <DropdownMenuItem className="gap-2" onClick={() => changeRole.mutate({ id: user.id, role: "professional" })}>
+                      <Shield className="w-4 h-4" /> Tornar Profissional
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   {user.status === "active" ? (
                     <DropdownMenuItem className="gap-2 text-destructive" onClick={() => toggleStatus.mutate({ id: user.id, status: "inactive" })}>
                       <PowerOff className="w-4 h-4" /> Desativar

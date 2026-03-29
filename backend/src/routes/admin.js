@@ -228,6 +228,31 @@ router.patch('/users/:id/status', async (req, res) => {
   }
 });
 
+// PATCH /api/admin/users/:id/role
+router.patch('/users/:id/role', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['professional', 'admin', 'superadmin'].includes(role)) {
+      return res.status(400).json({ error: 'Perfil inválido' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: { id: true, name: true, email: true, role: true, status: true }
+    });
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao alterar perfil', details: err.message });
+  }
+});
+
 // ========== MÉTRICAS GLOBAIS ==========
 
 // GET /api/admin/metrics

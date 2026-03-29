@@ -72,6 +72,8 @@ export const adminApi = {
     apiRequest<AdminUser>("/admin/users", { method: "POST", body: data }),
   toggleUserStatus: (id: string, status: string) =>
     apiRequest<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: { status } }),
+  changeUserRole: (id: string, role: string) =>
+    apiRequest<AdminUser>(`/admin/users/${id}/role`, { method: "PATCH", body: { role } }),
 
   // Métricas
   getMetrics: () => apiRequest<AdminMetrics>("/admin/metrics"),
