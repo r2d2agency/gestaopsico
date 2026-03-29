@@ -23,8 +23,39 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function Configuracoes() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isProfessional = user?.role === "professional" || user?.role === "admin" || user?.role === "superadmin";
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Profile form
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || "",
+    phone: user?.phone || "",
+    crp: user?.crp || "",
+    specialty: user?.specialty || "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || "",
+        phone: (user as any).phone || "",
+        crp: (user as any).crp || "",
+        specialty: (user as any).specialty || "",
+      });
+    }
+  }, [user]);
+
+  const saveProfile = useMutation({
+    mutationFn: () => apiRequest("/auth/profile", { method: "PATCH", body: profileForm }),
+    onSuccess: () => {
+      toast({ title: "Perfil atualizado!" });
+      // Reload page to refresh auth context
+      window.location.reload();
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const [form, setForm] = useState<Partial<OrgSettings>>({
     logo: "", primaryColor: "", secondaryColor: "", accentColor: "",
     businessName: "", businessPhone: "", businessEmail: "", businessAddress: ""
@@ -106,14 +137,73 @@ export default function Configuracoes() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Configurações</h1>
-          <p className="text-sm text-muted-foreground">Personalize sua clínica e marca</p>
+          <p className="text-sm text-muted-foreground">Seu perfil e personalização</p>
         </div>
-        <Button className="gap-2" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-          {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Salvar
-        </Button>
       </div>
 
+      {/* Meu Perfil - visible to ALL users */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-primary" /> Meu Perfil</CardTitle>
+                <CardDescription>Seus dados profissionais</CardDescription>
+              </div>
+              <Button size="sm" className="gap-2" onClick={() => saveProfile.mutate()} disabled={saveProfile.isPending}>
+                {saveProfile.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar Perfil
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Nome Completo</Label>
+                <Input value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} />
+              </div>
+              <div>
+                <Label>E-mail</Label>
+                <Input value={user?.email || ""} disabled className="opacity-60" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="flex items-center gap-1"><Phone className="w-3 h-3" /> Telefone / WhatsApp</Label>
+                <Input value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="(11) 99999-9999" />
+              </div>
+              {isProfessional && (
+                <>
+                  <div>
+                    <Label>CRP</Label>
+                    <Input value={profileForm.crp} onChange={e => setProfileForm({ ...profileForm, crp: e.target.value })} placeholder="CRP 06/123456" />
+                  </div>
+                  <div>
+                    <Label>Especialidade</Label>
+                    <Input value={profileForm.specialty} onChange={e => setProfileForm({ ...profileForm, specialty: e.target.value })} placeholder="TCC, Psicanálise..." />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{roleLabels[user?.role || ""] || user?.role}</Badge>
+              {user?.crp && <Badge variant="secondary">{user.crp}</Badge>}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Org Settings - only for admin+ */}
+      {isAdmin && (
+        <div className="flex items-end justify-end">
+          <Button className="gap-2" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar Configurações da Clínica
+          </Button>
+        </div>
+      )}
+
+      {isAdmin && (
       <div className="grid gap-6 md:grid-cols-2">
         {/* Identidade Visual */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -236,6 +326,7 @@ export default function Configuracoes() {
           </Card>
         </motion.div>
       </div>
+      )}
 
       {/* Team Management */}
       {isAdmin && (

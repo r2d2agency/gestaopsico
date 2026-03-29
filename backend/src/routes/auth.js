@@ -119,12 +119,33 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, name: true, email: true, role: true }
+      select: { id: true, name: true, email: true, role: true, crp: true, phone: true, specialty: true }
     });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar usuário' });
+  }
+});
+
+// PATCH /api/auth/profile - update own profile
+router.patch('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { name, phone, crp, specialty } = req.body;
+    const data = {};
+    if (name?.trim()) data.name = name.trim();
+    if (phone !== undefined) data.phone = phone?.trim() || null;
+    if (crp !== undefined) data.crp = crp?.trim() || null;
+    if (specialty !== undefined) data.specialty = specialty?.trim() || null;
+
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data,
+      select: { id: true, name: true, email: true, role: true, crp: true, phone: true, specialty: true }
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar perfil', details: err.message });
   }
 });
 
