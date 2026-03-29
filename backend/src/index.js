@@ -24,10 +24,13 @@ app.use(express.json());
 // Root
 app.get('/', (req, res) => res.json({ message: 'PsicoGest API online' }));
 
-// Health check
-app.get('/api/health', (req, res) => {
+const healthHandler = (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+};
+
+// Health checks
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // Routes
 app.use('/api/auth', authRoutes);
