@@ -23,6 +23,7 @@ const MOODS_LIST = [
 ];
 
 export default function PatientDashboardPage() {
+  const { basePath } = usePortalSlug();
   const qc = useQueryClient();
   const [quickMood, setQuickMood] = useState<number | null>(null);
 
