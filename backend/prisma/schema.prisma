@@ -77,6 +77,7 @@ model OrganizationSetting {
   patientBookingEndHour   Int @default(18) @map("patient_booking_end_hour")
   sessionDuration    Int      @default(50) @map("session_duration")
   bookingWeekdays    String   @default("1,2,3,4,5") @map("booking_weekdays")
+  timezone           String   @default("America/Sao_Paulo") @db.VarChar(50)
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 

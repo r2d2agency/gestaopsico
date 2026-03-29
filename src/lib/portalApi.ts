@@ -195,6 +195,7 @@ export interface OrgSettings {
   patientBookingEndHour?: number;
   sessionDuration?: number;
   bookingWeekdays?: string;
+  timezone?: string;
 }
 
 export const orgSettingsApi = {

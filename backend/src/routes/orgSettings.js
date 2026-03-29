@@ -98,7 +98,7 @@ router.put('/', async (req, res) => {
       allowPatientBooking, portalSlug,
       scheduleStartHour, scheduleEndHour,
       patientBookingStartHour, patientBookingEndHour,
-      sessionDuration, bookingWeekdays
+      sessionDuration, bookingWeekdays, timezone
     } = req.body;
 
     const data = {};
@@ -117,6 +117,7 @@ router.put('/', async (req, res) => {
     if (patientBookingEndHour !== undefined) data.patientBookingEndHour = Number(patientBookingEndHour);
     if (sessionDuration !== undefined) data.sessionDuration = Number(sessionDuration);
     if (bookingWeekdays !== undefined) data.bookingWeekdays = bookingWeekdays;
+    if (timezone !== undefined) data.timezone = timezone;
 
     // Handle portal slug - save to organization table
     if (portalSlug !== undefined) {
