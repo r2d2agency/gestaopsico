@@ -30,7 +30,7 @@ export default function PatientAppLayout() {
   const primaryColor = (dashboard as any)?.primaryColor;
   const accentColor = (dashboard as any)?.accentColor;
 
-  // Apply clinic colors + favicon + manifest dynamically
+  // Apply clinic colors + favicon + dynamic manifest
   useEffect(() => {
     if (primaryColor) {
       document.documentElement.style.setProperty("--primary", hexToHsl(primaryColor));
@@ -70,12 +70,52 @@ export default function PatientAppLayout() {
       if (metaApple) metaApple.content = clinicName;
     }
 
+    // Dynamic web app manifest with clinic branding
+    const startUrl = basePath || "/portal";
+    const manifest = {
+      name: `${clinicName} - Portal do Paciente`,
+      short_name: clinicName,
+      description: `Portal do paciente de ${clinicName}`,
+      theme_color: primaryColor || "#6366f1",
+      background_color: "#ffffff",
+      display: "standalone",
+      orientation: "portrait",
+      start_url: startUrl,
+      scope: "/",
+      icons: clinicLogo
+        ? [
+            { src: clinicLogo, sizes: "192x192", type: "image/png" },
+            { src: clinicLogo, sizes: "512x512", type: "image/png" },
+            { src: clinicLogo, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          ]
+        : [
+            { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
+            { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          ],
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+    const manifestUrl = URL.createObjectURL(blob);
+
+    // Replace existing manifest link
+    let manifestLink = document.querySelector("link[rel='manifest']") as HTMLLinkElement;
+    if (manifestLink) {
+      manifestLink.href = manifestUrl;
+    } else {
+      manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      manifestLink.href = manifestUrl;
+      document.head.appendChild(manifestLink);
+    }
+
     return () => {
       document.documentElement.style.removeProperty("--primary");
       document.documentElement.style.removeProperty("--accent");
       document.title = "PsicoGest - Sistema para Psicólogos";
+      URL.revokeObjectURL(manifestUrl);
     };
-  }, [primaryColor, accentColor, clinicLogo, clinicName]);
+  }, [primaryColor, accentColor, clinicLogo, clinicName, basePath]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
