@@ -21,7 +21,7 @@ export default function Login() {
   const [name, setName] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [step, setStep] = useState<"form" | "plan">("form");
-  const { login, register } = useAuth();
+  const { login, register, user: authUser } = useAuth();
   const navigate = useNavigate();
 
   const { data: plans = [], isLoading: plansLoading } = useQuery<Plan[]>({
@@ -38,7 +38,6 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
-      let loggedUser;
       if (isRegister) {
         await register({ name, email, password, planId: selectedPlanId || undefined });
         toast({ title: "Conta criada com sucesso!" });
@@ -46,22 +45,7 @@ export default function Login() {
         await login(email, password);
         toast({ title: "Login realizado!" });
       }
-      // Get fresh user from localStorage token to check role
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          if (payload.role === "patient") {
-            navigate("/portal");
-            return;
-          }
-          if (payload.role === "superadmin") {
-            navigate("/admin");
-            return;
-          }
-        } catch {}
-      }
-      navigate("/dashboard");
+      // Role-based redirect handled in useEffect below
     } catch (err: unknown) {
       toast({
         title: "Erro",
