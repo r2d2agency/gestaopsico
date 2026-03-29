@@ -90,8 +90,8 @@ export const pacientesApi = {
 
 // Consultas
 export const consultasApi = {
-  list: (params?: { date?: string; status?: string }) =>
-    apiRequest<Consulta[]>(`/consultas?${new URLSearchParams(params as Record<string, string>)}`),
+  list: (params?: Record<string, string>) =>
+    apiRequest<Consulta[]>(`/consultas?${new URLSearchParams(params || {})}`),
   get: (id: string) => apiRequest<Consulta>(`/consultas/${id}`),
   create: (data: Partial<Consulta>) => apiRequest<Consulta>("/consultas", { method: "POST", body: data }),
   update: (id: string, data: Partial<Consulta>) => apiRequest<Consulta>(`/consultas/${id}`, { method: "PUT", body: data }),
