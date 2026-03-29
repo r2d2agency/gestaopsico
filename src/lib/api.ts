@@ -49,7 +49,7 @@ export const authApi = {
       method: "POST",
       body: { email, password },
     }),
-  register: (data: { name: string; email: string; password: string }) =>
+  register: (data: { name: string; email: string; password: string; planId?: string }) =>
     apiRequest<{ token: string; user: { id: string; name: string; email: string; role: string } }>("/auth/register", { method: "POST", body: data }),
   me: () => apiRequest<{ id: string; name: string; email: string; role: string }>("/auth/me"),
   logout: () => {
