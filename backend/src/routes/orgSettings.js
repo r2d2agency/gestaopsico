@@ -88,7 +88,7 @@ router.put('/', async (req, res) => {
     }
 
     // Only admin or professional can update
-    if (!['admin', 'professional', 'superadmin'].includes(user.role)) {
+    if (!['admin', 'professional', 'superadmin', 'secretary', 'secretary_financial'].includes(user.role)) {
       return res.status(403).json({ error: 'Sem permissão para alterar configurações' });
     }
 
