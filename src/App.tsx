@@ -66,15 +66,15 @@ const App = () => (
               <Route path="/admin/branding" element={<AdminBranding />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
             </Route>
-            {/* Patient Portal */}
+            {/* Patient Portal - nested under slug */}
             <Route element={<ProtectedRoute requiredRole="patient"><PatientAppLayout /></ProtectedRoute>}>
-              <Route path="/portal" element={<PatientHome />} />
-              <Route path="/portal/humor" element={<PatientMood />} />
-              <Route path="/portal/testes" element={<PatientTests />} />
-              <Route path="/portal/consultas" element={<PatientAppointments />} />
-              <Route path="/portal/financeiro" element={<PatientFinancial />} />
-              <Route path="/portal/mensagens" element={<PatientMessages />} />
-              <Route path="/portal/configuracoes" element={<PatientSettings />} />
+              <Route path="/p/:slug/portal" element={<PatientHome />} />
+              <Route path="/p/:slug/portal/humor" element={<PatientMood />} />
+              <Route path="/p/:slug/portal/testes" element={<PatientTests />} />
+              <Route path="/p/:slug/portal/consultas" element={<PatientAppointments />} />
+              <Route path="/p/:slug/portal/financeiro" element={<PatientFinancial />} />
+              <Route path="/p/:slug/portal/mensagens" element={<PatientMessages />} />
+              <Route path="/p/:slug/portal/configuracoes" element={<PatientSettings />} />
             </Route>
             {/* App normal (professional) */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

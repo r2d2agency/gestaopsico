@@ -6,13 +6,19 @@ import { patientPortalApi } from "@/lib/portalApi";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { hexToHsl } from "@/lib/utils";
+import { usePortalSlug } from "@/hooks/usePortalSlug";
 
-const tabs = [
-  { to: "/portal", icon: Home, label: "Início" },
-  { to: "/portal/consultas", icon: Calendar, label: "Agenda" },
-  { to: "/portal/mensagens", icon: MessageSquare, label: "Mensagens" },
-  { to: "/portal/configuracoes", icon: Settings, label: "Config" },
-];
+export default function PatientAppLayout() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const { basePath } = usePortalSlug();
+
+  const tabs = [
+    { to: basePath, icon: Home, label: "Início" },
+    { to: `${basePath}/consultas`, icon: Calendar, label: "Agenda" },
+    { to: `${basePath}/mensagens`, icon: MessageSquare, label: "Mensagens" },
+    { to: `${basePath}/configuracoes`, icon: Settings, label: "Config" },
+  ];
 
 export default function PatientAppLayout() {
   const { user } = useAuth();
@@ -118,7 +124,7 @@ export default function PatientAppLayout() {
         <div className="flex items-center justify-around h-16 max-w-md mx-auto">
           {tabs.map(tab => {
             const isActive = location.pathname === tab.to || 
-              (tab.to !== "/portal" && location.pathname.startsWith(tab.to));
+              (tab.to !== basePath && location.pathname.startsWith(tab.to));
             return (
               <NavLink
                 key={tab.to}

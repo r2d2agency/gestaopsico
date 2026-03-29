@@ -7,6 +7,7 @@ import {
   Sparkles, Download, X
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { usePortalSlug } from "@/hooks/usePortalSlug";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
