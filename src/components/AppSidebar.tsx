@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -12,6 +12,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -25,13 +26,15 @@ const navItems = [
   { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
 ];
 
-const bottomItems = [
-  { icon: Settings, label: "Configurações", path: "/configuracoes" },
-  { icon: LogOut, label: "Sair", path: "/" },
-];
-
 export default function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col">
@@ -66,16 +69,20 @@ export default function AppSidebar() {
       </nav>
 
       <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
-        {bottomItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200"
-          >
-            <item.icon className="w-5 h-5 shrink-0" />
-            {item.label}
-          </Link>
-        ))}
+        <Link
+          to="/configuracoes"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200"
+        >
+          <Settings className="w-5 h-5 shrink-0" />
+          Configurações
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200 w-full"
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          Sair
+        </button>
       </div>
     </aside>
   );
