@@ -101,6 +101,7 @@ export const casaisApi = {
   get: (id: string) => apiRequest<Casal>(`/casais/${id}`),
   create: (data: { patient1_id: string; patient2_id: string; name: string }) =>
     apiRequest<Casal>("/casais", { method: "POST", body: data }),
+  records: (id: string) => apiRequest<any[]>(`/casais/${id}/prontuarios`),
 };
 
 // Prontuários

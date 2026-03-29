@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Heart } from "lucide-react";
 import {
   ClipboardList, Plus, Send, Trash2, Loader2, FileText,
   Download, Upload, BookOpen, Eye, BarChart3
@@ -22,6 +23,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { testsApi, type TestTemplate, type TestQuestion, type PresetTest } from "@/lib/portalApi";
 import { usePatients } from "@/hooks/usePatients";
+import { casaisApi, type Casal } from "@/lib/api";
 
 export default function TestManager() {
   const qc = useQueryClient();
@@ -32,6 +34,8 @@ export default function TestManager() {
   const [resultsOpen, setResultsOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [selectedPatient, setSelectedPatient] = useState("");
+  const [selectedCouple, setSelectedCouple] = useState("");
+  const [assignMode, setAssignMode] = useState<"patient" | "couple">("patient");
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [jsonInput, setJsonInput] = useState("");
   const [title, setTitle] = useState("");
@@ -52,6 +56,10 @@ export default function TestManager() {
   });
 
   const { data: patients = [] } = usePatients();
+  const { data: couples = [] } = useQuery<Casal[]>({
+    queryKey: ["couples"],
+    queryFn: () => casaisApi.list(),
+  });
 
   const { data: results } = useQuery({
     queryKey: ["test-results", selectedAssignment],
@@ -99,10 +107,16 @@ export default function TestManager() {
   });
 
   const assignMutation = useMutation({
-    mutationFn: () => testsApi.assignTest(selectedTemplate, selectedPatient),
-    onSuccess: () => {
+    mutationFn: () => {
+      if (assignMode === "couple") {
+        return testsApi.assignTest(selectedTemplate, undefined, selectedCouple);
+      }
+      return testsApi.assignTest(selectedTemplate, selectedPatient);
+    },
+    onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ["test-templates"] });
-      toast({ title: "Teste enviado ao paciente!" });
+      const msg = data?.message || "Teste enviado!";
+      toast({ title: msg });
       setAssignOpen(false);
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -373,8 +387,8 @@ export default function TestManager() {
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enviar Teste para Paciente</DialogTitle>
-            <p className="text-sm text-muted-foreground">Selecione o teste e o paciente</p>
+            <DialogTitle>Enviar Teste</DialogTitle>
+            <p className="text-sm text-muted-foreground">Selecione o teste e para quem enviar</p>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
@@ -389,20 +403,46 @@ export default function TestManager() {
               </Select>
             </div>
             <div>
-              <Label>Paciente</Label>
-              <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+              <Label>Enviar para</Label>
+              <Select value={assignMode} onValueChange={(v: "patient" | "couple") => { setAssignMode(v); setSelectedPatient(""); setSelectedCouple(""); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {patientList.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
+                  <SelectItem value="patient">Paciente Individual</SelectItem>
+                  <SelectItem value="couple">Casal (envia para ambos)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {assignMode === "patient" ? (
+              <div>
+                <Label>Paciente</Label>
+                <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                  <SelectContent>
+                    {patientList.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div>
+                <Label>Casal</Label>
+                <Select value={selectedCouple} onValueChange={setSelectedCouple}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o casal" /></SelectTrigger>
+                  <SelectContent>
+                    {(Array.isArray(couples) ? couples : []).map((c: Casal) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-primary" />{c.name || `${c.patient1?.name} & ${c.patient2?.name}`}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancelar</Button>
-            <Button onClick={() => assignMutation.mutate()} disabled={assignMutation.isPending || !selectedTemplate || !selectedPatient}>
+            <Button onClick={() => assignMutation.mutate()} disabled={assignMutation.isPending || !selectedTemplate || (assignMode === "patient" ? !selectedPatient : !selectedCouple)}>
               {assignMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               Enviar
             </Button>

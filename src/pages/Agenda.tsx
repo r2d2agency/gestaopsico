@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, UserCheck } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, UserCheck, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppointments } from "@/hooks/useAppointments";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { consultasApi, type Consulta } from "@/lib/api";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { consultasApi, casaisApi, type Consulta, type Casal } from "@/lib/api";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
@@ -51,6 +51,10 @@ export default function Agenda() {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const { data: appointments = [], isLoading } = useAppointments({ date: dateStr });
   const { data: patients = [] } = usePatients();
+  const { data: couples = [] } = useQuery<Casal[]>({
+    queryKey: ["couples"],
+    queryFn: () => casaisApi.list(),
+  });
   const qc = useQueryClient();
 
   const createMutation = useMutation({
@@ -83,9 +87,16 @@ export default function Agenda() {
     setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = () => {
-    if (!form.patient_id || !form.date || !form.time) {
-      toast({ title: "Preencha paciente, data e horário", variant: "destructive" });
-      return;
+    if (form.type === "couple") {
+      if (!form.couple_id || !form.date || !form.time) {
+        toast({ title: "Preencha casal, data e horário", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (!form.patient_id || !form.date || !form.time) {
+        toast({ title: "Preencha paciente, data e horário", variant: "destructive" });
+        return;
+      }
     }
     createMutation.mutate(form);
   };
@@ -116,16 +127,46 @@ export default function Agenda() {
             <p className="text-sm text-muted-foreground">Agende uma nova consulta para um paciente</p>
           </DialogHeader>
           <div className="space-y-4 mt-2">
-            <div>
-              <Label>Paciente *</Label>
-              <Select value={form.patient_id || ""} onValueChange={v => set("patient_id", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
-                <SelectContent>
-                  {(Array.isArray(patients) ? patients : (patients as any)?.data || []).map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Tipo</Label>
+                <Select value={form.type || "individual"} onValueChange={v => { set("type", v); if (v === "couple") set("patient_id", ""); else set("couple_id" as any, ""); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="couple">Casal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                {form.type === "couple" ? (
+                  <>
+                    <Label>Casal *</Label>
+                    <Select value={(form as any).couple_id || ""} onValueChange={v => set("couple_id" as any, v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o casal" /></SelectTrigger>
+                      <SelectContent>
+                        {(Array.isArray(couples) ? couples : []).map((c: Casal) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-primary" />{c.name || `${c.patient1?.name} & ${c.patient2?.name}`}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                ) : (
+                  <>
+                    <Label>Paciente *</Label>
+                    <Select value={form.patient_id || ""} onValueChange={v => set("patient_id", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                      <SelectContent>
+                        {(Array.isArray(patients) ? patients : (patients as any)?.data || []).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -157,27 +198,15 @@ export default function Agenda() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Tipo</Label>
-                <Select value={form.type || "individual"} onValueChange={v => set("type", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="individual">Individual</SelectItem>
-                    <SelectItem value="couple">Casal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Status Pagamento</Label>
-                <Select value={form.payment_status || "pending"} onValueChange={v => set("payment_status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="paid">Pago</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Status Pagamento</Label>
+              <Select value={form.payment_status || "pending"} onValueChange={v => set("payment_status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="paid">Pago</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Observações</Label>

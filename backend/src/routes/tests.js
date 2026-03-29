@@ -398,15 +398,38 @@ router.delete('/templates/:id', async (req, res) => {
 // POST /api/tests/assign
 router.post('/assign', async (req, res) => {
   try {
-    const { templateId, patientId } = req.body;
-    if (!templateId || !patientId) {
-      return res.status(400).json({ error: 'templateId e patientId são obrigatórios' });
-    }
+    const { templateId, patientId, coupleId } = req.body;
+    if (!templateId) return res.status(400).json({ error: 'templateId é obrigatório' });
 
     const template = await prisma.testTemplate.findFirst({
       where: { id: templateId, professionalId: req.userId }
     });
     if (!template) return res.status(404).json({ error: 'Teste não encontrado' });
+
+    // If coupleId is provided, assign to both patients in the couple individually
+    if (coupleId) {
+      const couple = await prisma.couple.findFirst({
+        where: { id: coupleId, professionalId: req.userId },
+        include: { patient1: { select: { id: true, name: true } }, patient2: { select: { id: true, name: true } } }
+      });
+      if (!couple) return res.status(404).json({ error: 'Casal não encontrado' });
+
+      const [a1, a2] = await Promise.all([
+        prisma.testAssignment.create({
+          data: { templateId, patientId: couple.patient1Id },
+          include: { template: { select: { title: true } }, patient: { select: { name: true } } }
+        }),
+        prisma.testAssignment.create({
+          data: { templateId, patientId: couple.patient2Id },
+          include: { template: { select: { title: true } }, patient: { select: { name: true } } }
+        })
+      ]);
+
+      return res.status(201).json({ assignments: [a1, a2], message: `Teste enviado para ${couple.patient1.name} e ${couple.patient2.name}` });
+    }
+
+    // Single patient assignment
+    if (!patientId) return res.status(400).json({ error: 'patientId ou coupleId é obrigatório' });
 
     const patient = await prisma.patient.findFirst({
       where: { id: patientId, professionalId: req.userId }
