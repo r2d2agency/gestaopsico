@@ -172,6 +172,7 @@ export default function Agenda() {
     return map;
   }, [professionals, appointments]);
 
+  const { data: couples = [] } = useQuery<Casal[]>({
     queryKey: ["couples"],
     queryFn: () => casaisApi.list(),
   });
