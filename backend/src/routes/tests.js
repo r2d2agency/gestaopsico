@@ -395,6 +395,26 @@ router.delete('/templates/:id', async (req, res) => {
   }
 });
 
+// GET /api/tests/assignments (professional: list all assignments for their templates)
+router.get('/assignments', async (req, res) => {
+  try {
+    const assignments = await prisma.testAssignment.findMany({
+      where: {
+        template: { professionalId: req.userId }
+      },
+      include: {
+        template: { select: { title: true, description: true, category: true } },
+        patient: { select: { id: true, name: true } },
+        _count: { select: { responses: true } }
+      },
+      orderBy: { assignedAt: 'desc' }
+    });
+    res.json(assignments);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar atribuições', details: err.message });
+  }
+});
+
 // POST /api/tests/assign
 router.post('/assign', async (req, res) => {
   try {
@@ -527,7 +547,62 @@ router.get('/assignments/:id/results', async (req, res) => {
   }
 });
 
+// PATCH /api/tests/assignments/:id/clinical-note
+router.patch('/assignments/:id/clinical-note', async (req, res) => {
+  try {
+    const assignment = await prisma.testAssignment.findUnique({
+      where: { id: req.params.id },
+      include: { template: { select: { professionalId: true } } }
+    });
+    if (!assignment) return res.status(404).json({ error: 'Atribuição não encontrada' });
+    if (assignment.template.professionalId !== req.userId) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const { professionalAssessment, professionalConclusion, aiInterpretation } = req.body;
+    const data = {};
+    if (professionalAssessment !== undefined) data.professionalAssessment = professionalAssessment;
+    if (professionalConclusion !== undefined) data.professionalConclusion = professionalConclusion;
+    if (aiInterpretation !== undefined) data.aiInterpretation = aiInterpretation;
+
+    const updated = await prisma.testAssignment.update({
+      where: { id: req.params.id },
+      data,
+      include: {
+        template: { select: { title: true } },
+        patient: { select: { id: true, name: true } }
+      }
+    });
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar nota clínica', details: err.message });
+  }
+});
+
+// Also save score/classification when results are calculated
+router.patch('/assignments/:id/save-score', async (req, res) => {
+  try {
+    const { score, classification } = req.body;
+    const assignment = await prisma.testAssignment.findUnique({
+      where: { id: req.params.id },
+      include: { template: { select: { professionalId: true } } }
+    });
+    if (!assignment || assignment.template.professionalId !== req.userId) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const updated = await prisma.testAssignment.update({
+      where: { id: req.params.id },
+      data: { score, classification }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar pontuação' });
+  }
+});
+
 // ======== PATIENT ENDPOINTS ========
+
 
 router.get('/my', async (req, res) => {
   try {

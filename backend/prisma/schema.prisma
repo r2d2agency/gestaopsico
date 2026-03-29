@@ -295,6 +295,7 @@ model Record {
   date                 DateTime     @db.Date
   createdAt            DateTime     @default(now()) @map("created_at")
   updatedAt            DateTime?    @default(now()) @map("updated_at")
+  testAssignments      TestAssignment[]
 
   @@map("records")
 }
@@ -398,15 +399,22 @@ model TestQuestion {
 }
 
 model TestAssignment {
-  id          String         @id @default(uuid()) @db.Uuid
-  templateId  String         @map("template_id") @db.Uuid
-  template    TestTemplate   @relation(fields: [templateId], references: [id])
-  patientId   String         @map("patient_id") @db.Uuid
-  patient     Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  status      String         @default("pending") @db.VarChar(20)
-  responses   TestResponse[]
-  assignedAt  DateTime       @default(now()) @map("assigned_at")
-  completedAt DateTime?      @map("completed_at")
+  id                       String         @id @default(uuid()) @db.Uuid
+  templateId               String         @map("template_id") @db.Uuid
+  template                 TestTemplate   @relation(fields: [templateId], references: [id])
+  patientId                String         @map("patient_id") @db.Uuid
+  patient                  Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  status                   String         @default("pending") @db.VarChar(20)
+  responses                TestResponse[]
+  assignedAt               DateTime       @default(now()) @map("assigned_at")
+  completedAt              DateTime?      @map("completed_at")
+  score                    Float?
+  classification           String?        @db.VarChar(100)
+  professionalAssessment   String?        @map("professional_assessment")
+  professionalConclusion   String?        @map("professional_conclusion")
+  aiInterpretation         String?        @map("ai_interpretation")
+  clinicalRecordId         String?        @map("clinical_record_id") @db.Uuid
+  clinicalRecord           Record?        @relation(fields: [clinicalRecordId], references: [id], onDelete: SetNull)
 
   @@map("test_assignments")
 }
