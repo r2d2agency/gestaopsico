@@ -36,7 +36,6 @@ import { orgSettingsApi } from "@/lib/portalApi";
 
 type ViewMode = "day" | "week" | "month";
 
-
 const statusColors: Record<string, string> = {
   scheduled: "bg-green-500",
   confirmed: "bg-green-500",
@@ -70,10 +69,8 @@ const emptyConsulta: Partial<Consulta> = {
   payment_status: "pending", mode: "in_person", notes: "",
 };
 
-// Full day hours (6am to 22pm) - scrollable
 const ALL_HOURS = Array.from({ length: 17 }, (_, i) => i + 6);
 
-// Distinct colors for professionals
 const PROFESSIONAL_COLORS = [
   { bg: "bg-blue-500/10", border: "border-l-blue-500", text: "text-blue-700", dot: "bg-blue-500" },
   { bg: "bg-emerald-500/10", border: "border-l-emerald-500", text: "text-emerald-700", dot: "bg-emerald-500" },
@@ -118,7 +115,6 @@ export default function Agenda() {
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-  // Compute date range based on view
   const dateRange = useMemo(() => {
     if (viewMode === "day") {
       return { startDate: dateStr, endDate: dateStr };
@@ -151,14 +147,12 @@ export default function Agenda() {
     return Array.from({ length: businessEndHour - businessStartHour + 1 }, (_, i) => i + businessStartHour);
   }, [businessStartHour, businessEndHour]);
 
-
   const queryParams: Record<string, string> = { ...dateRange };
   if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
     queryParams.professional_id = selectedProfessional;
   }
   const { data: appointments = [], isLoading } = useAppointments(queryParams);
 
-  // Build a stable map of professional ID -> color index
   const professionalColorMap = useMemo(() => {
     const map = new Map<string, number>();
     if (Array.isArray(professionals)) {
@@ -216,7 +210,30 @@ export default function Agenda() {
   const set = (field: string, value: string | number) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
+  const openScheduleDialog = (date: Date, time?: string) => {
+    const defaultTime = time || `${String(businessStartHour).padStart(2, "0")}:00`;
+    setSelectedDate(date);
+    setForm({
+      ...emptyConsulta,
+      date: format(date, "yyyy-MM-dd"),
+      time: defaultTime,
+      duration: 50,
+      value: 0,
+      mode: "in_person",
+      type: "individual",
+    });
+    if (selectedProfessional === "all") {
+      setSelectedProfessional("");
+    }
+    setDialogOpen(true);
+  };
+
   const handleSubmit = () => {
+    if (canCreateForOthers && (!selectedProfessional || selectedProfessional === "all")) {
+      toast({ title: "Selecione o profissional", variant: "destructive" });
+      return;
+    }
+
     if (form.type === "couple") {
       if (!(form as any).couple_id || !form.date || !form.time) {
         toast({ title: "Preencha casal, data e horário", variant: "destructive" });
@@ -228,8 +245,9 @@ export default function Agenda() {
         return;
       }
     }
+
     const payload = { ...form };
-    if (canCreateForOthers && selectedProfessional) {
+    if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
       (payload as any).professional_id = selectedProfessional;
     }
     createMutation.mutate(payload);
@@ -252,7 +270,7 @@ export default function Agenda() {
     const catLabel = blockCategories.find(c => c.value === blockCategory)?.label || blockCategory;
     const note = blockReason ? `[${catLabel}] ${blockReason}` : catLabel;
     const baseData: any = { time: blockTime, duration: blockDuration, notes: note };
-    if (canCreateForOthers && selectedProfessional) baseData.professional_id = selectedProfessional;
+    if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") baseData.professional_id = selectedProfessional;
 
     if (blockMode === "single") {
       blockMutation.mutate({ ...baseData, date: dateStr });
@@ -285,7 +303,6 @@ export default function Agenda() {
     setBlockEndDate(undefined);
   };
 
-  // Group appointments by date string
   const aptsByDate = useMemo(() => {
     const map: Record<string, any[]> = {};
     appointments.forEach((apt: any) => {
@@ -308,7 +325,6 @@ export default function Agenda() {
     return format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR });
   }, [selectedDate, viewMode]);
 
-  // Stats
   const totalCount = appointments.length;
   const scheduledCount = appointments.filter((a: any) => a.status === "scheduled" || a.status === "confirmed").length;
   const pendingCount = appointments.filter((a: any) => a.status === "pending").length;
@@ -316,7 +332,6 @@ export default function Agenda() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Agenda</h1>
@@ -326,13 +341,12 @@ export default function Agenda() {
           <Button variant="outline" onClick={() => setBlockOpen(true)} size="sm">
             <Ban className="w-4 h-4 mr-2" />Bloquear
           </Button>
-          <Button onClick={() => { setForm({ ...emptyConsulta, date: dateStr }); setDialogOpen(true); }} size="sm">
+          <Button onClick={() => openScheduleDialog(selectedDate)} size="sm">
             <Plus className="w-4 h-4 mr-2" />Nova Consulta
           </Button>
         </div>
       </div>
 
-      {/* View switcher + nav */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => navigate(-1)}><ChevronLeft className="w-4 h-4" /></Button>
@@ -358,7 +372,6 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Professional Filter */}
       {canCreateForOthers && (
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
           <Filter className="w-4 h-4 text-muted-foreground" />
@@ -375,7 +388,6 @@ export default function Agenda() {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
           { label: "Total", value: totalCount, color: "text-foreground" },
@@ -390,7 +402,6 @@ export default function Agenda() {
         ))}
       </div>
 
-      {/* Calendar views */}
       {isLoading ? (
         <div className="space-y-3">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
       ) : viewMode === "month" ? (
@@ -407,6 +418,7 @@ export default function Agenda() {
           aptsByDate={aptsByDate}
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
+          onCreateAtSlot={openScheduleDialog}
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
@@ -414,15 +426,16 @@ export default function Agenda() {
         />
       ) : (
         <DayView
+          selectedDate={selectedDate}
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
+          onCreateAtSlot={(time) => openScheduleDialog(selectedDate, time)}
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
         />
       )}
 
-      {/* Nova Consulta Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -526,7 +539,6 @@ export default function Agenda() {
         </DialogContent>
       </Dialog>
 
-      {/* Block Dialog */}
       <Dialog open={blockOpen} onOpenChange={(open) => { if (!open) resetBlock(); else setBlockOpen(true); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -660,7 +672,6 @@ export default function Agenda() {
   );
 }
 
-// ========== MONTH VIEW ==========
 function MonthView({ selectedDate, aptsByDate, onSelectDate, professionalColorMap, showProfessionalColors }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
@@ -733,12 +744,12 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate, professionalColorMa
   );
 }
 
-// ========== WEEK VIEW ==========
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAtSlot, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
+  onCreateAtSlot: (date: Date, time: string) => void;
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
@@ -747,22 +758,20 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
   const scrollRef = useRef<HTMLDivElement>(null);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const displayDays = weekDays.filter((_, i) => i < 6); // Mon-Sat
+  const displayDays = weekDays.filter((_, i) => i < 6);
 
-  // Auto-scroll to first business hour
   useEffect(() => {
     if (scrollRef.current && businessHours.length > 0) {
       const firstBizHour = businessHours[0];
       const rowIndex = ALL_HOURS.indexOf(firstBizHour);
       if (rowIndex > 0) {
-        scrollRef.current.scrollTop = rowIndex * 48; // 48px per row
+        scrollRef.current.scrollTop = rowIndex * 48;
       }
     }
   }, [businessHours]);
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
-      {/* Professional color legend */}
       {showProfessionalColors && professionalColorMap.size > 1 && (
         <div className="flex items-center gap-3 px-3 py-2 border-b border-border bg-muted/30 flex-wrap">
           <span className="text-[10px] font-medium text-muted-foreground">Profissionais:</span>
@@ -779,7 +788,6 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
           })}
         </div>
       )}
-      {/* Day headers */}
       <div className="grid border-b border-border" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
         <div className="p-2 border-r border-border" />
         {displayDays.map((day, i) => {
@@ -804,17 +812,17 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
           );
         })}
       </div>
-      {/* Time grid - ALL hours, scrollable */}
       <div ref={scrollRef} className="max-h-[600px] overflow-y-auto">
         {ALL_HOURS.map(hour => {
           const isBusinessHour = businessHours.includes(hour);
+          const slotTime = `${String(hour).padStart(2, "0")}:00`;
           return (
             <div key={hour} className={cn(
               "grid border-b border-border last:border-b-0",
               !isBusinessHour && "opacity-40 bg-muted/20"
             )} style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
               <div className="p-1.5 text-[11px] text-muted-foreground text-right pr-3 border-r border-border font-mono">
-                {String(hour).padStart(2, "0")}:00
+                {slotTime}
               </div>
               {displayDays.map((day, di) => {
                 const key = format(day, "yyyy-MM-dd");
@@ -824,7 +832,19 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
                   return h === hour;
                 });
                 return (
-                  <div key={di} className={cn("min-h-[48px] p-0.5 border-r border-border last:border-r-0 relative", isToday(day) && "bg-primary/[0.02]")}>
+                  <div
+                    key={di}
+                    onClick={() => onCreateAtSlot(day, slotTime)}
+                    className={cn(
+                      "min-h-[48px] p-0.5 border-r border-border last:border-r-0 relative cursor-pointer transition-colors hover:bg-accent/40",
+                      isToday(day) && "bg-primary/[0.02]"
+                    )}
+                  >
+                    {hourApts.length === 0 && (
+                      <div className="flex h-full min-h-[44px] items-center px-2 text-[10px] text-muted-foreground/80 opacity-0 transition-opacity hover:opacity-100">
+                        Clique para agendar
+                      </div>
+                    )}
                     {hourApts.map((apt: any, j: number) => {
                       const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
                       const proColor = showProfessionalColors && apt.professionalId
@@ -833,6 +853,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
                       return (
                         <div
                           key={j}
+                          onClick={(e) => e.stopPropagation()}
                           className={cn(
                             "text-[10px] px-1.5 py-1 rounded border-l-2 mb-0.5 truncate cursor-pointer hover:opacity-80",
                             proColor
@@ -857,32 +878,36 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
   );
 }
 
-// ========== DAY VIEW ==========
-function DayView({ appointments, onAttend, businessHours, professionalColorMap, showProfessionalColors }: {
+function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, businessHours, professionalColorMap, showProfessionalColors }: {
+  selectedDate: Date;
   appointments: any[];
   onAttend: (id: string) => void;
+  onCreateAtSlot: (time: string) => void;
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to first business hour
   useEffect(() => {
     if (scrollRef.current && businessHours.length > 0) {
       const firstBizHour = businessHours[0];
       const rowIndex = ALL_HOURS.indexOf(firstBizHour);
       if (rowIndex > 0) {
-        scrollRef.current.scrollTop = rowIndex * 56; // ~56px per row
+        scrollRef.current.scrollTop = rowIndex * 56;
       }
     }
   }, [businessHours]);
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="border-b border-border px-4 py-3 text-sm text-muted-foreground">
+        {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+      </div>
       <div ref={scrollRef} className="max-h-[600px] overflow-y-auto">
         {ALL_HOURS.map(hour => {
           const isBusinessHour = businessHours.includes(hour);
+          const slotTime = `${String(hour).padStart(2, "0")}:00`;
           const hourApts = appointments.filter((a: any) => {
             if (!a.time) return false;
             return parseInt(a.time.split(":")[0], 10) === hour;
@@ -893,9 +918,17 @@ function DayView({ appointments, onAttend, businessHours, professionalColorMap, 
               !isBusinessHour && "opacity-40 bg-muted/20"
             )}>
               <div className="w-16 shrink-0 p-2 text-right pr-3 border-r border-border text-xs text-muted-foreground font-mono">
-                {String(hour).padStart(2, "0")}:00
+                {slotTime}
               </div>
-              <div className="flex-1 min-h-[56px] p-1.5 space-y-1">
+              <div
+                className="flex-1 min-h-[56px] p-1.5 space-y-1 cursor-pointer transition-colors hover:bg-accent/30"
+                onClick={() => onCreateAtSlot(slotTime)}
+              >
+                {hourApts.length === 0 && (
+                  <div className="flex min-h-[44px] items-center px-2 text-xs text-muted-foreground">
+                    Clique no horário vazio para agendar
+                  </div>
+                )}
                 {hourApts.map((apt: any, i: number) => {
                   const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
                   const patientName = apt.patient?.name || (apt.type === "blocked" ? apt.notes || "Bloqueado" : "Paciente");
@@ -908,6 +941,7 @@ function DayView({ appointments, onAttend, businessHours, professionalColorMap, 
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.03 }}
+                      onClick={(e) => e.stopPropagation()}
                       className={cn(
                         "flex items-center justify-between p-2.5 rounded-lg border-l-3 transition-shadow hover:shadow-md",
                         proColor
@@ -957,7 +991,7 @@ function DayView({ appointments, onAttend, businessHours, professionalColorMap, 
                           {statusLabels[aptStatus] || aptStatus}
                         </Badge>
                         {apt.type !== "blocked" && aptStatus !== "cancelled" && !apt.attended && (
-                          <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={() => onAttend(apt.id)}>
+                          <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={(e) => { e.stopPropagation(); onAttend(apt.id); }}>
                             <UserCheck className="w-3 h-3" />Compareceu
                           </Button>
                         )}
