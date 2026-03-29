@@ -140,8 +140,8 @@ export const testsApi = {
     apiRequest<TestTemplate>(`/tests/templates/${id}`, { method: "PUT", body: data }),
   deleteTemplate: (id: string) =>
     apiRequest(`/tests/templates/${id}`, { method: "DELETE" }),
-  assignTest: (templateId: string, patientId: string) =>
-    apiRequest("/tests/assign", { method: "POST", body: { templateId, patientId } }),
+  assignTest: (templateId: string, patientId?: string, coupleId?: string) =>
+    apiRequest("/tests/assign", { method: "POST", body: { templateId, patientId, coupleId } }),
   getResults: (assignmentId: string) =>
     apiRequest<TestAssignment>(`/tests/assignments/${assignmentId}/results`),
   // Presets
