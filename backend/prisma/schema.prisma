@@ -11,9 +11,9 @@ model Organization {
   id            String         @id @default(uuid()) @db.Uuid
   name          String         @db.VarChar(255)
   slug          String         @unique @db.VarChar(100)
-  type          String         @default("clinic") @db.VarChar(20) // clinic | individual
-  plan          String         @default("basic") @db.VarChar(50) // basic | professional | enterprise
-  status        String         @default("active") @db.VarChar(20) // active | inactive | suspended
+  type          String         @default("clinic") @db.VarChar(20)
+  plan          String         @default("basic") @db.VarChar(50)
+  status        String         @default("active") @db.VarChar(20)
   maxUsers      Int            @default(1) @map("max_users")
   phone         String?        @db.VarChar(20)
   email         String?        @db.VarChar(255)
@@ -26,6 +26,7 @@ model Organization {
   updatedAt     DateTime       @updatedAt @map("updated_at")
   users         User[]
   subscriptions Subscription[]
+  providerKeys  AiProviderKey[]
 
   @@map("organizations")
 }
@@ -51,13 +52,17 @@ model User {
   name           String        @db.VarChar(255)
   email          String        @unique @db.VarChar(255)
   passwordHash   String        @map("password_hash") @db.VarChar(255)
-  role           String        @default("professional") @db.VarChar(50) // superadmin | admin | professional
-  status         String        @default("active") @db.VarChar(20) // active | inactive
+  role           String        @default("professional") @db.VarChar(50)
+  status         String        @default("active") @db.VarChar(20)
   createdAt      DateTime      @default(now()) @map("created_at")
   patients       Patient[]
   couples        Couple[]
   appointments   Appointment[]
   records        Record[]
+  createdAgents  AiAgent[]     @relation("agentCreator")
+  customizations AiAgentCustomization[] @relation("agentCustomizations")
+  providerKeys   AiProviderKey[]        @relation("providerKeys")
+  aiChats        AiChat[]               @relation("aiChats")
 
   @@map("users")
 }
@@ -173,4 +178,77 @@ model Payment {
   createdAt     DateTime     @default(now()) @map("created_at")
 
   @@map("payments")
+}
+
+model AiAgent {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(255)
+  description    String?
+  systemPrompt   String   @map("system_prompt")
+  capabilities   String[] @default([])
+  category       String   @default("general") @db.VarChar(50)
+  defaultModel   String   @default("gemini") @map("default_model") @db.VarChar(50)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdBy      String   @map("created_by") @db.Uuid
+  creator        User     @relation("agentCreator", fields: [createdBy], references: [id])
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  customizations AiAgentCustomization[]
+  chats          AiChat[]
+
+  @@map("ai_agents")
+}
+
+model AiAgentCustomization {
+  id              String   @id @default(uuid()) @db.Uuid
+  agentId         String   @map("agent_id") @db.Uuid
+  agent           AiAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  userId          String   @map("user_id") @db.Uuid
+  user            User     @relation("agentCustomizations", fields: [userId], references: [id])
+  additionalPrompt String? @map("additional_prompt")
+  preferredModel  String?  @map("preferred_model") @db.VarChar(50)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([agentId, userId])
+  @@map("ai_agent_customizations")
+}
+
+model AiProviderKey {
+  id             String        @id @default(uuid()) @db.Uuid
+  provider       String        @db.VarChar(50) // openai | gemini | claude
+  apiKey         String        @map("api_key")
+  isGlobal       Boolean       @default(false) @map("is_global")
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  userId         String?       @map("user_id") @db.Uuid
+  user           User?         @relation("providerKeys", fields: [userId], references: [id])
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  @@map("ai_provider_keys")
+}
+
+model AiChat {
+  id        String          @id @default(uuid()) @db.Uuid
+  agentId   String          @map("agent_id") @db.Uuid
+  agent     AiAgent         @relation(fields: [agentId], references: [id])
+  userId    String          @map("user_id") @db.Uuid
+  user      User            @relation("aiChats", fields: [userId], references: [id])
+  title     String?         @db.VarChar(255)
+  createdAt DateTime        @default(now()) @map("created_at")
+  messages  AiChatMessage[]
+
+  @@map("ai_chats")
+}
+
+model AiChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  chatId    String   @map("chat_id") @db.Uuid
+  chat      AiChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String   @db.VarChar(20) // user | assistant
+  content   String
+  model     String?  @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("ai_chat_messages")
 }
