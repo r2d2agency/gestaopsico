@@ -98,7 +98,33 @@ function isValidCPF(cpf) {
 router.get('/', async (req, res) => {
   try {
     const { search, status } = req.query;
-    const where = { professionalId: req.userId };
+
+    // Fetch user to determine role and org
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { role: true, organizationId: true }
+    });
+
+    const where = {};
+
+    // Role-based filtering
+    if (user?.role === 'superadmin') {
+      // superadmin sees all patients (optionally filter by org)
+    } else if (user?.role === 'admin') {
+      // admin sees all patients in their organization
+      if (user.organizationId) {
+        where.professional = { organizationId: user.organizationId };
+      }
+    } else if (['secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      // secretary/financial sees all patients in their org
+      if (user.organizationId) {
+        where.professional = { organizationId: user.organizationId };
+      }
+    } else {
+      // professional sees only their own patients
+      where.professionalId = req.userId;
+    }
+
     if (status) where.status = status;
     if (search) {
       where.OR = [
@@ -107,7 +133,11 @@ router.get('/', async (req, res) => {
         { cpf: { contains: search } }
       ];
     }
-    const patients = await prisma.patient.findMany({ where, orderBy: { createdAt: 'desc' } });
+    const patients = await prisma.patient.findMany({
+      where,
+      include: { professional: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
     res.json(patients.map(mapPatient));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar pacientes', details: err.message });
