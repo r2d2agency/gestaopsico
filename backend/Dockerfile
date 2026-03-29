@@ -7,4 +7,4 @@ COPY prisma ./prisma/
 RUN npx prisma generate
 COPY . .
 EXPOSE 3001
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
