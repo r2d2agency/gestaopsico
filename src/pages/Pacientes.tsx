@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { patientPortalApi } from "@/lib/portalApi";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { patientPortalApi, orgSettingsApi } from "@/lib/portalApi";
 import { pacientesApi, type Patient } from "@/lib/api";
 
 // CPF validation (client-side)
@@ -263,7 +263,14 @@ export default function Pacientes() {
     });
   };
 
-  const portalUrl = `${window.location.origin}/login`;
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings"],
+    queryFn: () => orgSettingsApi.get(),
+  });
+  const portalSlug = orgSettings?.portalSlug;
+  const portalUrl = portalSlug
+    ? `${window.location.origin}/p/${portalSlug}`
+    : `${window.location.origin}/login`;
   const patientList = Array.isArray(patients) ? patients : (patients as any)?.data || [];
   const isPending = editingId ? updatePatient.isPending : createPatient.isPending;
 
