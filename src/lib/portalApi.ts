@@ -189,6 +189,12 @@ export interface OrgSettings {
   businessAddress?: string;
   allowPatientBooking?: boolean;
   portalSlug?: string;
+  scheduleStartHour?: number;
+  scheduleEndHour?: number;
+  patientBookingStartHour?: number;
+  patientBookingEndHour?: number;
+  sessionDuration?: number;
+  bookingWeekdays?: string;
 }
 
 export const orgSettingsApi = {

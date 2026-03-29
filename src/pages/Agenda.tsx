@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
@@ -32,10 +32,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
+import { orgSettingsApi } from "@/lib/portalApi";
 
 type ViewMode = "day" | "week" | "month";
 
-const BUSINESS_HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h-19h
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-green-500",
@@ -116,6 +116,17 @@ export default function Agenda() {
     queryFn: () => apiRequest<any[]>("/settings/professionals"),
     enabled: canCreateForOthers,
   });
+
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings"],
+    queryFn: () => orgSettingsApi.get(),
+  });
+
+  const businessHours = useMemo(() => {
+    const start = orgSettings?.scheduleStartHour ?? 8;
+    const end = orgSettings?.scheduleEndHour ?? 19;
+    return Array.from({ length: end - start + 1 }, (_, i) => i + start);
+  }, [orgSettings]);
 
   const queryParams: Record<string, string> = { ...dateRange };
   if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
@@ -356,11 +367,13 @@ export default function Agenda() {
           aptsByDate={aptsByDate}
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
+          businessHours={businessHours}
         />
       ) : (
         <DayView
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
+          businessHours={businessHours}
         />
       )}
 
@@ -666,11 +679,12 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate }: {
 }
 
 // ========== WEEK VIEW ==========
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
+  businessHours: number[];
 }) {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -706,7 +720,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend }: {
       </div>
       {/* Time grid */}
       <div className="max-h-[600px] overflow-y-auto">
-        {BUSINESS_HOURS.map(hour => (
+        {businessHours.map(hour => (
           <div key={hour} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
             <div className="p-1.5 text-[11px] text-muted-foreground text-right pr-3 border-r border-border font-mono">
               {String(hour).padStart(2, "0")}:00
@@ -747,14 +761,15 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend }: {
 }
 
 // ========== DAY VIEW ==========
-function DayView({ appointments, onAttend }: {
+function DayView({ appointments, onAttend, businessHours }: {
   appointments: any[];
   onAttend: (id: string) => void;
+  businessHours: number[];
 }) {
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="max-h-[600px] overflow-y-auto">
-        {BUSINESS_HOURS.map(hour => {
+        {businessHours.map(hour => {
           const hourApts = appointments.filter((a: any) => {
             if (!a.time) return false;
             return parseInt(a.time.split(":")[0], 10) === hour;

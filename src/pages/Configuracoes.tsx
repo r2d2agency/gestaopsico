@@ -59,7 +59,10 @@ export default function Configuracoes() {
   const [form, setForm] = useState<Partial<OrgSettings>>({
     logo: "", primaryColor: "", secondaryColor: "", accentColor: "",
     businessName: "", businessPhone: "", businessEmail: "", businessAddress: "",
-    allowPatientBooking: true
+    allowPatientBooking: true,
+    scheduleStartHour: 8, scheduleEndHour: 19,
+    patientBookingStartHour: 8, patientBookingEndHour: 18,
+    sessionDuration: 50, bookingWeekdays: "1,2,3,4,5",
   });
 
   const { data: settings, isLoading } = useQuery({
@@ -366,22 +369,23 @@ export default function Configuracoes() {
       </div>
       )}
 
-      {/* Portal do Paciente */}
+      {/* Portal do Paciente + Horários */}
       {isProfessional && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarIcon className="w-5 h-5 text-primary" />
-                Portal do Paciente
+                Agendamento e Horários
               </CardTitle>
-              <CardDescription>Controle o que os pacientes podem fazer pelo app</CardDescription>
+              <CardDescription>Configure os horários da sua agenda e do portal do paciente</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Toggle agendamento */}
               <div className="flex items-center justify-between p-3 rounded-lg border border-border">
                 <div>
                   <p className="text-sm font-medium text-foreground">Agendamento pelo paciente</p>
-                  <p className="text-xs text-muted-foreground">Permitir que pacientes agendem consultas diretamente pelo app</p>
+                  <p className="text-xs text-muted-foreground">Permitir que pacientes agendem consultas pelo app</p>
                 </div>
                 <button
                   onClick={() => setForm(prev => ({ ...prev, allowPatientBooking: !prev.allowPatientBooking }))}
@@ -390,14 +394,109 @@ export default function Configuracoes() {
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.allowPatientBooking ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
-              <Button
-                size="sm"
-                className="gap-1"
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
-              >
+
+              {/* Horários do profissional */}
+              <div className="p-4 rounded-lg border border-border space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">🗓️ Horário da Agenda (Profissional / Secretária)</p>
+                  <p className="text-xs text-muted-foreground">Horário visível para agendar consultas internamente</p>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs">Início</Label>
+                    <Select value={String(form.scheduleStartHour ?? 8)} onValueChange={v => setForm(prev => ({ ...prev, scheduleStartHour: Number(v) }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 16 }, (_, i) => i + 5).map(h => (
+                          <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Término</Label>
+                    <Select value={String(form.scheduleEndHour ?? 19)} onValueChange={v => setForm(prev => ({ ...prev, scheduleEndHour: Number(v) }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 16 }, (_, i) => i + 8).map(h => (
+                          <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Duração da sessão</Label>
+                    <Select value={String(form.sessionDuration ?? 50)} onValueChange={v => setForm(prev => ({ ...prev, sessionDuration: Number(v) }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[30, 40, 45, 50, 60, 90, 120].map(d => (
+                          <SelectItem key={d} value={String(d)}>{d} min</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Horários do paciente */}
+              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">📱 Horário visível para o Paciente</p>
+                  <p className="text-xs text-muted-foreground">Faixa de horários que o paciente vê para agendar pelo app</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs">Início</Label>
+                    <Select value={String(form.patientBookingStartHour ?? 8)} onValueChange={v => setForm(prev => ({ ...prev, patientBookingStartHour: Number(v) }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 16 }, (_, i) => i + 5).map(h => (
+                          <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Término</Label>
+                    <Select value={String(form.patientBookingEndHour ?? 18)} onValueChange={v => setForm(prev => ({ ...prev, patientBookingEndHour: Number(v) }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 16 }, (_, i) => i + 8).map(h => (
+                          <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {/* Weekdays */}
+                <div>
+                  <Label className="text-xs">Dias da semana para agendamento</Label>
+                  <div className="flex gap-1.5 mt-1">
+                    {[
+                      { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
+                      { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" }
+                    ].map(d => {
+                      const weekdays = (form.bookingWeekdays || "1,2,3,4,5").split(",").map(Number);
+                      const active = weekdays.includes(d.day);
+                      return (
+                        <button key={d.day} onClick={() => {
+                          const current = (form.bookingWeekdays || "1,2,3,4,5").split(",").map(Number);
+                          const updated = active ? current.filter(x => x !== d.day) : [...current, d.day];
+                          setForm(prev => ({ ...prev, bookingWeekdays: updated.sort().join(",") }));
+                        }}
+                          className={`w-10 h-10 rounded-lg text-xs font-medium transition-all border ${
+                            active ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                          }`}
+                        >{d.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <Button size="sm" className="gap-1" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                 {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                Salvar
+                Salvar Configurações de Horário
               </Button>
             </CardContent>
           </Card>

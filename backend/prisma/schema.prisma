@@ -71,6 +71,12 @@ model OrganizationSetting {
   businessEmail  String?      @map("business_email") @db.VarChar(255)
   businessAddress String?     @map("business_address")
   allowPatientBooking Boolean @default(true) @map("allow_patient_booking")
+  scheduleStartHour  Int      @default(8) @map("schedule_start_hour")
+  scheduleEndHour    Int      @default(19) @map("schedule_end_hour")
+  patientBookingStartHour Int @default(8) @map("patient_booking_start_hour")
+  patientBookingEndHour   Int @default(18) @map("patient_booking_end_hour")
+  sessionDuration    Int      @default(50) @map("session_duration")
+  bookingWeekdays    String   @default("1,2,3,4,5") @map("booking_weekdays")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
