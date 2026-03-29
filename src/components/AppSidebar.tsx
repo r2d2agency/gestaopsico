@@ -17,6 +17,7 @@ import {
   Smile,
   CreditCard,
   Shield,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
