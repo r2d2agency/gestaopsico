@@ -25,43 +25,29 @@ import {
   Cell,
 } from "recharts";
 
-const weeklyData = [
-  { day: "Seg", consultas: 6, receita: 1200 },
-  { day: "Ter", consultas: 8, receita: 1600 },
-  { day: "Qua", consultas: 5, receita: 1000 },
-  { day: "Qui", consultas: 9, receita: 1800 },
-  { day: "Sex", consultas: 7, receita: 1400 },
-  { day: "Sáb", consultas: 3, receita: 600 },
+const emptyWeeklyData = [
+  { day: "Seg", consultas: 0, receita: 0 },
+  { day: "Ter", consultas: 0, receita: 0 },
+  { day: "Qua", consultas: 0, receita: 0 },
+  { day: "Qui", consultas: 0, receita: 0 },
+  { day: "Sex", consultas: 0, receita: 0 },
+  { day: "Sáb", consultas: 0, receita: 0 },
   { day: "Dom", consultas: 0, receita: 0 },
 ];
 
-const monthlyTrend = [
-  { month: "Jan", pacientes: 42, consultas: 120 },
-  { month: "Fev", pacientes: 48, consultas: 135 },
-  { month: "Mar", pacientes: 55, consultas: 150 },
-  { month: "Abr", pacientes: 52, consultas: 142 },
-  { month: "Mai", pacientes: 60, consultas: 168 },
-  { month: "Jun", pacientes: 65, consultas: 180 },
+const emptyMonthlyTrend = [
+  { month: "Jan", pacientes: 0, consultas: 0 },
+  { month: "Fev", pacientes: 0, consultas: 0 },
+  { month: "Mar", pacientes: 0, consultas: 0 },
+  { month: "Abr", pacientes: 0, consultas: 0 },
+  { month: "Mai", pacientes: 0, consultas: 0 },
+  { month: "Jun", pacientes: 0, consultas: 0 },
 ];
 
-const typeData = [
-  { name: "Individual", value: 65, fill: "hsl(var(--primary))" },
-  { name: "Casal", value: 25, fill: "hsl(var(--info))" },
-  { name: "Grupo", value: 10, fill: "hsl(var(--warning))" },
-];
-
-const chartConfig: ChartConfig = {
-  consultas: { label: "Consultas", color: "hsl(var(--primary))" },
-  receita: { label: "Receita", color: "hsl(var(--info))" },
-  pacientes: { label: "Pacientes", color: "hsl(var(--primary))" },
-};
-
-const fallbackSchedule = [
-  { time: "08:00", patient: "Ana Silva", type: "Individual", status: "confirmed" },
-  { time: "09:30", patient: "Carlos & Maria", type: "Casal", status: "confirmed" },
-  { time: "11:00", patient: "João Oliveira", type: "Individual", status: "pending" },
-  { time: "14:00", patient: "Beatriz Santos", type: "Individual", status: "confirmed" },
-  { time: "15:30", patient: "Pedro & Laura", type: "Casal", status: "confirmed" },
+const emptyTypeData = [
+  { name: "Individual", value: 0, fill: "hsl(var(--primary))" },
+  { name: "Casal", value: 0, fill: "hsl(var(--info))" },
+  { name: "Grupo", value: 0, fill: "hsl(var(--warning))" },
 ];
 
 export default function Dashboard() {
