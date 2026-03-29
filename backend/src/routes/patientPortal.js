@@ -77,7 +77,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       user.organizationId
         ? prisma.organizationSetting.findUnique({
             where: { organizationId: user.organizationId },
-            select: { allowPatientBooking: true, businessName: true }
+            select: { allowPatientBooking: true, businessName: true, logo: true, primaryColor: true, accentColor: true, secondaryColor: true }
           })
         : null
     ]);
@@ -88,7 +88,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       recentMood,
       patientName: user.name,
       allowBooking: orgSettings?.allowPatientBooking ?? true,
-      clinicName: orgSettings?.businessName || null
+      clinicName: orgSettings?.businessName || null,
+      clinicLogo: orgSettings?.logo || null,
+      primaryColor: orgSettings?.primaryColor || null,
+      accentColor: orgSettings?.accentColor || orgSettings?.secondaryColor || null,
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar dashboard' });
