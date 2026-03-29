@@ -36,12 +36,14 @@ function getMotivational() {
   return MOTIVATIONAL[day % MOTIVATIONAL.length];
 }
 
-const quickActions = [
-  { to: "/portal/humor", icon: Heart, label: "Humor", desc: "Registrar como se sente", gradient: "from-primary/10 to-primary/5" },
-  { to: "/portal/testes", icon: ClipboardList, label: "Testes", desc: "Testes pendentes", gradient: "from-accent to-accent/50" },
-  { to: "/portal/consultas", icon: Calendar, label: "Consultas", desc: "Próximas sessões", gradient: "from-success/10 to-success/5" },
-  { to: "/portal/financeiro", icon: CreditCard, label: "Financeiro", desc: "Pagamentos", gradient: "from-warning/10 to-warning/5" },
-];
+function getQuickActions(basePath: string) {
+  return [
+    { to: `${basePath}/humor`, icon: Heart, label: "Humor", desc: "Registrar como se sente", gradient: "from-primary/10 to-primary/5" },
+    { to: `${basePath}/testes`, icon: ClipboardList, label: "Testes", desc: "Testes pendentes", gradient: "from-accent to-accent/50" },
+    { to: `${basePath}/consultas`, icon: Calendar, label: "Consultas", desc: "Próximas sessões", gradient: "from-success/10 to-success/5" },
+    { to: `${basePath}/financeiro`, icon: CreditCard, label: "Financeiro", desc: "Pagamentos", gradient: "from-warning/10 to-warning/5" },
+  ];
+}
 
 export default function PatientHome() {
   const { user } = useAuth();
