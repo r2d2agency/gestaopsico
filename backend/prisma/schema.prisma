@@ -149,6 +149,11 @@ model WhatsappNotification {
   @@index([status, scheduledAt])
   @@map("whatsapp_notifications")
 }
+
+model Patient {
+  id               String        @id @default(uuid()) @db.Uuid
+  professionalId   String        @map("professional_id") @db.Uuid
+  professional     User          @relation(fields: [professionalId], references: [id])
   name             String        @db.VarChar(255)
   cpf              String?       @unique @db.VarChar(14)
   birthDate        DateTime?     @map("birth_date") @db.Date
