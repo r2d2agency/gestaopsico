@@ -20,22 +20,25 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const professionalNav = [
+type NavItem = { icon: typeof LayoutDashboard; label: string; path: string; roles?: string[] };
+
+// roles: undefined = all professional roles can see
+const allNav: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Pacientes", path: "/pacientes" },
-  { icon: Heart, label: "Casais", path: "/casais" },
+  { icon: Users, label: "Pacientes", path: "/pacientes", roles: ["admin", "professional", "psychologist", "superadmin"] },
+  { icon: Heart, label: "Casais", path: "/casais", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Calendar, label: "Agenda", path: "/agenda" },
-  { icon: Video, label: "Consultas", path: "/consultas" },
-  { icon: FileText, label: "Prontuários", path: "/prontuarios" },
-  { icon: DollarSign, label: "Financeiro", path: "/financeiro" },
-  { icon: ClipboardList, label: "Testes", path: "/testes" },
-  { icon: Sparkles, label: "Assistente IA", path: "/assistente-ia" },
-  { icon: Bot, label: "Secretária IA", path: "/secretaria-ia" },
+  { icon: Video, label: "Consultas", path: "/consultas", roles: ["admin", "professional", "psychologist", "secretary", "superadmin"] },
+  { icon: FileText, label: "Prontuários", path: "/prontuarios", roles: ["admin", "professional", "psychologist", "superadmin"] },
+  { icon: DollarSign, label: "Financeiro", path: "/financeiro", roles: ["admin", "professional", "psychologist", "financial", "superadmin"] },
+  { icon: ClipboardList, label: "Testes", path: "/testes", roles: ["admin", "professional", "psychologist", "superadmin"] },
+  { icon: Sparkles, label: "Assistente IA", path: "/assistente-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
+  { icon: Bot, label: "Secretária IA", path: "/secretaria-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Bell, label: "Notificações", path: "/notificacoes" },
-  { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
+  { icon: BarChart3, label: "Relatórios", path: "/relatorios", roles: ["admin", "professional", "psychologist", "financial", "superadmin"] },
 ];
 
-const patientNav = [
+const patientNav: NavItem[] = [
   { icon: LayoutDashboard, label: "Início", path: "/portal" },
   { icon: Smile, label: "Humor", path: "/portal/humor" },
   { icon: ClipboardList, label: "Testes", path: "/portal/testes" },
@@ -49,11 +52,28 @@ export default function AppSidebar() {
   const { logout, user } = useAuth();
 
   const isPatient = user?.role === "patient";
-  const navItems = isPatient ? patientNav : professionalNav;
+  const role = user?.role || "professional";
+
+  const navItems = isPatient
+    ? patientNav
+    : allNav.filter((item) => {
+        if (!item.roles) return true;
+        return item.roles.includes(role);
+      });
 
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const roleLabel: Record<string, string> = {
+    admin: "Administrador",
+    professional: "Profissional",
+    psychologist: "Psicólogo(a)",
+    secretary: "Secretária",
+    financial: "Financeiro",
+    superadmin: "Superadmin",
+    patient: "Portal do Paciente",
   };
 
   return (
@@ -65,7 +85,7 @@ export default function AppSidebar() {
         <div>
           <h1 className="font-display font-bold text-sm text-sidebar-primary">PsicoGest</h1>
           <p className="text-xs text-sidebar-foreground/60">
-            {isPatient ? "Portal do Paciente" : "Gestão Clínica"}
+            {roleLabel[role] || "Gestão Clínica"}
           </p>
         </div>
       </div>
@@ -91,7 +111,7 @@ export default function AppSidebar() {
       </nav>
 
       <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
-        {!isPatient && user?.role === "superadmin" && (
+        {!isPatient && (role === "superadmin" || role === "admin") && (
           <Link
             to="/admin"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200"

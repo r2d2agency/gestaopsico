@@ -5,9 +5,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface Props {
   children: React.ReactNode;
   requiredRole?: string;
+  allowedRoles?: string[];
 }
 
-export default function ProtectedRoute({ children, requiredRole }: Props) {
+export default function ProtectedRoute({ children, requiredRole, allowedRoles }: Props) {
   const { user, isLoading, token } = useAuth();
 
   if (isLoading) {
@@ -26,10 +27,18 @@ export default function ProtectedRoute({ children, requiredRole }: Props) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
-    // Patient users go to portal, others to dashboard
+  // Check required role
+  if (requiredRole && user.role !== requiredRole && user.role !== "superadmin") {
     const fallback = user.role === "patient" ? "/portal" : "/dashboard";
     return <Navigate to={fallback} replace />;
+  }
+
+  // Check allowed roles list
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(user.role) && user.role !== "superadmin") {
+      const fallback = user.role === "patient" ? "/portal" : "/dashboard";
+      return <Navigate to={fallback} replace />;
+    }
   }
 
   return <>{children}</>;
