@@ -7,4 +7,4 @@ COPY prisma ./prisma/
 RUN npx prisma generate
 COPY . .
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && npm start"]
