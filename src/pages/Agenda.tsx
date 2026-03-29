@@ -685,7 +685,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
   businessHours: number[];
-) {
+}) {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   // Only show weekdays (Mon-Fri) for cleaner business view, but keep Sat for possible schedules
@@ -761,14 +761,15 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
 }
 
 // ========== DAY VIEW ==========
-function DayView({ appointments, onAttend }: {
+function DayView({ appointments, onAttend, businessHours }: {
   appointments: any[];
   onAttend: (id: string) => void;
+  businessHours: number[];
 }) {
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="max-h-[600px] overflow-y-auto">
-        {BUSINESS_HOURS.map(hour => {
+        {businessHours.map(hour => {
           const hourApts = appointments.filter((a: any) => {
             if (!a.time) return false;
             return parseInt(a.time.split(":")[0], 10) === hour;
