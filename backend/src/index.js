@@ -21,6 +21,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Root
+app.get('/', (req, res) => res.json({ message: 'PsicoGest API online' }));
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
