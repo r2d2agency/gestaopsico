@@ -59,7 +59,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
 
-    const [appointments, pendingTests, recentMood] = await Promise.all([
+    const [appointments, pendingTests, recentMood, orgSettings] = await Promise.all([
       prisma.appointment.findMany({
         where: { patientId: user.patientId, status: 'scheduled' },
         orderBy: { date: 'asc' },
@@ -73,14 +73,22 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         where: { patientId: user.patientId },
         orderBy: { date: 'desc' },
         take: 7
-      })
+      }),
+      user.organizationId
+        ? prisma.organizationSetting.findUnique({
+            where: { organizationId: user.organizationId },
+            select: { allowPatientBooking: true, businessName: true }
+          })
+        : null
     ]);
 
     res.json({
       upcomingAppointments: appointments,
       pendingTests,
       recentMood,
-      patientName: user.name
+      patientName: user.name,
+      allowBooking: orgSettings?.allowPatientBooking ?? true,
+      clinicName: orgSettings?.businessName || null
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar dashboard' });
