@@ -207,6 +207,17 @@ export interface PatientPortalMessage {
   createdAt: string;
 }
 
+export interface AvailabilitySlot {
+  time: string;
+  available: boolean;
+}
+
+export interface AvailabilityResponse {
+  slots: AvailabilitySlot[];
+  professionalName: string;
+  date: string;
+}
+
 export const patientPortalApi = {
   createAccess: (data: { patientId: string; email: string; password: string }) =>
     apiRequest("/patient-portal/create-access", { method: "POST", body: data }),
@@ -218,6 +229,10 @@ export const patientPortalApi = {
     apiRequest<{ payments: any[]; summary: { total: number; paid: number; pending: number } }>(
       "/patient-portal/financial"
     ),
+  availability: (date: string) =>
+    apiRequest<AvailabilityResponse>(`/patient-portal/availability?date=${date}`),
+  book: (data: { date: string; time: string; mode?: string; notes?: string }) =>
+    apiRequest("/patient-portal/book", { method: "POST", body: data }),
   listMessages: () =>
     apiRequest<PatientPortalMessage[]>("/patient-portal/messages"),
   sendMessage: (data: { type: "text" | "audio" | "file"; content: string; fileName?: string; mimeType?: string }) =>
