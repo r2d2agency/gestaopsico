@@ -64,6 +64,41 @@ export default function Configuracoes() {
     reader.readAsDataURL(file);
   };
 
+  // Team management
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [teamForm, setTeamForm] = useState({ name: "", email: "", password: "", role: "professional", crp: "", phone: "", specialty: "" });
+
+  const { data: teamData } = useQuery<{ data: any[]; total: number }>({
+    queryKey: ["team"],
+    queryFn: () => apiRequest("/team"),
+    enabled: isAdmin,
+  });
+
+  const createTeamMember = useMutation({
+    mutationFn: (data: any) => apiRequest("/team", { method: "POST", body: data }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team"] });
+      toast({ title: "Membro adicionado à equipe!" });
+      setTeamDialogOpen(false);
+      setTeamForm({ name: "", email: "", password: "", role: "professional", crp: "", phone: "", specialty: "" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const toggleTeamStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest(`/team/${id}/status`, { method: "PATCH", body: { status } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team"] });
+      toast({ title: "Status atualizado!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const roleLabels: Record<string, string> = {
+    admin: "Admin", professional: "Psicólogo(a)", secretary: "Secretária",
+    financial: "Financeiro", secretary_financial: "Sec.+Fin.", superadmin: "Superadmin",
+  };
+
   if (isLoading) return <div className="text-center py-16 text-muted-foreground">Carregando...</div>;
 
   return (
