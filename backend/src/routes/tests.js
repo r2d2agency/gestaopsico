@@ -401,15 +401,52 @@ router.post('/assign', async (req, res) => {
     const { templateId, patientId, coupleId } = req.body;
     if (!templateId) return res.status(400).json({ error: 'templateId é obrigatório' });
 
+    // Get current user to check role/org
+    const currentUser = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!currentUser) return res.status(401).json({ error: 'Usuário não encontrado' });
+
     const template = await prisma.testTemplate.findFirst({
       where: { id: templateId, professionalId: req.userId }
     });
     if (!template) return res.status(404).json({ error: 'Teste não encontrado' });
 
+    // Build patient lookup: professional sees own patients, admin/secretary see org patients
+    const patientWhere = (pid) => {
+      if (currentUser.role === 'admin' || currentUser.role === 'secretary') {
+        return { id: pid, ...(currentUser.organizationId ? { professionalId: { in: prisma.$queryRawUnsafe(`SELECT id FROM users WHERE organization_id = '${currentUser.organizationId}'`).then ? undefined : undefined } } : {}) };
+      }
+      return { id: pid, professionalId: req.userId };
+    };
+
+    // Simplified: look up patient by id, check org match or direct ownership
+    const findPatient = async (pid) => {
+      const p = await prisma.patient.findFirst({
+        where: {
+          id: pid,
+          OR: [
+            { professionalId: req.userId },
+            ...(currentUser.organizationId
+              ? [{ professional: { organizationId: currentUser.organizationId } }]
+              : [])
+          ]
+        }
+      });
+      return p;
+    };
+
     // If coupleId is provided, assign to both patients in the couple individually
     if (coupleId) {
+      const coupleWhere = {
+        id: coupleId,
+        OR: [
+          { professionalId: req.userId },
+          ...(currentUser.organizationId
+            ? [{ professional: { organizationId: currentUser.organizationId } }]
+            : [])
+        ]
+      };
       const couple = await prisma.couple.findFirst({
-        where: { id: coupleId, professionalId: req.userId },
+        where: coupleWhere,
         include: { patient1: { select: { id: true, name: true } }, patient2: { select: { id: true, name: true } } }
       });
       if (!couple) return res.status(404).json({ error: 'Casal não encontrado' });
@@ -431,9 +468,7 @@ router.post('/assign', async (req, res) => {
     // Single patient assignment
     if (!patientId) return res.status(400).json({ error: 'patientId ou coupleId é obrigatório' });
 
-    const patient = await prisma.patient.findFirst({
-      where: { id: patientId, professionalId: req.userId }
-    });
+    const patient = await findPatient(patientId);
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
     const assignment = await prisma.testAssignment.create({
