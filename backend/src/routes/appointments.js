@@ -56,20 +56,48 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+function normalizeAppointmentInput(body = {}, fallbackProfessionalId) {
+  const raw = Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [key, value === '' ? null : value])
+  );
+
+  const data = {
+    type: raw.type,
+    date: raw.date,
+    time: raw.time,
+    duration: raw.duration,
+    value: raw.value,
+    status: raw.status,
+    paymentStatus: raw.paymentStatus ?? raw.payment_status,
+    mode: raw.mode,
+    attended: raw.attended,
+    notes: raw.notes,
+    patientId: raw.patientId ?? raw.patient_id,
+    coupleId: raw.coupleId ?? raw.couple_id,
+    professionalId: raw.professionalId ?? raw.professional_id ?? fallbackProfessionalId,
+  };
+
+  if (data.date) {
+    data.date = new Date(String(data.date).includes('T') ? String(data.date) : `${String(data.date)}T00:00:00.000Z`);
+  }
+
+  if (data.duration != null) {
+    const duration = Number(data.duration);
+    data.duration = Number.isNaN(duration) ? undefined : duration;
+  }
+
+  if (data.value != null) {
+    const value = Number(data.value);
+    data.value = Number.isNaN(value) ? undefined : value;
+  }
+
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+}
+
 // POST /api/consultas
 router.post('/', async (req, res) => {
   try {
-    // Sanitize: convert empty strings to null
-    const raw = Object.fromEntries(
-      Object.entries(req.body).map(([k, v]) => [k, v === '' ? null : v])
-    );
-    const data = { ...raw, professionalId: raw.professionalId || req.userId };
-    // Remove fields that shouldn't be passed directly
-    delete data.patient;
-    delete data.couple;
-    if (data.date) data.date = new Date(String(data.date) + (String(data.date).includes('T') ? '' : 'T00:00:00.000Z'));
-    if (data.value) data.value = Number(data.value) || 0;
-    if (data.duration) data.duration = Number(data.duration) || 50;
+    const data = normalizeAppointmentInput(req.body, req.userId);
     const appointment = await prisma.appointment.create({
       data,
       include: { patient: { select: { id: true, name: true } } }
@@ -84,8 +112,7 @@ router.post('/', async (req, res) => {
 // PUT /api/consultas/:id
 router.put('/:id', async (req, res) => {
   try {
-    const data = { ...req.body };
-    if (data.date) data.date = new Date(String(data.date) + (String(data.date).includes('T') ? '' : 'T00:00:00.000Z'));
+    const data = normalizeAppointmentInput(req.body, req.userId);
     const appointment = await prisma.appointment.updateMany({
       where: { id: req.params.id, professionalId: req.userId },
       data
@@ -97,7 +124,8 @@ router.put('/:id', async (req, res) => {
     });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar consulta' });
+    console.error('Erro ao atualizar consulta:', err);
+    res.status(500).json({ error: 'Erro ao atualizar consulta', details: err.message });
   }
 });
 
