@@ -96,7 +96,7 @@ export default function AdminUsers() {
           <DialogTrigger asChild>
             <Button className="gap-2"><UserPlus className="w-4 h-4" /> Novo Usuário</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Criar Usuário</DialogTitle>
             </DialogHeader>
@@ -127,10 +127,10 @@ export default function AdminUsers() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Organização</Label>
-                  <Select value={form.organizationId} onValueChange={(v) => setForm({ ...form, organizationId: v })}>
+                  <Select value={form.organizationId || "none"} onValueChange={(v) => setForm({ ...form, organizationId: v === "none" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="none">Nenhuma</SelectItem>
                       {orgsData?.data?.map((org) => (
                         <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                       ))}
