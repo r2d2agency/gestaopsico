@@ -32,6 +32,7 @@ import PatientDashboard from "./pages/PatientDashboard";
 import PatientMood from "./pages/PatientMood";
 import PatientTests from "./pages/PatientTests";
 import NotFound from "./pages/NotFound";
+import HelpPage from "./pages/HelpPage";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="/prontuarios" element={<Dashboard />} />
               <Route path="/relatorios" element={<Dashboard />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/ajuda" element={<HelpPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
