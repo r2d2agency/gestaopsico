@@ -129,4 +129,61 @@ router.get('/financial', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/patient-portal/messages - patient's messages history
+router.get('/messages', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { patientId: true }
+    });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const messages = await prisma.patientPortalMessage.findMany({
+      where: { patientId: user.patientId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar mensagens', details: err.message });
+  }
+});
+
+// POST /api/patient-portal/messages - create patient message
+router.post('/messages', authMiddleware, async (req, res) => {
+  try {
+    const { type, content, fileName, mimeType } = req.body;
+    if (!type || !content) {
+      return res.status(400).json({ error: 'type e content são obrigatórios' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { patientId: true }
+    });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const patient = await prisma.patient.findUnique({
+      where: { id: user.patientId },
+      select: { id: true, professionalId: true }
+    });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    const message = await prisma.patientPortalMessage.create({
+      data: {
+        patientId: patient.id,
+        professionalId: patient.professionalId,
+        type,
+        content,
+        fileName: fileName || null,
+        mimeType: mimeType || null
+      }
+    });
+
+    res.status(201).json(message);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar mensagem', details: err.message });
+  }
+});
+
 module.exports = router;

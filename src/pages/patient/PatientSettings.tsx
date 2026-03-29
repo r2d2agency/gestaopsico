@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, LogOut, User, Shield, ChevronRight } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Lock, LogOut, User, Shield, ChevronRight, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
 
 export default function PatientSettings() {
   const { user, logout } = useAuth();
@@ -13,6 +15,20 @@ export default function PatientSettings() {
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () => authApi.changePassword({ currentPassword: currentPw, newPassword: newPw }),
+    onSuccess: () => {
+      toast({ title: "Senha alterada com sucesso! 🔒" });
+      setShowPassword(false);
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Erro ao alterar senha", description: err.message, variant: "destructive" });
+    },
+  });
 
   const handleChangePassword = () => {
     if (newPw.length < 6) {
@@ -23,11 +39,7 @@ export default function PatientSettings() {
       toast({ title: "Senhas não coincidem", variant: "destructive" });
       return;
     }
-    toast({ title: "Senha alterada com sucesso! 🔒" });
-    setShowPassword(false);
-    setCurrentPw("");
-    setNewPw("");
-    setConfirmPw("");
+    changePasswordMutation.mutate();
   };
 
   return (
@@ -37,7 +49,6 @@ export default function PatientSettings() {
         <p className="text-xs text-muted-foreground">Gerencie sua conta</p>
       </div>
 
-      {/* Profile info */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
           <CardContent className="pt-4 pb-3">
@@ -54,14 +65,10 @@ export default function PatientSettings() {
         </Card>
       </motion.div>
 
-      {/* Change password */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Card>
           <CardContent className="pt-4 pb-3">
-            <button
-              onClick={() => setShowPassword(!showPassword)}
-              className="flex items-center justify-between w-full"
-            >
+            <button onClick={() => setShowPassword(!showPassword)} className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
                   <Lock className="w-4 h-4 text-warning" />
@@ -71,29 +78,15 @@ export default function PatientSettings() {
               <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${showPassword ? "rotate-90" : ""}`} />
             </button>
             {showPassword && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-3 space-y-2">
-                <form onSubmit={e => { e.preventDefault(); handleChangePassword(); }}>
-                  <div className="space-y-2">
-                    <Input
-                      type="password"
-                      placeholder="Senha atual"
-                      value={currentPw}
-                      onChange={e => setCurrentPw(e.target.value)}
-                    />
-                    <Input
-                      type="password"
-                      placeholder="Nova senha"
-                      value={newPw}
-                      onChange={e => setNewPw(e.target.value)}
-                    />
-                    <Input
-                      type="password"
-                      placeholder="Confirmar nova senha"
-                      value={confirmPw}
-                      onChange={e => setConfirmPw(e.target.value)}
-                    />
-                    <Button type="submit" size="sm" className="w-full">Salvar nova senha</Button>
-                  </div>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-3">
+                <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} className="space-y-2">
+                  <Input type="password" placeholder="Senha atual" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} />
+                  <Input type="password" placeholder="Nova senha" value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+                  <Input type="password" placeholder="Confirmar nova senha" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
+                  <Button type="submit" size="sm" className="w-full" disabled={changePasswordMutation.isPending}>
+                    {changePasswordMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Salvar nova senha
+                  </Button>
                 </form>
               </motion.div>
             )}
@@ -101,7 +94,6 @@ export default function PatientSettings() {
         </Card>
       </motion.div>
 
-      {/* Privacy */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card>
           <CardContent className="pt-4 pb-3">
@@ -118,13 +110,8 @@ export default function PatientSettings() {
         </Card>
       </motion.div>
 
-      {/* Logout */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <Button
-          variant="outline"
-          className="w-full gap-2 text-destructive border-destructive/20 hover:bg-destructive/5"
-          onClick={logout}
-        >
+        <Button variant="outline" className="w-full gap-2 text-destructive border-destructive/20 hover:bg-destructive/5" onClick={logout}>
           <LogOut className="w-4 h-4" />
           Sair da conta
         </Button>

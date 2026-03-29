@@ -52,6 +52,10 @@ export const authApi = {
   register: (data: { name: string; email: string; password: string; planId?: string }) =>
     apiRequest<{ token: string; user: { id: string; name: string; email: string; role: string } }>("/auth/register", { method: "POST", body: data }),
   me: () => apiRequest<{ id: string; name: string; email: string; role: string }>("/auth/me"),
+  updateProfile: (data: { name?: string; phone?: string; crp?: string; specialty?: string }) =>
+    apiRequest<{ id: string; name: string; email: string; role: string; crp?: string; phone?: string; specialty?: string }>("/auth/profile", { method: "PATCH", body: data }),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    apiRequest<{ message: string }>("/auth/change-password", { method: "PATCH", body: data }),
   logout: () => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("token");

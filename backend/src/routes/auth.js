@@ -149,4 +149,35 @@ router.patch('/profile', authMiddleware, async (req, res) => {
   }
 });
 
+// PATCH /api/auth/change-password - change own password
+router.patch('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { passwordHash }
+    });
+
+    res.json({ message: 'Senha alterada com sucesso' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao alterar senha', details: err.message });
+  }
+});
+
 module.exports = router;

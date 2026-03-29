@@ -116,6 +116,7 @@ model User {
   providerKeys   AiProviderKey[]        @relation("providerKeys")
   aiChats        AiChat[]               @relation("aiChats")
   secretaryConfigs SecretaryConfig[]
+  patientPortalMessages PatientPortalMessage[] @relation("portalMessageProfessional")
 
   @@map("users")
 }
@@ -219,6 +220,7 @@ model Patient {
   testAssignments  TestAssignment[]
   accounts         Account[]
   userAccounts     User[]        @relation("patientUser")
+  portalMessages   PatientPortalMessage[]
 
   @@map("patients")
 }
@@ -405,6 +407,23 @@ model TestResponse {
   answer       String
 
   @@map("test_responses")
+}
+
+model PatientPortalMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation("portalMessageProfessional", fields: [professionalId], references: [id], onDelete: Cascade)
+  type           String   @db.VarChar(20)
+  content        String
+  fileName       String?  @map("file_name") @db.VarChar(255)
+  mimeType       String?  @map("mime_type") @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([patientId, createdAt])
+  @@index([professionalId, createdAt])
+  @@map("patient_portal_messages")
 }
 
 model SystemSetting {
