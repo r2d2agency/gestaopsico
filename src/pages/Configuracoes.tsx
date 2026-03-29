@@ -495,6 +495,40 @@ export default function Configuracoes() {
                 </div>
               </div>
 
+              {/* Timezone */}
+              <div className="p-4 rounded-lg border border-border space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">🌐 Fuso Horário</p>
+                  <p className="text-xs text-muted-foreground">Defina o fuso horário da sua clínica</p>
+                </div>
+                <Select value={form.timezone || "America/Sao_Paulo"} onValueChange={v => setForm(prev => ({ ...prev, timezone: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="America/Sao_Paulo">São Paulo (BRT, UTC-3)</SelectItem>
+                    <SelectItem value="America/Manaus">Manaus (AMT, UTC-4)</SelectItem>
+                    <SelectItem value="America/Belem">Belém (BRT, UTC-3)</SelectItem>
+                    <SelectItem value="America/Fortaleza">Fortaleza (BRT, UTC-3)</SelectItem>
+                    <SelectItem value="America/Recife">Recife (BRT, UTC-3)</SelectItem>
+                    <SelectItem value="America/Bahia">Salvador (BRT, UTC-3)</SelectItem>
+                    <SelectItem value="America/Cuiaba">Cuiabá (AMT, UTC-4)</SelectItem>
+                    <SelectItem value="America/Campo_Grande">Campo Grande (AMT, UTC-4)</SelectItem>
+                    <SelectItem value="America/Rio_Branco">Rio Branco (ACT, UTC-5)</SelectItem>
+                    <SelectItem value="America/Noronha">Fernando de Noronha (FNT, UTC-2)</SelectItem>
+                    <SelectItem value="America/Porto_Velho">Porto Velho (AMT, UTC-4)</SelectItem>
+                    <SelectItem value="America/Boa_Vista">Boa Vista (AMT, UTC-4)</SelectItem>
+                    <SelectItem value="America/Buenos_Aires">Buenos Aires (ART, UTC-3)</SelectItem>
+                    <SelectItem value="America/Santiago">Santiago (CLT, UTC-4)</SelectItem>
+                    <SelectItem value="America/Bogota">Bogotá (COT, UTC-5)</SelectItem>
+                    <SelectItem value="America/Lima">Lima (PET, UTC-5)</SelectItem>
+                    <SelectItem value="America/New_York">Nova York (EST, UTC-5)</SelectItem>
+                    <SelectItem value="Europe/Lisbon">Lisboa (WET, UTC+0)</SelectItem>
+                    <SelectItem value="Europe/London">Londres (GMT, UTC+0)</SelectItem>
+                    <SelectItem value="Europe/Paris">Paris (CET, UTC+1)</SelectItem>
+                    <SelectItem value="Asia/Tokyo">Tóquio (JST, UTC+9)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button size="sm" className="gap-1" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                 {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 Salvar Configurações de Horário
