@@ -1,0 +1,100 @@
+const express = require('express');
+const { PrismaClient } = require('@prisma/client');
+const { authMiddleware } = require('../middleware/auth');
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+router.use(authMiddleware);
+
+// GET /api/consultas
+router.get('/', async (req, res) => {
+  try {
+    const { date, status } = req.query;
+    const where = { professionalId: req.userId };
+    if (status) where.status = status;
+    if (date) where.date = new Date(date);
+
+    const appointments = await prisma.appointment.findMany({
+      where,
+      include: {
+        patient: { select: { id: true, name: true } },
+        couple: { select: { id: true, name: true } }
+      },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }]
+    });
+    res.json(appointments);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar consultas', details: err.message });
+  }
+});
+
+// GET /api/consultas/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const appointment = await prisma.appointment.findFirst({
+      where: { id: req.params.id, professionalId: req.userId },
+      include: {
+        patient: true,
+        couple: { include: { patient1: true, patient2: true } },
+        records: true,
+        transcriptions: true
+      }
+    });
+    if (!appointment) return res.status(404).json({ error: 'Consulta não encontrada' });
+    res.json(appointment);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar consulta' });
+  }
+});
+
+// POST /api/consultas
+router.post('/', async (req, res) => {
+  try {
+    const data = { ...req.body, professionalId: req.userId };
+    if (data.date) data.date = new Date(data.date);
+    const appointment = await prisma.appointment.create({
+      data,
+      include: { patient: { select: { id: true, name: true } } }
+    });
+    res.status(201).json(appointment);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao criar consulta', details: err.message });
+  }
+});
+
+// PUT /api/consultas/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (data.date) data.date = new Date(data.date);
+    const appointment = await prisma.appointment.updateMany({
+      where: { id: req.params.id, professionalId: req.userId },
+      data
+    });
+    if (appointment.count === 0) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const updated = await prisma.appointment.findUnique({
+      where: { id: req.params.id },
+      include: { patient: { select: { id: true, name: true } } }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar consulta' });
+  }
+});
+
+// POST /api/consultas/:id/cancel
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    const appointment = await prisma.appointment.updateMany({
+      where: { id: req.params.id, professionalId: req.userId },
+      data: { status: 'cancelled' }
+    });
+    if (appointment.count === 0) return res.status(404).json({ error: 'Consulta não encontrada' });
+    res.json({ message: 'Consulta cancelada' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao cancelar consulta' });
+  }
+});
+
+module.exports = router;
