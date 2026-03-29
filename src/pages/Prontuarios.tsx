@@ -877,3 +877,73 @@ function RecordForm({
     </div>
   );
 }
+
+const STATUS_COLORS: Record<string, string> = {
+  scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  completed: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  cancelled: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  blocked: "bg-muted text-muted-foreground",
+};
+const STATUS_LABELS: Record<string, string> = {
+  scheduled: "Agendada", completed: "Realizada", cancelled: "Cancelada", blocked: "Bloqueado",
+};
+
+function AppointmentCard({ apt, onEdit, onCancel, onAttend, isPast, isCancelling }: {
+  apt: any;
+  onEdit: () => void;
+  onCancel: () => void;
+  onAttend?: () => void;
+  isPast?: boolean;
+  isCancelling?: boolean;
+}) {
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="py-4 px-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex flex-col items-center text-center bg-muted rounded-lg px-3 py-2 min-w-[60px]">
+              <span className="text-lg font-bold text-foreground leading-none">
+                {format(new Date(apt.date), "dd")}
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase">
+                {format(new Date(apt.date), "MMM yyyy", { locale: ptBR })}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {apt.time} • {apt.duration || 50}min
+              </p>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <Badge className={`text-[10px] ${STATUS_COLORS[apt.status] || ""}`}>
+                  {STATUS_LABELS[apt.status] || apt.status}
+                </Badge>
+                {apt.mode && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {apt.mode === "video" || apt.mode === "online" ? "Online" : "Presencial"}
+                  </Badge>
+                )}
+                {apt.attended && <Badge variant="outline" className="text-[10px] border-green-300 text-green-600">✓ Compareceu</Badge>}
+              </div>
+              {apt.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{apt.notes}</p>}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {!isPast && apt.status === "scheduled" && onAttend && (
+              <Button size="sm" variant="outline" className="text-xs text-green-600 border-green-200 hover:bg-green-50" onClick={onAttend}>
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Compareceu
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" className="text-xs" onClick={onEdit}>
+              <Edit className="w-3.5 h-3.5" />
+            </Button>
+            {apt.status !== "cancelled" && (
+              <Button size="sm" variant="ghost" className="text-xs text-destructive hover:text-destructive" onClick={onCancel} disabled={isCancelling}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
