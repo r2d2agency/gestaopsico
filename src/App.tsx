@@ -13,6 +13,7 @@ import Agenda from "./pages/Agenda";
 import FinanceiroCompleto from "./pages/FinanceiroCompleto";
 import AiAssistant from "./pages/AiAssistant";
 import AppLayout from "./components/AppLayout";
+import PatientAppLayout from "./components/PatientAppLayout";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrganizations from "./pages/admin/AdminOrganizations";
@@ -28,9 +29,13 @@ import Notifications from "./pages/Notifications";
 import Configuracoes from "./pages/Configuracoes";
 import TestManager from "./pages/TestManager";
 import CasaisPage from "./pages/CasaisPage";
-import PatientDashboard from "./pages/PatientDashboard";
+import PatientHome from "./pages/patient/PatientHome";
 import PatientMood from "./pages/PatientMood";
 import PatientTests from "./pages/PatientTests";
+import PatientMessages from "./pages/patient/PatientMessages";
+import PatientSettings from "./pages/patient/PatientSettings";
+import PatientAppointments from "./pages/patient/PatientAppointments";
+import PatientFinancial from "./pages/patient/PatientFinancial";
 import NotFound from "./pages/NotFound";
 import HelpPage from "./pages/HelpPage";
 
@@ -59,12 +64,14 @@ const App = () => (
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
             </Route>
             {/* Patient Portal */}
-            <Route element={<ProtectedRoute requiredRole="patient"><AppLayout /></ProtectedRoute>}>
-              <Route path="/portal" element={<PatientDashboard />} />
+            <Route element={<ProtectedRoute requiredRole="patient"><PatientAppLayout /></ProtectedRoute>}>
+              <Route path="/portal" element={<PatientHome />} />
               <Route path="/portal/humor" element={<PatientMood />} />
               <Route path="/portal/testes" element={<PatientTests />} />
-              <Route path="/portal/consultas" element={<PatientDashboard />} />
-              <Route path="/portal/financeiro" element={<PatientDashboard />} />
+              <Route path="/portal/consultas" element={<PatientAppointments />} />
+              <Route path="/portal/financeiro" element={<PatientFinancial />} />
+              <Route path="/portal/mensagens" element={<PatientMessages />} />
+              <Route path="/portal/configuracoes" element={<PatientSettings />} />
             </Route>
             {/* App normal (professional) */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
