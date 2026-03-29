@@ -257,16 +257,15 @@ export default function LandingPage() {
               <Sparkles className="w-4 h-4" /> Inteligência Artificial para Psicólogos
             </span>
             <h1 className="text-5xl md:text-7xl font-display font-extrabold text-foreground leading-[1.1] max-w-5xl mx-auto tracking-tight">
-              Seu consultório de{" "}
+              Toda sua rotina clínica{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-lavender to-rose">
-                psicologia
-              </span>{" "}
-              na era digital
+                organizada automaticamente
+              </span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mt-8 max-w-2xl mx-auto leading-relaxed">
-              Agenda, prontuário com IA, testes psicológicos, monitoramento de humor, 
-              app do paciente (PWA) e financeiro completo — 
-              tudo pensado para psicólogos e clínicas que querem focar no que realmente importa.
+              Não é só um acesso à inteligência artificial. É um ambiente completo que integra IA ao seu fluxo clínico — 
+              agenda, prontuário, testes, financeiro e app do paciente. 
+              Tudo conectado, sem copiar e colar.
             </p>
             <div className="flex items-center justify-center gap-4 mt-10">
               <Button size="lg" className="gradient-primary border-0 shadow-glow text-base px-8 h-12" asChild>
@@ -326,6 +325,111 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Problem: Why standalone AI fails */}
+      <section className="py-24 px-6 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose/10 text-rose text-sm font-medium border border-rose/20">
+                <Zap className="w-4 h-4" /> O problema
+              </span>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mt-4 leading-tight">
+                Usar o ChatGPT <span className="text-rose">não é suficiente</span>
+              </h2>
+              <p className="text-muted-foreground mt-4 text-lg">
+                Muitos psicólogos já utilizam ferramentas de IA de forma isolada. Mas enfrentam problemas sérios no dia a dia:
+              </p>
+              <div className="mt-8 space-y-4">
+                {[
+                  { icon: "📋", text: "Copiar e colar informações entre ferramentas toda vez" },
+                  { icon: "📂", text: "Falta de histórico organizado — tudo se perde" },
+                  { icon: "🔗", text: "Nenhuma integração com agenda, pacientes ou prontuário" },
+                  { icon: "🧠", text: "Perda de contexto clínico ao longo do tempo" },
+                  { icon: "⏰", text: "Tempo gasto montando prompts manualmente" },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -12 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08 }}
+                    className="flex items-center gap-3 bg-card rounded-xl p-4 border border-border shadow-sm"
+                  >
+                    <span className="text-2xl shrink-0">{item.icon}</span>
+                    <span className="text-foreground text-sm">{item.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <div className="bg-card rounded-2xl border border-primary/20 shadow-xl p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
+                <div className="relative">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-display font-semibold text-foreground text-sm">A solução PsicoGest</p>
+                      <p className="text-xs text-muted-foreground">IA integrada ao fluxo clínico</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
+                      <p className="font-medium text-primary text-sm mb-1">✅ Contexto automático</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        A IA já conhece o histórico do paciente, lê o prontuário e entende o contexto — sem você precisar explicar nada.
+                      </p>
+                    </div>
+                    <div className="bg-success/5 rounded-xl p-4 border border-success/10">
+                      <p className="font-medium text-success text-sm mb-1">✅ Tudo no lugar certo</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Insights, sugestões e análises ficam organizados no prontuário do paciente automaticamente.
+                      </p>
+                    </div>
+                    <div className="bg-lavender/5 rounded-xl p-4 border border-lavender/10">
+                      <p className="font-medium text-lavender text-sm mb-1">✅ Zero copiar e colar</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Sem prompts manuais, sem abrir outra aba, sem perder tempo. O sistema faz isso por você.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Key Phrase Callout */}
+      <section className="py-16 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-lavender/5 to-rose/5 rounded-3xl blur-xl" />
+            <div className="relative bg-card rounded-3xl border border-border p-12 shadow-lg">
+              <Sparkles className="w-8 h-8 text-primary mx-auto mb-4" />
+              <blockquote className="text-2xl md:text-3xl font-display font-bold text-foreground leading-snug">
+                "Você não precisa usar várias ferramentas nem adaptar sua rotina à tecnologia.{" "}
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-lavender">
+                  A tecnologia se adapta à sua rotina clínica.
+                </span>"
+              </blockquote>
+              <p className="text-muted-foreground mt-4 text-sm">
+                O psicólogo não precisa mais montar prompts, copiar informações ou organizar manualmente. 
+                O sistema já entende o contexto do atendimento e organiza tudo automaticamente no lugar certo.
+              </p>
             </div>
           </motion.div>
         </div>
@@ -435,34 +539,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* AI Secretary Section */}
       <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium border border-success/20">
-                <Bot className="w-4 h-4" /> Novidade
+                <Bot className="w-4 h-4" /> Diferencial
               </span>
               <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mt-4">
-                Sua <span className="text-primary">Secretária IA</span> no WhatsApp
+                Uma <span className="text-primary">secretária digital</span> que trabalha com você
               </h2>
               <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                Um agente inteligente que trabalha 24 horas no seu WhatsApp. Agenda, remarca, cobra e responde seus pacientes automaticamente.
+                Não é um chatbot genérico. É uma secretária inteligente integrada ao seu consultório, 
+                que conhece sua agenda, seus pacientes e sua rotina.
               </p>
             </motion.div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: MessageCircle, title: "Agendamento Automático", desc: "Pacientes marcam e remarcam sessões pelo WhatsApp a qualquer hora. A IA consulta sua agenda em tempo real.", color: "text-primary" },
-              { icon: Zap, title: "Lembretes e Cobranças", desc: "Envio automático de lembretes de sessão, cobranças pendentes e confirmações de pagamento via WhatsApp.", color: "text-success" },
-              { icon: Brain, title: "Alertas Inteligentes", desc: "Receba no seu WhatsApp: agenda do dia, relatórios financeiros, novos agendamentos e alertas de inadimplência.", color: "text-lavender" },
+              { icon: MessageCircle, title: "Responde no WhatsApp", desc: "Atende seus pacientes 24h no WhatsApp — agenda, remarca, tira dúvidas e confirma presença automaticamente.", color: "text-primary" },
+              { icon: Calendar, title: "Organiza Agendamentos", desc: "Consulta sua agenda em tempo real, encontra horários disponíveis e agenda pacientes sem você precisar intervir.", color: "text-success" },
+              { icon: Bell, title: "Reduz Mensagens Fora de Horário", desc: "Responde instantaneamente a qualquer hora — seu paciente não fica sem retorno e você não é incomodado fora do expediente.", color: "text-lavender" },
+              { icon: UserCheck, title: "Evita Perda de Pacientes", desc: "Sem atraso nas respostas, sem agendamentos esquecidos. O paciente é atendido na hora, o que aumenta a fidelização.", color: "text-warm" },
+              { icon: Zap, title: "Comunicação Ativa", desc: "Envia lembretes de sessão, cobranças pendentes e confirmações de pagamento de forma proativa e automatizada.", color: "text-info" },
+              { icon: Brain, title: "Alertas para o Profissional", desc: "Receba no seu WhatsApp: agenda do dia, relatórios financeiros, novos agendamentos e alertas de inadimplência.", color: "text-rose" },
             ].map((item, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.08 }}
                 className="bg-card rounded-2xl p-7 border border-border shadow-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
               >
                 <div className={`w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-5 ${item.color}`}>
