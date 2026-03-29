@@ -184,7 +184,7 @@ model Patient {
   professionalId   String        @map("professional_id") @db.Uuid
   professional     User          @relation("professionalPatients", fields: [professionalId], references: [id])
   name             String        @db.VarChar(255)
-  cpf              String?       @unique @db.VarChar(14)
+  cpf              String?       @db.VarChar(14)
   birthDate        DateTime?     @map("birth_date") @db.Date
   phone            String?       @db.VarChar(20)
   email            String?       @db.VarChar(255)
@@ -223,6 +223,7 @@ model Patient {
   userAccounts     User[]        @relation("patientUser")
   portalMessages   PatientPortalMessage[]
 
+  @@unique([cpf, professionalId])
   @@map("patients")
 }
 

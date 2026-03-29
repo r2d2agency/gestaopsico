@@ -189,10 +189,12 @@ router.get('/cep/:cep', async (req, res) => {
 router.get('/validate-cpf/:cpf', async (req, res) => {
   const cpf = (req.params.cpf || '').replace(/\D/g, '');
   if (!isValidCPF(cpf)) return res.json({ valid: false, message: 'CPF inválido' });
-  // Check if already exists
-  const existing = await prisma.patient.findFirst({ where: { cpf: { contains: cpf } } });
-  if (existing && existing.professionalId === req.userId) {
-    return res.json({ valid: true, exists: true, message: 'CPF já cadastrado' });
+  // Check if already exists FOR THIS PROFESSIONAL only
+  const existing = await prisma.patient.findFirst({
+    where: { cpf: { contains: cpf }, professionalId: req.userId }
+  });
+  if (existing) {
+    return res.json({ valid: true, exists: true, message: 'CPF já cadastrado para este profissional' });
   }
   res.json({ valid: true, exists: false });
 });
@@ -213,8 +215,8 @@ router.post('/', async (req, res) => {
     const patient = await prisma.patient.create({ data });
     res.status(201).json(mapPatient(patient));
   } catch (err) {
-    if (err.code === 'P2002' && err.meta?.target?.includes('cpf')) {
-      return res.status(400).json({ error: 'CPF já cadastrado para outro paciente' });
+    if (err.code === 'P2002' && (err.meta?.target?.includes('cpf') || err.meta?.target?.includes('patients_cpf_professional_id_key'))) {
+      return res.status(400).json({ error: 'CPF já cadastrado para este profissional' });
     }
     res.status(500).json({ error: 'Erro ao criar paciente', details: err.message });
   }
