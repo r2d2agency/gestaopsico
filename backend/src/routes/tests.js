@@ -445,9 +445,12 @@ router.post('/assignments/:id/resend', async (req, res) => {
     if (assignment.template.professionalId !== req.userId) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
+    // Delete old responses so patient can re-answer
+    await prisma.testResponse.deleteMany({ where: { assignmentId: req.params.id } });
+
     const updated = await prisma.testAssignment.update({
       where: { id: req.params.id },
-      data: { status: 'pending', completedAt: null, assignedAt: new Date() }
+      data: { status: 'pending', completedAt: null, score: null, classification: null, assignedAt: new Date() }
     });
     res.json(updated);
   } catch (err) {

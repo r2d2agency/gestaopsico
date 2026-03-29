@@ -10,10 +10,15 @@ router.use(authMiddleware);
 // GET /api/consultas
 router.get('/', async (req, res) => {
   try {
-    const { date, status } = req.query;
-    const where = { professionalId: req.userId };
+    const { date, status, professional_id } = req.query;
+    // Allow secretary/admin to filter by another professional
+    const where = { professionalId: professional_id || req.userId };
     if (status) where.status = status;
-    if (date) where.date = new Date(date);
+    if (date) {
+      // Ensure consistent date matching for @db.Date fields
+      const d = new Date(date + 'T00:00:00.000Z');
+      where.date = d;
+    }
 
     const appointments = await prisma.appointment.findMany({
       where,
