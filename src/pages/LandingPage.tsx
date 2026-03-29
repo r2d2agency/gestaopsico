@@ -188,10 +188,10 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
-              <Link to="/dashboard">Entrar</Link>
+              <Link to="/login">Entrar</Link>
             </Button>
             <Button className="gradient-primary border-0 shadow-glow" asChild>
-              <Link to="/dashboard">Começar Grátis</Link>
+              <Link to="/login">Começar Grátis</Link>
             </Button>
           </div>
         </div>
@@ -353,7 +353,7 @@ export default function LandingPage() {
               ))}
             </div>
             <Button className="mt-10 gradient-primary border-0 shadow-glow" size="lg" asChild>
-              <Link to="/dashboard">Começar Agora <ArrowRight className="w-4 h-4 ml-2" /></Link>
+              <Link to="/login">Começar Agora <ArrowRight className="w-4 h-4 ml-2" /></Link>
             </Button>
           </motion.div>
 
@@ -588,7 +588,7 @@ export default function LandingPage() {
             </p>
             <div className="flex items-center justify-center gap-4 mt-10">
               <Button size="lg" className="bg-primary-foreground text-foreground hover:bg-primary-foreground/90 text-base px-8 h-12" asChild>
-                <Link to="/dashboard">Criar Conta Gratuita <ArrowRight className="w-4 h-4 ml-2" /></Link>
+                <Link to="/login">Criar Conta Gratuita <ArrowRight className="w-4 h-4 ml-2" /></Link>
               </Button>
               <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-base px-8 h-12">
                 <Headphones className="w-4 h-4 mr-2" /> Falar com Suporte
