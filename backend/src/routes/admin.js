@@ -163,7 +163,15 @@ router.get('/users', async (req, res) => {
 // POST /api/admin/users
 router.post('/users', async (req, res) => {
   try {
-    const { name, email, password, role, organizationId } = req.body;
+    const name = req.body?.name?.trim();
+    const email = req.body?.email?.trim()?.toLowerCase();
+    const password = req.body?.password;
+    const role = req.body?.role;
+    const organizationId = req.body?.organizationId;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+    }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(400).json({ error: 'Email já cadastrado' });
@@ -180,7 +188,15 @@ router.post('/users', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role: role || 'professional', organizationId },
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: role || 'professional',
+        status: 'active',
+        createdAt: new Date(),
+        organizationId
+      },
       select: { id: true, name: true, email: true, role: true, status: true, organizationId: true }
     });
 
