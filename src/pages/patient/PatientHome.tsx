@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { patientPortalApi, moodApi } from "@/lib/portalApi";
+import { patientPortalApi, moodApi, testsApi, type TestAssignment } from "@/lib/portalApi";
 
 const MOODS = [
   { value: 1, label: "Muito mal", icon: Frown, color: "text-destructive" },
@@ -94,6 +94,13 @@ export default function PatientHome() {
     queryKey: ["patient-dashboard"],
     queryFn: () => patientPortalApi.dashboard(),
   });
+
+  const { data: myTests = [] } = useQuery<TestAssignment[]>({
+    queryKey: ["my-tests"],
+    queryFn: () => testsApi.myTests(),
+  });
+
+  const pendingTests = myTests.filter(t => t.status === "pending");
 
   const moodMutation = useMutation({
     mutationFn: (mood: number) =>
@@ -225,6 +232,36 @@ export default function PatientHome() {
           </Link>
         ))}
       </div>
+
+      {/* Pending Tests */}
+      {pendingTests.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <ClipboardList className="w-3.5 h-3.5" />
+              Testes pendentes
+            </p>
+            {pendingTests.map(test => (
+              <Link key={test.id} to="/portal/testes">
+                <Card className="hover:shadow-md transition-shadow border-warning/30 bg-warning/5">
+                  <CardContent className="pt-3 pb-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+                      <ClipboardList className="w-5 h-5 text-warning" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{test.template?.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Enviado em {new Date(test.assignedAt).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <Badge variant="destructive" className="text-[9px] shrink-0">Responder</Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Next appointment preview */}
       {data?.upcomingAppointments?.[0] && (
