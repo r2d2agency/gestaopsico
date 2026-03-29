@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 const { authMiddleware, generateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -33,8 +33,12 @@ router.post('/register', async (req, res) => {
     const token = generateToken(user.id);
     res.status(201).json({ user, token });
   } catch (err) {
-    if (err?.code === 'P2002') {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       return res.status(409).json({ error: 'Email já cadastrado' });
+    }
+
+    if (err instanceof Prisma.PrismaClientValidationError) {
+      return res.status(400).json({ error: 'Dados inválidos para criar a conta' });
     }
 
     console.error('register error:', err);
