@@ -734,7 +734,7 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate, professionalColorMa
 }
 
 // ========== WEEK VIEW ==========
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours, professionalColorMap, showProfessionalColors }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
@@ -742,6 +742,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
+  professionals?: any[];
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
