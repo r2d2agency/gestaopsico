@@ -197,7 +197,7 @@ export default function PatientHome() {
                   {moodMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                   Registrar
                 </Button>
-                <Link to="/portal/humor" className="flex-1">
+                <Link to={`${basePath}/humor`} className="flex-1">
                   <Button size="sm" variant="outline" className="w-full text-xs">+ Detalhes</Button>
                 </Link>
               </motion.div>
@@ -246,7 +246,7 @@ export default function PatientHome() {
               Testes pendentes
             </p>
             {pendingTests.map(test => (
-              <Link key={test.id} to="/portal/testes">
+              <Link key={test.id} to={`${basePath}/testes`}>
                 <Card className="hover:shadow-md transition-shadow border-warning/30 bg-warning/5">
                   <CardContent className="pt-3 pb-3 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
@@ -270,7 +270,7 @@ export default function PatientHome() {
       {/* Next appointment preview */}
       {data?.upcomingAppointments?.[0] && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Link to="/portal/consultas">
+          <Link to={`${basePath}/consultas`}>
             <Card className="hover:shadow-md transition-shadow">
               <CardContent className="pt-4 pb-3">
                 <p className="text-xs text-muted-foreground mb-1">Próxima consulta</p>
