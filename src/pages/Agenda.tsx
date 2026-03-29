@@ -138,7 +138,7 @@ export default function Agenda() {
         toast({ title: "Preencha casal, data e horário", variant: "destructive" });
         return;
       }
-    } else if (form.type !== "blocked") {
+    } else {
       if (!form.patient_id || !form.date || !form.time) {
         toast({ title: "Preencha paciente, data e horário", variant: "destructive" });
         return;
