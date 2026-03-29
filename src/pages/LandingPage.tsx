@@ -704,6 +704,9 @@ export default function LandingPage() {
                     </ul>
                   </div>
                 )}
+                {(plan as any).note && (
+                  <p className="text-xs text-muted-foreground text-center italic mt-2 px-2">{(plan as any).note}</p>
+                )}
                 <div className="space-y-2">
                   <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
                     <Link to={`/login?plan=${plan.name.toLowerCase()}`}>
