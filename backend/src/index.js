@@ -15,6 +15,7 @@ const aiRoutes = require('./routes/aiAgents');
 const setupRoutes = require('./routes/setup');
 const plansRoutes = require('./routes/plans');
 const settingsRoutes = require('./routes/settings');
+const whatsappRoutes = require('./routes/whatsapp');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/plans', plansRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 PsicoGest API rodando na porta ${PORT}`);

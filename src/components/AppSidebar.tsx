@@ -11,6 +11,8 @@ import {
   Settings,
   LogOut,
   Sparkles,
+  Bot,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -23,6 +25,8 @@ const navItems = [
   { icon: FileText, label: "Prontuários", path: "/prontuarios" },
   { icon: DollarSign, label: "Financeiro", path: "/financeiro" },
   { icon: Sparkles, label: "Assistente IA", path: "/assistente-ia" },
+  { icon: Bot, label: "Secretária IA", path: "/secretaria-ia" },
+  { icon: Bell, label: "Notificações", path: "/notificacoes" },
   { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
 ];
 

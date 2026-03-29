@@ -88,14 +88,67 @@ model User {
   customizations AiAgentCustomization[] @relation("agentCustomizations")
   providerKeys   AiProviderKey[]        @relation("providerKeys")
   aiChats        AiChat[]               @relation("aiChats")
+  secretaryConfigs SecretaryConfig[]
 
   @@map("users")
 }
 
-model Patient {
-  id               String        @id @default(uuid()) @db.Uuid
-  professionalId   String        @map("professional_id") @db.Uuid
-  professional     User          @relation(fields: [professionalId], references: [id])
+model WhatsappInstance {
+  id             String         @id @default(uuid()) @db.Uuid
+  instanceId     String         @unique @map("instance_id") @db.VarChar(255)
+  instanceName   String         @map("instance_name") @db.VarChar(255)
+  phone          String?        @db.VarChar(20)
+  status         String         @default("disconnected") @db.VarChar(20)
+  organizationId String?        @map("organization_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  secretaryConfigs SecretaryConfig[]
+  notifications  WhatsappNotification[]
+
+  @@map("whatsapp_instances")
+}
+
+model SecretaryConfig {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  user            User              @relation(fields: [userId], references: [id])
+  instanceId      String?           @map("instance_id") @db.Uuid
+  instance        WhatsappInstance?  @relation(fields: [instanceId], references: [id])
+  secretaryName   String            @default("Secretária Virtual") @map("secretary_name") @db.VarChar(100)
+  workingHoursStart String          @default("08:00") @map("working_hours_start") @db.VarChar(5)
+  workingHoursEnd String            @default("18:00") @map("working_hours_end") @db.VarChar(5)
+  workingDays     String[]          @default(["seg","ter","qua","qui","sex"]) @map("working_days")
+  clinicName      String?           @map("clinic_name") @db.VarChar(255)
+  clinicAddress   String?           @map("clinic_address")
+  clinicPhone     String?           @map("clinic_phone") @db.VarChar(20)
+  professionalInfo String?         @map("professional_info")
+  promptComplement String?         @map("prompt_complement")
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@unique([userId])
+  @@map("secretary_configs")
+}
+
+model WhatsappNotification {
+  id             String            @id @default(uuid()) @db.Uuid
+  instanceId     String            @map("instance_id") @db.Uuid
+  instance       WhatsappInstance   @relation(fields: [instanceId], references: [id])
+  phone          String            @db.VarChar(20)
+  message        String
+  type           String            @db.VarChar(30)
+  status         String            @default("queued") @db.VarChar(20)
+  scheduledAt    DateTime          @map("scheduled_at")
+  sentAt         DateTime?         @map("sent_at")
+  error          String?
+  referenceId    String?           @map("reference_id") @db.Uuid
+  referenceType  String?           @map("reference_type") @db.VarChar(30)
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  @@index([status, scheduledAt])
+  @@map("whatsapp_notifications")
+}
   name             String        @db.VarChar(255)
   cpf              String?       @unique @db.VarChar(14)
   birthDate        DateTime?     @map("birth_date") @db.Date
