@@ -1,54 +1,11 @@
 import { motion } from "framer-motion";
-import { Users, Calendar, DollarSign, Clock, Plus, ArrowRight, TrendingUp, Brain } from "lucide-react";
+import { Users, Calendar, DollarSign, Clock, Plus, ArrowRight, Brain, ClipboardList } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useDashboardSummary } from "@/hooks/useDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-
-const emptyWeeklyData = [
-  { day: "Seg", consultas: 0, receita: 0 },
-  { day: "Ter", consultas: 0, receita: 0 },
-  { day: "Qua", consultas: 0, receita: 0 },
-  { day: "Qui", consultas: 0, receita: 0 },
-  { day: "Sex", consultas: 0, receita: 0 },
-  { day: "Sáb", consultas: 0, receita: 0 },
-  { day: "Dom", consultas: 0, receita: 0 },
-];
-
-const emptyMonthlyTrend = [
-  { month: "Jan", pacientes: 0, consultas: 0 },
-  { month: "Fev", pacientes: 0, consultas: 0 },
-  { month: "Mar", pacientes: 0, consultas: 0 },
-  { month: "Abr", pacientes: 0, consultas: 0 },
-  { month: "Mai", pacientes: 0, consultas: 0 },
-  { month: "Jun", pacientes: 0, consultas: 0 },
-];
-
-const emptyTypeData = [
-  { name: "Individual", value: 0, fill: "hsl(var(--primary))" },
-  { name: "Casal", value: 0, fill: "hsl(var(--info))" },
-  { name: "Grupo", value: 0, fill: "hsl(var(--warning))" },
-];
 
 export default function Dashboard() {
   const { data: summary, isLoading } = useDashboardSummary();
@@ -58,7 +15,12 @@ export default function Dashboard() {
     patient: c.patient?.name || "Paciente",
     type: c.type === "couple" ? "Casal" : "Individual",
     status: c.status === "scheduled" ? "confirmed" : c.status,
-  })) || fallbackSchedule;
+  })) || [];
+
+  const todayCount = summary?.today_appointments ?? 0;
+  const totalPatients = summary?.total_patients ?? 0;
+  const monthlyRevenue = summary?.monthly_revenue ?? 0;
+  const pendingPayments = summary?.pending_payments ?? 0;
 
   return (
     <div className="space-y-6">
@@ -89,109 +51,20 @@ export default function Dashboard() {
           ))
         ) : (
           <>
-            <StatCard icon={Calendar} label="Consultas Hoje" value={String(summary?.today_appointments ?? 5)} change="+12%" changeType="positive" />
-            <StatCard icon={Users} label="Total Pacientes" value={String(summary?.total_patients ?? 65)} change="+8%" changeType="positive" />
-            <StatCard icon={DollarSign} label="Faturamento Mensal" value={`R$ ${((summary?.monthly_revenue ?? 1200000) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} change="+15%" changeType="positive" />
-            <StatCard icon={Clock} label="Pagamentos Pendentes" value={`R$ ${((summary?.pending_payments ?? 350000) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} change="3 pendentes" changeType="negative" />
+            <StatCard icon={Calendar} label="Consultas Hoje" value={String(todayCount)} change={todayCount > 0 ? `${todayCount} agendada(s)` : "Nenhuma"} changeType={todayCount > 0 ? "positive" : "neutral"} />
+            <StatCard icon={Users} label="Total Pacientes" value={String(totalPatients)} change={totalPatients > 0 ? "Ativos" : "Nenhum cadastrado"} changeType={totalPatients > 0 ? "positive" : "neutral"} />
+            <StatCard icon={DollarSign} label="Faturamento Mensal" value={`R$ ${(monthlyRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} change={monthlyRevenue > 0 ? "Este mês" : "Sem faturamento"} changeType={monthlyRevenue > 0 ? "positive" : "neutral"} />
+            <StatCard icon={Clock} label="Pagamentos Pendentes" value={`R$ ${(pendingPayments / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} change={pendingPayments > 0 ? "Pendente(s)" : "Nenhum pendente"} changeType={pendingPayments > 0 ? "negative" : "neutral"} />
           </>
         )}
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Area Chart - Tendência Mensal */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="lg:col-span-1 shadow-card hover:shadow-card-hover transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" /> Tendência Mensal
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                <AreaChart data={monthlyTrend}>
-                  <defs>
-                    <linearGradient id="gradPacientes" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area type="monotone" dataKey="pacientes" stroke="hsl(var(--primary))" fill="url(#gradPacientes)" strokeWidth={2} />
-                </AreaChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Bar Chart - Consultas por Dia */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card className="shadow-card hover:shadow-card-hover transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Calendar className="w-4 h-4" /> Consultas da Semana
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                <BarChart data={weeklyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="day" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="consultas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Pie Chart - Tipo de Consulta */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="shadow-card hover:shadow-card-hover transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Users className="w-4 h-4" /> Tipos de Consulta
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center">
-              <div className="h-[200px] w-full flex items-center">
-                <div className="w-[60%] h-full">
-                  <ChartContainer config={chartConfig} className="h-full w-full">
-                    <PieChart>
-                      <Pie data={typeData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
-                        {typeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                    </PieChart>
-                  </ChartContainer>
-                </div>
-                <div className="space-y-2">
-                  {typeData.map((t) => (
-                    <div key={t.name} className="flex items-center gap-2 text-xs">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: t.fill }} />
-                      <span className="text-muted-foreground">{t.name}</span>
-                      <span className="font-semibold text-foreground">{t.value}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Schedule + Recent */}
+      {/* Schedule + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          transition={{ delay: 0.1 }}
           className="lg:col-span-2"
         >
           <Card className="shadow-card">
@@ -202,27 +75,38 @@ export default function Dashboard() {
               </Link>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {todayAppointments.map((apt: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-mono text-muted-foreground w-12">{apt.time}</span>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{apt.patient}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          apt.type === "Casal" ? "bg-info/10 text-info" : "bg-secondary text-secondary-foreground"
-                        }`}>
-                          {apt.type}
-                        </span>
+              {todayAppointments.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Calendar className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">Nenhuma consulta agendada para hoje</p>
+                  <p className="text-xs mt-1">Agende uma nova consulta para começar</p>
+                  <Button variant="outline" size="sm" className="mt-3" asChild>
+                    <Link to="/agenda"><Plus className="w-4 h-4 mr-1" />Agendar Consulta</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {todayAppointments.map((apt: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-mono text-muted-foreground w-12">{apt.time}</span>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{apt.patient}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            apt.type === "Casal" ? "bg-info/10 text-info" : "bg-secondary text-secondary-foreground"
+                          }`}>
+                            {apt.type}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`w-2 h-2 rounded-full ${apt.status === "confirmed" ? "bg-success" : "bg-warning"}`} />
+                        <Button variant="outline" size="sm">Iniciar</Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`w-2 h-2 rounded-full ${apt.status === "confirmed" ? "bg-success" : "bg-warning"}`} />
-                      <Button variant="outline" size="sm">Iniciar</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -230,31 +114,30 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.15 }}
         >
           <Card className="shadow-card h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">Atividade Recente</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Comece por aqui</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {[
-                  { action: "Consulta finalizada", detail: "Ana Silva - Individual", time: "Há 2h", color: "bg-success" },
-                  { action: "Pagamento recebido", detail: "R$ 250,00 - PIX", time: "Há 3h", color: "bg-primary" },
-                  { action: "Novo paciente", detail: "João Oliveira cadastrado", time: "Há 5h", color: "bg-info" },
-                  { action: "Prontuário atualizado", detail: "Beatriz Santos", time: "Ontem", color: "bg-warning" },
-                  { action: "Consulta agendada", detail: "Pedro & Laura - Casal", time: "Ontem", color: "bg-secondary" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 px-6 py-3">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${item.color}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{item.action}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.detail}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{item.time}</span>
+            <CardContent className="space-y-3">
+              {[
+                { label: "Cadastrar pacientes", description: "Adicione seus primeiros pacientes", to: "/pacientes", icon: Users },
+                { label: "Agendar consultas", description: "Crie sua primeira consulta", to: "/agenda", icon: Calendar },
+                { label: "Configurar testes", description: "Importe testes validados", to: "/testes", icon: ClipboardList },
+                { label: "Ver financeiro", description: "Controle pagamentos e faturamento", to: "/financeiro", icon: DollarSign },
+              ].map((item, i) => (
+                <Link key={i} to={item.to} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <item.icon className="w-4 h-4 text-primary" />
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              ))}
             </CardContent>
           </Card>
         </motion.div>
