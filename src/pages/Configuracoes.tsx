@@ -1,14 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon, Upload } from "lucide-react";
+import {
+  Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon, Upload,
+  UserPlus, Users, Power, PowerOff, Shield,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { orgSettingsApi, type OrgSettings } from "@/lib/portalApi";
-
+import { apiRequest } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 export default function Configuracoes() {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
