@@ -198,6 +198,15 @@ export interface PatientDashboard {
   patientName: string;
 }
 
+export interface PatientPortalMessage {
+  id: string;
+  type: "text" | "audio" | "file";
+  content: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  createdAt: string;
+}
+
 export const patientPortalApi = {
   createAccess: (data: { patientId: string; email: string; password: string }) =>
     apiRequest("/patient-portal/create-access", { method: "POST", body: data }),
@@ -209,4 +218,8 @@ export const patientPortalApi = {
     apiRequest<{ payments: any[]; summary: { total: number; paid: number; pending: number } }>(
       "/patient-portal/financial"
     ),
+  listMessages: () =>
+    apiRequest<PatientPortalMessage[]>("/patient-portal/messages"),
+  sendMessage: (data: { type: "text" | "audio" | "file"; content: string; fileName?: string; mimeType?: string }) =>
+    apiRequest<PatientPortalMessage>("/patient-portal/messages", { method: "POST", body: data }),
 };
