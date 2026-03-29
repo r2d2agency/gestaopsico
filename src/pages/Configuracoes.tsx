@@ -21,6 +21,8 @@ import { orgSettingsApi, type OrgSettings } from "@/lib/portalApi";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 export default function Configuracoes() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<Partial<OrgSettings>>({
