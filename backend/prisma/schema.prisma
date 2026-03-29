@@ -116,6 +116,7 @@ model User {
   providerKeys   AiProviderKey[]        @relation("providerKeys")
   aiChats        AiChat[]               @relation("aiChats")
   secretaryConfigs SecretaryConfig[]
+  patientPortalMessages PatientPortalMessage[] @relation("portalMessageProfessional")
 
   @@map("users")
 }
@@ -219,6 +220,7 @@ model Patient {
   testAssignments  TestAssignment[]
   accounts         Account[]
   userAccounts     User[]        @relation("patientUser")
+  portalMessages   PatientPortalMessage[]
 
   @@map("patients")
 }
