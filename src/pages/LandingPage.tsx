@@ -190,13 +190,13 @@ const plans = [
     price: "R$ 349",
     priceWithSecretary: "R$ 549",
     period: "/mês",
-    desc: "Para clínicas com equipe",
+    desc: "Até 3 profissionais",
     features: [
-      "Até 10 profissionais",
+      "Até 3 profissionais inclusos",
       "Tudo do Profissional",
       "Painel administrativo + RBAC",
       "Secretária e financeiro dedicados",
-      "Multi-unidades",
+      "Relatórios consolidados",
       "Suporte dedicado + SLA",
     ],
     secretaryFeatures: [
@@ -205,6 +205,7 @@ const plans = [
       "Bot inteligente por profissional",
     ],
     highlighted: false,
+    note: "Mais de 3 profissionais? Entre em contato para um plano personalizado.",
   },
 ];
 
@@ -702,6 +703,9 @@ export default function LandingPage() {
                       ))}
                     </ul>
                   </div>
+                )}
+                {(plan as any).note && (
+                  <p className="text-xs text-muted-foreground text-center italic mt-2 px-2">{(plan as any).note}</p>
                 )}
                 <div className="space-y-2">
                   <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
