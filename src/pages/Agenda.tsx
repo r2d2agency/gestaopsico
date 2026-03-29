@@ -685,10 +685,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, businessHo
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
   businessHours: number[];
-}) {
-  onSelectDate: (d: Date) => void;
-  onAttend: (id: string) => void;
-}) {
+) {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   // Only show weekdays (Mon-Fri) for cleaner business view, but keep Sat for possible schedules
