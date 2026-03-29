@@ -127,9 +127,6 @@ export default function Agenda() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments"] });
       toast({ title: "Horário bloqueado!" });
-      setBlockOpen(false);
-      setBlockReason("");
-      setBlockTime("");
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
