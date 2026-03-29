@@ -101,6 +101,9 @@ model User {
   passwordHash   String        @map("password_hash") @db.VarChar(255)
   role           String        @default("professional") @db.VarChar(50)
   status         String        @default("active") @db.VarChar(20)
+  crp            String?       @db.VarChar(20)
+  phone          String?       @db.VarChar(20)
+  specialty      String?       @db.VarChar(100)
   createdAt      DateTime      @default(now()) @map("created_at")
   patients       Patient[]     @relation("professionalPatients")
   couples        Couple[]

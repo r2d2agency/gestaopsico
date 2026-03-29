@@ -1,0 +1,4 @@
+-- Add CRP and phone fields to users
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "crp" VARCHAR(20);
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "phone" VARCHAR(20);
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "specialty" VARCHAR(100);

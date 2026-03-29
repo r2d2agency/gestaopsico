@@ -143,7 +143,7 @@ router.get('/users', async (req, res) => {
         where,
         select: {
           id: true, name: true, email: true, role: true, status: true, createdAt: true,
-          organizationId: true,
+          organizationId: true, crp: true, phone: true, specialty: true,
           organization: { select: { name: true, slug: true } },
           _count: { select: { patients: true, appointments: true } }
         },
@@ -186,6 +186,10 @@ router.post('/users', async (req, res) => {
       }
     }
 
+    const crp = req.body?.crp?.trim() || null;
+    const phone = req.body?.phone?.trim() || null;
+    const specialty = req.body?.specialty?.trim() || null;
+
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -195,9 +199,12 @@ router.post('/users', async (req, res) => {
         role: role || 'professional',
         status: 'active',
         createdAt: new Date(),
-        organizationId
+        organizationId,
+        crp,
+        phone,
+        specialty
       },
-      select: { id: true, name: true, email: true, role: true, status: true, organizationId: true }
+      select: { id: true, name: true, email: true, role: true, status: true, organizationId: true, crp: true, phone: true, specialty: true }
     });
 
     res.status(201).json(user);
