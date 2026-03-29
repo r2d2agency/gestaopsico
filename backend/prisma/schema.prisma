@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @db.VarChar(255)
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @map("password_hash") @db.VarChar(255)
+  role         String        @default("professional") @db.VarChar(50)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  patients     Patient[]
+  couples      Couple[]
+  appointments Appointment[]
+  records      Record[]
+
+  @@map("users")
+}
+
+model Patient {
+  id               String        @id @default(uuid()) @db.Uuid
+  professionalId   String        @map("professional_id") @db.Uuid
+  professional     User          @relation(fields: [professionalId], references: [id])
+  name             String        @db.VarChar(255)
+  cpf              String?       @unique @db.VarChar(14)
+  birthDate        DateTime?     @map("birth_date") @db.Date
+  phone            String?       @db.VarChar(20)
+  email            String?       @db.VarChar(255)
+  address          String?
+  gender           String?       @db.VarChar(20)
+  emergencyContact String?       @map("emergency_contact") @db.VarChar(255)
+  clinicalNotes    String?       @map("clinical_notes")
+  healthHistory    String?       @map("health_history")
+  medications      String?
+  allergies        String?
+  status           String        @default("active") @db.VarChar(20)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  appointments     Appointment[]
+  records          Record[]
+  payments         Payment[]
+  couplesAs1       Couple[]      @relation("patient1")
+  couplesAs2       Couple[]      @relation("patient2")
+
+  @@map("patients")
+}
+
+model Couple {
+  id             String        @id @default(uuid()) @db.Uuid
+  professionalId String        @map("professional_id") @db.Uuid
+  professional   User          @relation(fields: [professionalId], references: [id])
+  patient1Id     String        @map("patient1_id") @db.Uuid
+  patient1       Patient       @relation("patient1", fields: [patient1Id], references: [id])
+  patient2Id     String        @map("patient2_id") @db.Uuid
+  patient2       Patient       @relation("patient2", fields: [patient2Id], references: [id])
+  name           String?       @db.VarChar(255)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  appointments   Appointment[]
+  records        Record[]
+
+  @@map("couples")
+}
+
+model Appointment {
+  id             String         @id @default(uuid()) @db.Uuid
+  professionalId String         @map("professional_id") @db.Uuid
+  professional   User           @relation(fields: [professionalId], references: [id])
+  patientId      String?        @map("patient_id") @db.Uuid
+  patient        Patient?       @relation(fields: [patientId], references: [id])
+  coupleId       String?        @map("couple_id") @db.Uuid
+  couple         Couple?        @relation(fields: [coupleId], references: [id])
+  type           String         @db.VarChar(20)
+  date           DateTime       @db.Date
+  time           String         @db.VarChar(5)
+  duration       Int            @default(50)
+  value          Decimal?       @db.Decimal(10, 2)
+  status         String         @default("scheduled") @db.VarChar(20)
+  paymentStatus  String         @default("pending") @map("payment_status") @db.VarChar(20)
+  mode           String         @default("video") @db.VarChar(20)
+  notes          String?
+  createdAt      DateTime       @default(now()) @map("created_at")
+  records        Record[]
+  transcriptions Transcription[]
+  payments       Payment[]
+
+  @@map("appointments")
+}
+
+model Record {
+  id             String   @id @default(uuid()) @db.Uuid
+  appointmentId  String?  @map("appointment_id") @db.Uuid
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id])
+  patientId      String?  @map("patient_id") @db.Uuid
+  patient        Patient? @relation(fields: [patientId], references: [id])
+  coupleId       String?  @map("couple_id") @db.Uuid
+  couple         Couple?  @relation(fields: [coupleId], references: [id])
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation(fields: [professionalId], references: [id])
+  type           String   @db.VarChar(20)
+  content        String?
+  aiContent      String?  @map("ai_content")
+  date           DateTime @db.Date
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("records")
+}
+
+model Transcription {
+  id            String      @id @default(uuid()) @db.Uuid
+  appointmentId String      @map("appointment_id") @db.Uuid
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  content       String?
+  speakers      Json?
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@map("transcriptions")
+}
+
+model Payment {
+  id            String      @id @default(uuid()) @db.Uuid
+  appointmentId String?     @map("appointment_id") @db.Uuid
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  patientId     String      @map("patient_id") @db.Uuid
+  patient       Patient     @relation(fields: [patientId], references: [id])
+  value         Decimal     @db.Decimal(10, 2)
+  method        String?     @db.VarChar(20)
+  status        String      @default("pending") @db.VarChar(20)
+  paidAt        DateTime?   @map("paid_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@map("payments")
+}
