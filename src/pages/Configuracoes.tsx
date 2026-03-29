@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon } from "lucide-react";
+import { Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { orgSettingsApi, type OrgSettings } from "@/lib/portalApi";
 
 export default function Configuracoes() {
   const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<Partial<OrgSettings>>({
     logo: "", primaryColor: "", secondaryColor: "", accentColor: "",
     businessName: "", businessPhone: "", businessEmail: "", businessAddress: ""
@@ -36,6 +37,20 @@ export default function Configuracoes() {
 
   const set = (field: keyof OrgSettings, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 2MB", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      set("logo", reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (isLoading) return <div className="text-center py-16 text-muted-foreground">Carregando...</div>;
 
   return (
@@ -60,15 +75,43 @@ export default function Configuracoes() {
               <CardDescription>Personalize as cores e logo da sua clínica</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Logo Upload */}
               <div>
-                <Label>URL do Logo</Label>
-                <Input value={form.logo || ""} onChange={e => set("logo", e.target.value)} placeholder="https://..." />
-                {form.logo && (
-                  <div className="mt-2 p-3 bg-muted rounded-lg flex items-center justify-center">
-                    <img src={form.logo} alt="Logo" className="max-h-16 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <Label>Logo</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+                <div className="flex items-center gap-3 mt-1">
+                  {form.logo ? (
+                    <div className="relative group">
+                      <img src={form.logo} alt="Logo" className="w-16 h-16 rounded-lg object-contain border border-border bg-muted p-1" />
+                      <button
+                        onClick={() => set("logo", "")}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >×</button>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
+                      <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />Enviar Logo
+                    </Button>
+                    <span className="text-xs text-muted-foreground">PNG, JPG ou SVG (máx. 2MB)</span>
                   </div>
-                )}
+                </div>
+                <div className="mt-2">
+                  <Label className="text-xs text-muted-foreground">Ou cole a URL:</Label>
+                  <Input value={form.logo?.startsWith("data:") ? "" : form.logo || ""} onChange={e => set("logo", e.target.value)} placeholder="https://..." className="mt-1" />
+                </div>
               </div>
+
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Cor Primária</Label>
