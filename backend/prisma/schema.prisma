@@ -7,17 +7,57 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Organization {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String         @db.VarChar(255)
+  slug          String         @unique @db.VarChar(100)
+  type          String         @default("clinic") @db.VarChar(20) // clinic | individual
+  plan          String         @default("basic") @db.VarChar(50) // basic | professional | enterprise
+  status        String         @default("active") @db.VarChar(20) // active | inactive | suspended
+  maxUsers      Int            @default(1) @map("max_users")
+  phone         String?        @db.VarChar(20)
+  email         String?        @db.VarChar(255)
+  cnpj          String?        @db.VarChar(18)
+  address       String?
+  logo          String?
+  trialEndsAt   DateTime?      @map("trial_ends_at")
+  suspendedAt   DateTime?      @map("suspended_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  users         User[]
+  subscriptions Subscription[]
+
+  @@map("organizations")
+}
+
+model Subscription {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan           String       @db.VarChar(50)
+  status         String       @default("active") @db.VarChar(20) // active | cancelled | expired | trial
+  startDate      DateTime     @map("start_date")
+  endDate        DateTime?    @map("end_date")
+  value          Decimal      @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("subscriptions")
+}
+
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  name         String        @db.VarChar(255)
-  email        String        @unique @db.VarChar(255)
-  passwordHash String        @map("password_hash") @db.VarChar(255)
-  role         String        @default("professional") @db.VarChar(50)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  patients     Patient[]
-  couples      Couple[]
-  appointments Appointment[]
-  records      Record[]
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  name           String        @db.VarChar(255)
+  email          String        @unique @db.VarChar(255)
+  passwordHash   String        @map("password_hash") @db.VarChar(255)
+  role           String        @default("professional") @db.VarChar(50) // superadmin | admin | professional
+  status         String        @default("active") @db.VarChar(20) // active | inactive
+  createdAt      DateTime      @default(now()) @map("created_at")
+  patients       Patient[]
+  couples        Couple[]
+  appointments   Appointment[]
+  records        Record[]
 
   @@map("users")
 }
@@ -91,20 +131,20 @@ model Appointment {
 }
 
 model Record {
-  id             String   @id @default(uuid()) @db.Uuid
-  appointmentId  String?  @map("appointment_id") @db.Uuid
+  id             String       @id @default(uuid()) @db.Uuid
+  appointmentId  String?      @map("appointment_id") @db.Uuid
   appointment    Appointment? @relation(fields: [appointmentId], references: [id])
-  patientId      String?  @map("patient_id") @db.Uuid
-  patient        Patient? @relation(fields: [patientId], references: [id])
-  coupleId       String?  @map("couple_id") @db.Uuid
-  couple         Couple?  @relation(fields: [coupleId], references: [id])
-  professionalId String   @map("professional_id") @db.Uuid
-  professional   User     @relation(fields: [professionalId], references: [id])
-  type           String   @db.VarChar(20)
+  patientId      String?      @map("patient_id") @db.Uuid
+  patient        Patient?     @relation(fields: [patientId], references: [id])
+  coupleId       String?      @map("couple_id") @db.Uuid
+  couple         Couple?      @relation(fields: [coupleId], references: [id])
+  professionalId String       @map("professional_id") @db.Uuid
+  professional   User         @relation(fields: [professionalId], references: [id])
+  type           String       @db.VarChar(20)
   content        String?
-  aiContent      String?  @map("ai_content")
-  date           DateTime @db.Date
-  createdAt      DateTime @default(now()) @map("created_at")
+  aiContent      String?      @map("ai_content")
+  date           DateTime     @db.Date
+  createdAt      DateTime     @default(now()) @map("created_at")
 
   @@map("records")
 }
@@ -121,16 +161,16 @@ model Transcription {
 }
 
 model Payment {
-  id            String      @id @default(uuid()) @db.Uuid
-  appointmentId String?     @map("appointment_id") @db.Uuid
+  id            String       @id @default(uuid()) @db.Uuid
+  appointmentId String?      @map("appointment_id") @db.Uuid
   appointment   Appointment? @relation(fields: [appointmentId], references: [id])
-  patientId     String      @map("patient_id") @db.Uuid
-  patient       Patient     @relation(fields: [patientId], references: [id])
-  value         Decimal     @db.Decimal(10, 2)
-  method        String?     @db.VarChar(20)
-  status        String      @default("pending") @db.VarChar(20)
-  paidAt        DateTime?   @map("paid_at")
-  createdAt     DateTime    @default(now()) @map("created_at")
+  patientId     String       @map("patient_id") @db.Uuid
+  patient       Patient      @relation(fields: [patientId], references: [id])
+  value         Decimal      @db.Decimal(10, 2)
+  method        String?      @db.VarChar(20)
+  status        String       @default("pending") @db.VarChar(20)
+  paidAt        DateTime?    @map("paid_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
 
   @@map("payments")
 }
