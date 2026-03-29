@@ -244,6 +244,19 @@ export default function Prontuarios() {
     ? appointments.filter((a) => a.patient_id === form.patientId)
     : appointments;
 
+  // Filter appointments for the selected patient
+  const selectedPatientApts = useMemo(() => {
+    if (!selectedEntity || selectedEntity.type !== "patient") return { upcoming: [], past: [] };
+    const now = new Date();
+    const filtered = patientApts.filter((a: any) => a.patientId === selectedEntity.id || a.patient?.id === selectedEntity.id);
+    const upcoming = filtered.filter((a: any) => new Date(a.date) >= new Date(now.toISOString().split("T")[0]) && a.status !== "cancelled");
+    const past = filtered.filter((a: any) => new Date(a.date) < new Date(now.toISOString().split("T")[0]) || a.status === "cancelled" || a.status === "completed");
+    return {
+      upcoming: upcoming.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+      past: past.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    };
+  }, [selectedEntity, patientApts]);
+
   // Update name if we came from URL param and now have patients loaded
   if (selectedEntity && !selectedEntity.name && patients.length > 0) {
     const found = patients.find((p: any) => p.id === selectedEntity.id);
