@@ -7,6 +7,7 @@ import {
   Sparkles, Download, X
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { usePortalSlug } from "@/hooks/usePortalSlug";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,16 +36,19 @@ function getMotivational() {
   return MOTIVATIONAL[day % MOTIVATIONAL.length];
 }
 
-const quickActions = [
-  { to: "/portal/humor", icon: Heart, label: "Humor", desc: "Registrar como se sente", gradient: "from-primary/10 to-primary/5" },
-  { to: "/portal/testes", icon: ClipboardList, label: "Testes", desc: "Testes pendentes", gradient: "from-accent to-accent/50" },
-  { to: "/portal/consultas", icon: Calendar, label: "Consultas", desc: "Próximas sessões", gradient: "from-success/10 to-success/5" },
-  { to: "/portal/financeiro", icon: CreditCard, label: "Financeiro", desc: "Pagamentos", gradient: "from-warning/10 to-warning/5" },
-];
+function getQuickActions(basePath: string) {
+  return [
+    { to: `${basePath}/humor`, icon: Heart, label: "Humor", desc: "Registrar como se sente", gradient: "from-primary/10 to-primary/5" },
+    { to: `${basePath}/testes`, icon: ClipboardList, label: "Testes", desc: "Testes pendentes", gradient: "from-accent to-accent/50" },
+    { to: `${basePath}/consultas`, icon: Calendar, label: "Consultas", desc: "Próximas sessões", gradient: "from-success/10 to-success/5" },
+    { to: `${basePath}/financeiro`, icon: CreditCard, label: "Financeiro", desc: "Pagamentos", gradient: "from-warning/10 to-warning/5" },
+  ];
+}
 
 export default function PatientHome() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { basePath } = usePortalSlug();
   const [quickMood, setQuickMood] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -193,7 +197,7 @@ export default function PatientHome() {
                   {moodMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                   Registrar
                 </Button>
-                <Link to="/portal/humor" className="flex-1">
+                <Link to={`${basePath}/humor`} className="flex-1">
                   <Button size="sm" variant="outline" className="w-full text-xs">+ Detalhes</Button>
                 </Link>
               </motion.div>
@@ -204,7 +208,7 @@ export default function PatientHome() {
 
       {/* Quick Actions Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {quickActions.map((action, i) => (
+        {getQuickActions(basePath).map((action, i) => (
           <Link key={action.to} to={action.to}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -242,7 +246,7 @@ export default function PatientHome() {
               Testes pendentes
             </p>
             {pendingTests.map(test => (
-              <Link key={test.id} to="/portal/testes">
+              <Link key={test.id} to={`${basePath}/testes`}>
                 <Card className="hover:shadow-md transition-shadow border-warning/30 bg-warning/5">
                   <CardContent className="pt-3 pb-3 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
@@ -266,7 +270,7 @@ export default function PatientHome() {
       {/* Next appointment preview */}
       {data?.upcomingAppointments?.[0] && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Link to="/portal/consultas">
+          <Link to={`${basePath}/consultas`}>
             <Card className="hover:shadow-md transition-shadow">
               <CardContent className="pt-4 pb-3">
                 <p className="text-xs text-muted-foreground mb-1">Próxima consulta</p>

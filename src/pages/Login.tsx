@@ -46,9 +46,9 @@ export default function Login() {
         loggedUser = await login(email, password);
         toast({ title: "Login realizado!" });
       }
-      // Role-based redirect
+      // Role-based redirect - patients should login via portal link /p/:slug
       if (loggedUser.role === "patient") {
-        navigate("/portal");
+        navigate("/login");
       } else if (loggedUser.role === "superadmin") {
         navigate("/admin");
       } else {

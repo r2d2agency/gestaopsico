@@ -47,9 +47,9 @@ export default function PortalLogin() {
   const { user } = useAuth();
   useEffect(() => {
     if (user && user.role === "patient") {
-      navigate("/portal", { replace: true });
+      navigate(`/p/${slug}/portal`, { replace: true });
     }
-  }, [user]);
+  }, [user, slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +65,7 @@ export default function PortalLogin() {
       }
 
       if (loggedUser.role === "patient") {
-        navigate("/portal");
+        navigate(`/p/${slug}/portal`);
       } else {
         navigate("/dashboard");
       }
