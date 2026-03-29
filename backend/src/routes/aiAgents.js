@@ -21,7 +21,8 @@ router.get('/agents', async (req, res) => {
     });
     res.json(agents);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar agentes', details: err.message });
+    console.error('AI agents disabled or table missing:', err.message);
+    res.json([]);
   }
 });
 
