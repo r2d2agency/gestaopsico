@@ -63,12 +63,16 @@ router.post('/register', async (req, res) => {
       }
     }
 
+    // Auto-promote first user to superadmin
+    const userCount = await prisma.user.count();
+    const isFirstUser = userCount === 0;
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         passwordHash,
-        role: 'professional',
+        role: isFirstUser ? 'superadmin' : 'professional',
         status: 'active',
         organizationId,
         createdAt: new Date()
