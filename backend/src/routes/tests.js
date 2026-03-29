@@ -7,9 +7,166 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
-// ======== PROFESSIONAL ENDPOINTS ========
+// ======== PRESET TEST TEMPLATES ========
+const PRESET_TESTS = [
+  {
+    title: "Inventário de Ansiedade de Beck (BAI)",
+    description: "Avalia a intensidade de sintomas de ansiedade. Cada item é pontuado de 0 a 3. Resultado: 0-10 mínimo, 11-19 leve, 20-30 moderado, 31-63 grave.",
+    category: "ansiedade",
+    scoringRules: { type: "sum", ranges: [
+      { min: 0, max: 10, label: "Mínimo" },
+      { min: 11, max: 19, label: "Leve" },
+      { min: 20, max: 30, label: "Moderado" },
+      { min: 31, max: 63, label: "Grave" }
+    ]},
+    questions: [
+      { text: "Dormência ou formigamento", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Sensação de calor", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Tremores nas pernas", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Incapaz de relaxar", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Medo que aconteça o pior", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Atordoado ou tonto", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Palpitação ou aceleração do coração", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Sem equilíbrio", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Aterrorizado", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Nervoso", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Sensação de sufocação", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Tremores nas mãos", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Trêmulo", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Medo de perder o controle", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Dificuldade de respirar", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Medo de morrer", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Assustado", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Indigestão ou desconforto no abdômen", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Sensação de desmaio", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Rosto afogueado", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+      { text: "Suor (não devido ao calor)", type: "scale", options: ["Absolutamente não", "Levemente", "Moderadamente", "Gravemente"] },
+    ]
+  },
+  {
+    title: "Inventário de Depressão de Beck (BDI-II)",
+    description: "Avalia a intensidade de sintomas depressivos. Cada grupo é pontuado de 0 a 3. Resultado: 0-13 mínimo, 14-19 leve, 20-28 moderado, 29-63 grave.",
+    category: "depressao",
+    scoringRules: { type: "sum", ranges: [
+      { min: 0, max: 13, label: "Mínimo" },
+      { min: 14, max: 19, label: "Leve" },
+      { min: 20, max: 28, label: "Moderado" },
+      { min: 29, max: 63, label: "Grave" }
+    ]},
+    questions: [
+      { text: "Tristeza", type: "scale", options: ["Não me sinto triste", "Sinto-me triste muitas vezes", "Estou triste o tempo todo", "Estou tão triste que não consigo suportar"] },
+      { text: "Pessimismo", type: "scale", options: ["Não estou desanimado", "Sinto-me mais desanimado que de costume", "Não espero que as coisas deem certo", "Sinto que não há esperança"] },
+      { text: "Fracasso passado", type: "scale", options: ["Não me sinto um fracasso", "Fracassei mais do que deveria", "Vejo muitos fracassos", "Sinto-me um fracasso total"] },
+      { text: "Perda de prazer", type: "scale", options: ["Tenho prazer nas coisas", "Não sinto tanto prazer", "Tenho pouco prazer", "Não sinto nenhum prazer"] },
+      { text: "Sentimentos de culpa", type: "scale", options: ["Não me sinto culpado", "Sinto-me culpado às vezes", "Sinto-me culpado na maioria das vezes", "Sinto-me culpado o tempo todo"] },
+      { text: "Sentimento de punição", type: "scale", options: ["Não sinto que esteja sendo punido", "Sinto que posso ser punido", "Espero ser punido", "Sinto que estou sendo punido"] },
+      { text: "Autoestima", type: "scale", options: ["Sinto como sempre me senti", "Perdi confiança em mim", "Estou desapontado comigo", "Não gosto de mim"] },
+      { text: "Autocrítica", type: "scale", options: ["Não me critico mais que o normal", "Sou mais crítico comigo", "Critico-me por todas falhas", "Me culpo por tudo de ruim"] },
+      { text: "Pensamentos suicidas", type: "scale", options: ["Não penso em me matar", "Penso mas não faria", "Gostaria de me matar", "Me mataria se tivesse oportunidade"] },
+      { text: "Choro", type: "scale", options: ["Não choro mais que antes", "Choro mais que antes", "Choro por qualquer coisa", "Sinto vontade mas não consigo"] },
+      { text: "Agitação", type: "scale", options: ["Não estou mais inquieto", "Sinto-me mais inquieto", "Estou tão inquieto que é difícil ficar parado", "Estou muito inquieto"] },
+      { text: "Perda de interesse", type: "scale", options: ["Não perdi interesse", "Estou menos interessado", "Perdi o interesse pela maioria", "É difícil me interessar"] },
+      { text: "Indecisão", type: "scale", options: ["Tomo decisões bem", "Acho mais difícil decidir", "Tenho muita dificuldade", "Não consigo tomar decisões"] },
+      { text: "Desvalorização", type: "scale", options: ["Me sinto útil", "Não me considero tão útil", "Me sinto mais inútil", "Me sinto completamente inútil"] },
+      { text: "Falta de energia", type: "scale", options: ["Tenho energia", "Tenho menos energia", "Não tenho energia para muito", "Não tenho energia para nada"] },
+      { text: "Alteração no sono", type: "scale", options: ["Nenhuma mudança", "Durmo um pouco mais/menos", "Durmo muito mais/menos", "Quase o dia todo / quase nada"] },
+      { text: "Irritabilidade", type: "scale", options: ["Não estou mais irritável", "Estou mais irritável", "Estou muito mais irritável", "Estou irritável o tempo todo"] },
+      { text: "Alteração no apetite", type: "scale", options: ["Nenhuma mudança", "Apetite um pouco diferente", "Apetite muito diferente", "Sem apetite ou como demais"] },
+      { text: "Dificuldade de concentração", type: "scale", options: ["Concentro-me bem", "Não me concentro tão bem", "É difícil manter atenção", "Não consigo me concentrar"] },
+      { text: "Cansaço ou fadiga", type: "scale", options: ["Não estou mais cansado", "Canso mais facilmente", "Cansado demais para muitas coisas", "Cansado demais para tudo"] },
+      { text: "Perda de interesse por sexo", type: "scale", options: ["Nenhuma mudança", "Menos interessado", "Muito menos interessado", "Perdi completamente"] },
+    ]
+  },
+  {
+    title: "Escala de Autoestima de Rosenberg",
+    description: "Avalia a autoestima global. Itens 2, 5, 6, 8, 9 são invertidos. Resultado: 30-40 autoestima alta, 20-30 média, <20 baixa.",
+    category: "autoestima",
+    scoringRules: { type: "sum", reverseItems: [1, 4, 5, 7, 8], ranges: [
+      { min: 10, max: 19, label: "Autoestima Baixa" },
+      { min: 20, max: 29, label: "Autoestima Média" },
+      { min: 30, max: 40, label: "Autoestima Alta" }
+    ]},
+    questions: [
+      { text: "Eu sinto que sou uma pessoa de valor, no mínimo tanto quanto as outras pessoas", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"] },
+      { text: "Eu acho que eu tenho várias boas qualidades", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"] },
+      { text: "Levando tudo em conta, eu penso que sou um fracasso", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"], reverseScored: true },
+      { text: "Eu acho que sou capaz de fazer as coisas tão bem quanto a maioria das pessoas", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"] },
+      { text: "Eu acho que eu não tenho muito do que me orgulhar", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"], reverseScored: true },
+      { text: "Eu tenho uma atitude positiva com relação a mim mesmo", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"] },
+      { text: "No conjunto, eu estou satisfeito comigo", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"] },
+      { text: "Eu gostaria de poder ter mais respeito por mim mesmo", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"], reverseScored: true },
+      { text: "Às vezes eu me sinto inútil", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"], reverseScored: true },
+      { text: "Às vezes eu acho que não presto para nada", type: "scale", options: ["Discordo totalmente", "Discordo", "Concordo", "Concordo totalmente"], reverseScored: true },
+    ]
+  },
+  {
+    title: "Escala de Estresse Percebido (PSS-10)",
+    description: "Avalia o grau de estresse percebido no último mês. Itens 4, 5, 7 e 8 são invertidos. Resultado: 0-13 baixo, 14-26 moderado, 27-40 alto estresse.",
+    category: "estresse",
+    scoringRules: { type: "sum", reverseItems: [3, 4, 6, 7], ranges: [
+      { min: 0, max: 13, label: "Estresse Baixo" },
+      { min: 14, max: 26, label: "Estresse Moderado" },
+      { min: 27, max: 40, label: "Estresse Alto" }
+    ]},
+    questions: [
+      { text: "Ficou aborrecido por algo inesperado?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"] },
+      { text: "Sentiu que era incapaz de controlar coisas importantes?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"] },
+      { text: "Sentiu-se nervoso e estressado?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"] },
+      { text: "Sentiu-se confiante em lidar com problemas pessoais?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"], reverseScored: true },
+      { text: "Sentiu que as coisas corriam a seu favor?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"], reverseScored: true },
+      { text: "Não conseguiu lidar com todas as coisas que tinha que fazer?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"] },
+      { text: "Sentiu que controlava as irritações do dia a dia?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"], reverseScored: true },
+      { text: "Sentiu que estava por cima das coisas?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"], reverseScored: true },
+      { text: "Ficou irritado com coisas fora do seu controle?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"] },
+      { text: "Sentiu dificuldades acumulando tanto que não conseguia superar?", type: "scale", options: ["Nunca", "Quase nunca", "Às vezes", "Frequentemente", "Muito frequentemente"] },
+    ]
+  },
+  {
+    title: "PHQ-9 (Questionário de Saúde do Paciente)",
+    description: "Rastreamento e monitoramento de depressão. Resultado: 0-4 nenhuma, 5-9 leve, 10-14 moderada, 15-19 moderadamente grave, 20-27 grave.",
+    category: "depressao",
+    scoringRules: { type: "sum", ranges: [
+      { min: 0, max: 4, label: "Nenhuma" },
+      { min: 5, max: 9, label: "Leve" },
+      { min: 10, max: 14, label: "Moderada" },
+      { min: 15, max: 19, label: "Moderadamente Grave" },
+      { min: 20, max: 27, label: "Grave" }
+    ]},
+    questions: [
+      { text: "Pouco interesse ou prazer em fazer as coisas", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Sentir-se para baixo, deprimido ou sem esperança", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Dificuldade para dormir/dormir demais", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Sentir-se cansado ou com pouca energia", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Falta de apetite ou comer demais", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Sentir-se mal consigo mesmo", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Dificuldade para se concentrar", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Mover-se ou falar tão lentamente / agitação", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Pensamentos de que seria melhor estar morto", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+    ]
+  },
+  {
+    title: "GAD-7 (Transtorno de Ansiedade Generalizada)",
+    description: "Rastreamento de ansiedade generalizada. Resultado: 0-4 mínima, 5-9 leve, 10-14 moderada, 15-21 grave.",
+    category: "ansiedade",
+    scoringRules: { type: "sum", ranges: [
+      { min: 0, max: 4, label: "Mínima" },
+      { min: 5, max: 9, label: "Leve" },
+      { min: 10, max: 14, label: "Moderada" },
+      { min: 15, max: 21, label: "Grave" }
+    ]},
+    questions: [
+      { text: "Sentir-se nervoso, ansioso ou no limite", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Não ser capaz de impedir ou controlar as preocupações", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Preocupar-se muito com diversas coisas", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Dificuldade para relaxar", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Ficar tão agitado que é difícil sentar-se e ficar quieto", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Ficar facilmente aborrecido ou irritável", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+      { text: "Sentir medo como se algo horrível fosse acontecer", type: "scale", options: ["Nenhuma vez", "Vários dias", "Mais da metade dos dias", "Quase todos os dias"] },
+    ]
+  }
+];
 
-// GET /api/tests/templates - list professional's test templates
+// GET /api/tests/templates
 router.get('/templates', async (req, res) => {
   try {
     const templates = await prisma.testTemplate.findMany({
@@ -21,7 +178,109 @@ router.get('/templates', async (req, res) => {
     });
     res.json(templates);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar testes' });
+    console.error('Tests listing error:', err.message);
+    res.json([]);
+  }
+});
+
+// GET /api/tests/presets - get available preset templates
+router.get('/presets', async (req, res) => {
+  res.json(PRESET_TESTS);
+});
+
+// POST /api/tests/import-preset - import a preset test
+router.post('/import-preset', async (req, res) => {
+  try {
+    const { presetIndex } = req.body;
+    const preset = PRESET_TESTS[presetIndex];
+    if (!preset) return res.status(400).json({ error: 'Preset inválido' });
+
+    const template = await prisma.testTemplate.create({
+      data: {
+        professionalId: req.userId,
+        title: preset.title,
+        description: preset.description,
+        category: preset.category,
+        isPreset: true,
+        scoringRules: preset.scoringRules,
+        questions: {
+          create: preset.questions.map((q, i) => ({
+            text: q.text,
+            type: q.type || 'scale',
+            options: q.options || [],
+            orderNum: i,
+            weight: 1,
+            reverseScored: q.reverseScored || false
+          }))
+        }
+      },
+      include: { questions: { orderBy: { orderNum: 'asc' } } }
+    });
+    res.status(201).json(template);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao importar preset', details: err.message });
+  }
+});
+
+// POST /api/tests/import-json - import test from JSON
+router.post('/import-json', async (req, res) => {
+  try {
+    const { title, description, category, scoringRules, questions } = req.body;
+    if (!title || !questions?.length) {
+      return res.status(400).json({ error: 'Título e perguntas são obrigatórios' });
+    }
+
+    const template = await prisma.testTemplate.create({
+      data: {
+        professionalId: req.userId,
+        title,
+        description,
+        category,
+        scoringRules: scoringRules || null,
+        questions: {
+          create: questions.map((q, i) => ({
+            text: q.text,
+            type: q.type || 'scale',
+            options: q.options || [],
+            orderNum: i,
+            weight: q.weight || 1,
+            reverseScored: q.reverseScored || false
+          }))
+        }
+      },
+      include: { questions: { orderBy: { orderNum: 'asc' } } }
+    });
+    res.status(201).json(template);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao importar JSON', details: err.message });
+  }
+});
+
+// GET /api/tests/templates/:id/export - export test as JSON
+router.get('/templates/:id/export', async (req, res) => {
+  try {
+    const template = await prisma.testTemplate.findFirst({
+      where: { id: req.params.id, professionalId: req.userId },
+      include: { questions: { orderBy: { orderNum: 'asc' } } }
+    });
+    if (!template) return res.status(404).json({ error: 'Teste não encontrado' });
+
+    const exportData = {
+      title: template.title,
+      description: template.description,
+      category: template.category,
+      scoringRules: template.scoringRules,
+      questions: template.questions.map(q => ({
+        text: q.text,
+        type: q.type,
+        options: q.options,
+        weight: q.weight,
+        reverseScored: q.reverseScored
+      }))
+    };
+    res.json(exportData);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao exportar teste' });
   }
 });
 
@@ -51,7 +310,7 @@ router.get('/templates/:id', async (req, res) => {
 // POST /api/tests/templates
 router.post('/templates', async (req, res) => {
   try {
-    const { title, description, category, questions } = req.body;
+    const { title, description, category, scoringRules, questions } = req.body;
     if (!title) return res.status(400).json({ error: 'Título é obrigatório' });
 
     const template = await prisma.testTemplate.create({
@@ -60,12 +319,15 @@ router.post('/templates', async (req, res) => {
         title,
         description,
         category,
+        scoringRules: scoringRules || null,
         questions: questions?.length ? {
           create: questions.map((q, i) => ({
             text: q.text,
             type: q.type || 'scale',
             options: q.options || [],
-            orderNum: i
+            orderNum: i,
+            weight: q.weight || 1,
+            reverseScored: q.reverseScored || false
           }))
         } : undefined
       },
@@ -86,14 +348,14 @@ router.put('/templates/:id', async (req, res) => {
     });
     if (!existing) return res.status(404).json({ error: 'Teste não encontrado' });
 
-    const { title, description, category, isActive, questions } = req.body;
+    const { title, description, category, isActive, scoringRules, questions } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (category !== undefined) data.category = category;
     if (isActive !== undefined) data.isActive = isActive;
+    if (scoringRules !== undefined) data.scoringRules = scoringRules;
 
-    // If questions provided, replace all
     if (questions) {
       await prisma.testQuestion.deleteMany({ where: { templateId: req.params.id } });
       await prisma.testQuestion.createMany({
@@ -102,7 +364,9 @@ router.put('/templates/:id', async (req, res) => {
           text: q.text,
           type: q.type || 'scale',
           options: q.options || [],
-          orderNum: i
+          orderNum: i,
+          weight: q.weight || 1,
+          reverseScored: q.reverseScored || false
         }))
       });
     }
@@ -119,7 +383,19 @@ router.put('/templates/:id', async (req, res) => {
   }
 });
 
-// POST /api/tests/assign - assign test to patient
+// DELETE /api/tests/templates/:id
+router.delete('/templates/:id', async (req, res) => {
+  try {
+    await prisma.testTemplate.deleteMany({
+      where: { id: req.params.id, professionalId: req.userId }
+    });
+    res.json({ message: 'Teste removido' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao remover teste' });
+  }
+});
+
+// POST /api/tests/assign
 router.post('/assign', async (req, res) => {
   try {
     const { templateId, patientId } = req.body;
@@ -127,7 +403,6 @@ router.post('/assign', async (req, res) => {
       return res.status(400).json({ error: 'templateId e patientId são obrigatórios' });
     }
 
-    // Verify ownership
     const template = await prisma.testTemplate.findFirst({
       where: { id: templateId, professionalId: req.userId }
     });
@@ -152,7 +427,7 @@ router.post('/assign', async (req, res) => {
   }
 });
 
-// GET /api/tests/assignments/:id/results - professional view results
+// GET /api/tests/assignments/:id/results
 router.get('/assignments/:id/results', async (req, res) => {
   try {
     const assignment = await prisma.testAssignment.findUnique({
@@ -165,12 +440,37 @@ router.get('/assignments/:id/results', async (req, res) => {
     });
     if (!assignment) return res.status(404).json({ error: 'Atribuição não encontrada' });
 
-    // Verify professional owns the template
     if (assignment.template.professionalId !== req.userId) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    res.json(assignment);
+    // Calculate score if scoring rules exist
+    let score = null;
+    let classification = null;
+    if (assignment.template.scoringRules && assignment.status === 'completed') {
+      const rules = assignment.template.scoringRules;
+      const questions = assignment.template.questions;
+      let total = 0;
+      
+      for (const q of questions) {
+        const resp = assignment.responses.find(r => r.questionId === q.id);
+        if (resp) {
+          let val = parseInt(resp.answer) || 0;
+          if (q.reverseScored && q.options.length > 0) {
+            val = q.options.length - 1 - val;
+          }
+          total += val * (q.weight || 1);
+        }
+      }
+      
+      score = total;
+      if (rules.ranges) {
+        const range = rules.ranges.find(r => total >= r.min && total <= r.max);
+        classification = range?.label || 'Indefinido';
+      }
+    }
+
+    res.json({ ...assignment, score, classification });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar resultados' });
   }
@@ -178,7 +478,6 @@ router.get('/assignments/:id/results', async (req, res) => {
 
 // ======== PATIENT ENDPOINTS ========
 
-// GET /api/tests/my - patient's pending and completed tests
 router.get('/my', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
@@ -187,9 +486,7 @@ router.get('/my', async (req, res) => {
     const assignments = await prisma.testAssignment.findMany({
       where: { patientId: user.patientId },
       include: {
-        template: {
-          select: { title: true, description: true, category: true }
-        },
+        template: { select: { title: true, description: true, category: true } },
         _count: { select: { responses: true } }
       },
       orderBy: { assignedAt: 'desc' }
@@ -201,7 +498,6 @@ router.get('/my', async (req, res) => {
   }
 });
 
-// GET /api/tests/my/:assignmentId - get test to answer
 router.get('/my/:assignmentId', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
@@ -210,9 +506,7 @@ router.get('/my/:assignmentId', async (req, res) => {
     const assignment = await prisma.testAssignment.findFirst({
       where: { id: req.params.assignmentId, patientId: user.patientId },
       include: {
-        template: {
-          include: { questions: { orderBy: { orderNum: 'asc' } } }
-        },
+        template: { include: { questions: { orderBy: { orderNum: 'asc' } } } },
         responses: true
       }
     });
@@ -224,7 +518,6 @@ router.get('/my/:assignmentId', async (req, res) => {
   }
 });
 
-// POST /api/tests/my/:assignmentId/respond - submit test responses
 router.post('/my/:assignmentId/respond', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
@@ -235,12 +528,11 @@ router.post('/my/:assignmentId/respond', async (req, res) => {
     });
     if (!assignment) return res.status(404).json({ error: 'Teste não encontrado ou já respondido' });
 
-    const { responses } = req.body; // [{ questionId, answer }]
+    const { responses } = req.body;
     if (!Array.isArray(responses) || !responses.length) {
       return res.status(400).json({ error: 'Respostas são obrigatórias' });
     }
 
-    // Create responses
     await prisma.testResponse.createMany({
       data: responses.map(r => ({
         assignmentId: req.params.assignmentId,
@@ -249,7 +541,6 @@ router.post('/my/:assignmentId/respond', async (req, res) => {
       }))
     });
 
-    // Mark as completed
     const updated = await prisma.testAssignment.update({
       where: { id: req.params.assignmentId },
       data: { status: 'completed', completedAt: new Date() }
