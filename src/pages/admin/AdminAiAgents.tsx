@@ -83,7 +83,7 @@ export default function AdminAiAgents() {
           <DialogTrigger asChild>
             <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Novo Agente</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>{editAgent ? "Editar Agente" : "Novo Agente de IA"}</DialogTitle>
             </DialogHeader>

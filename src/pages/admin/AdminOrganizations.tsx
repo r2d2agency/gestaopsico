@@ -100,7 +100,7 @@ export default function AdminOrganizations() {
               <Plus className="w-4 h-4" /> Nova Organização
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Criar Organização</DialogTitle>
             </DialogHeader>

@@ -40,7 +40,7 @@ export default function AdminAiProviders() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" />Adicionar Key</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Adicionar API Key</DialogTitle>
             </DialogHeader>
