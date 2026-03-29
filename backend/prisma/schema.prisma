@@ -295,6 +295,7 @@ model Record {
   date                 DateTime     @db.Date
   createdAt            DateTime     @default(now()) @map("created_at")
   updatedAt            DateTime?    @default(now()) @map("updated_at")
+  testAssignments      TestAssignment[]
 
   @@map("records")
 }
