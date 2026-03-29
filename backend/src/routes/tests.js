@@ -395,6 +395,26 @@ router.delete('/templates/:id', async (req, res) => {
   }
 });
 
+// GET /api/tests/assignments (professional: list all assignments for their templates)
+router.get('/assignments', async (req, res) => {
+  try {
+    const assignments = await prisma.testAssignment.findMany({
+      where: {
+        template: { professionalId: req.userId }
+      },
+      include: {
+        template: { select: { title: true, description: true, category: true } },
+        patient: { select: { id: true, name: true } },
+        _count: { select: { responses: true } }
+      },
+      orderBy: { assignedAt: 'desc' }
+    });
+    res.json(assignments);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar atribuições', details: err.message });
+  }
+});
+
 // POST /api/tests/assign
 router.post('/assign', async (req, res) => {
   try {
