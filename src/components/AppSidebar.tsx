@@ -17,6 +17,7 @@ import {
   Smile,
   CreditCard,
   Shield,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,6 +37,7 @@ const allNav: NavItem[] = [
   { icon: Bot, label: "Secretária IA", path: "/secretaria-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Bell, label: "Notificações", path: "/notificacoes" },
   { icon: BarChart3, label: "Relatórios", path: "/relatorios", roles: ["admin", "professional", "psychologist", "financial", "secretary_financial", "superadmin"] },
+  { icon: HelpCircle, label: "Ajuda", path: "/ajuda" },
 ];
 
 const patientNav: NavItem[] = [
