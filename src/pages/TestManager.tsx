@@ -124,6 +124,24 @@ export default function TestManager() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: (id: string) => testsApi.deleteAssignment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-assignments"] });
+      toast({ title: "Envio removido" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: (id: string) => testsApi.resendAssignment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-assignments"] });
+      toast({ title: "Teste reenviado!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const saveClinicalNote = useMutation({
     mutationFn: () => testsApi.updateClinicalNote(selectedAssignment!, { professionalAssessment: assessment, professionalConclusion: conclusion }),
     onSuccess: () => {
