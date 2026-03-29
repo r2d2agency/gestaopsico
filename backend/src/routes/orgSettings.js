@@ -59,7 +59,8 @@ router.put('/', async (req, res) => {
 
     const {
       logo, primaryColor, secondaryColor, accentColor,
-      businessName, businessPhone, businessEmail, businessAddress
+      businessName, businessPhone, businessEmail, businessAddress,
+      allowPatientBooking
     } = req.body;
 
     const data = {};
@@ -71,6 +72,7 @@ router.put('/', async (req, res) => {
     if (businessPhone !== undefined) data.businessPhone = businessPhone;
     if (businessEmail !== undefined) data.businessEmail = businessEmail;
     if (businessAddress !== undefined) data.businessAddress = businessAddress;
+    if (allowPatientBooking !== undefined) data.allowPatientBooking = allowPatientBooking;
 
     const settings = await prisma.organizationSetting.upsert({
       where: { organizationId: user.organizationId },
