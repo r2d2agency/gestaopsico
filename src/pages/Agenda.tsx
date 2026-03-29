@@ -2,13 +2,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
-  UserCheck, Heart, Ban, Filter, Users
+  UserCheck, Heart, Ban, Filter, Users, CalendarIcon, Repeat, Briefcase,
+  Plane, Stethoscope, GraduationCap, Home, Coffee
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAppointments } from "@/hooks/useAppointments";
-import { format } from "date-fns";
+import { format, addDays, eachDayOfInterval, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { consultasApi, casaisApi, apiRequest, type Consulta, type Casal } from "@/lib/api";
@@ -21,6 +22,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
@@ -63,8 +68,14 @@ export default function Agenda() {
   const [selectedProfessional, setSelectedProfessional] = useState("");
   const [blockReason, setBlockReason] = useState("");
   const [blockTime, setBlockTime] = useState("");
+  const [blockEndTime, setBlockEndTime] = useState("");
   const [blockDuration, setBlockDuration] = useState(60);
-
+  const [blockCategory, setBlockCategory] = useState("personal");
+  const [blockMode, setBlockMode] = useState<"single" | "period" | "recurring">("single");
+  const [blockStartDate, setBlockStartDate] = useState<Date | undefined>(undefined);
+  const [blockEndDate, setBlockEndDate] = useState<Date | undefined>(undefined);
+  const [blockRecurrence, setBlockRecurrence] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [blockWeekdays, setBlockWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   // Fetch professionals list for secretary/admin
@@ -116,9 +127,6 @@ export default function Agenda() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments"] });
       toast({ title: "Horário bloqueado!" });
-      setBlockOpen(false);
-      setBlockReason("");
-      setBlockTime("");
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -152,21 +160,74 @@ export default function Agenda() {
     createMutation.mutate(payload);
   };
 
+  const blockCategories = [
+    { value: "personal", label: "Compromisso pessoal", icon: Coffee },
+    { value: "vacation", label: "Férias", icon: Plane },
+    { value: "congress", label: "Congresso / Evento", icon: GraduationCap },
+    { value: "family", label: "Familiar", icon: Home },
+    { value: "health", label: "Saúde / Doença", icon: Stethoscope },
+    { value: "work", label: "Reunião / Trabalho", icon: Briefcase },
+  ];
+
   const handleBlock = () => {
     if (!blockTime) {
-      toast({ title: "Selecione o horário", variant: "destructive" });
+      toast({ title: "Selecione o horário inicial", variant: "destructive" });
       return;
     }
-    const data: any = {
-      date: dateStr,
+
+    const catLabel = blockCategories.find(c => c.value === blockCategory)?.label || blockCategory;
+    const note = blockReason ? `[${catLabel}] ${blockReason}` : catLabel;
+
+    const baseData: any = {
       time: blockTime,
       duration: blockDuration,
-      notes: blockReason || "Compromisso pessoal",
+      notes: note,
     };
     if (canCreateForOthers && selectedProfessional) {
-      data.professional_id = selectedProfessional;
+      baseData.professional_id = selectedProfessional;
     }
-    blockMutation.mutate(data);
+
+    if (blockMode === "single") {
+      // Single day block
+      blockMutation.mutate({ ...baseData, date: dateStr });
+    } else if (blockMode === "period") {
+      // Block a date range (e.g. vacation)
+      if (!blockStartDate || !blockEndDate) {
+        toast({ title: "Selecione data inicial e final", variant: "destructive" });
+        return;
+      }
+      const days = eachDayOfInterval({ start: blockStartDate, end: blockEndDate });
+      days.forEach((day) => {
+        blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") });
+      });
+    } else if (blockMode === "recurring") {
+      // Recurring blocks (daily/weekly) within a date range
+      if (!blockStartDate || !blockEndDate) {
+        toast({ title: "Selecione o período de recorrência", variant: "destructive" });
+        return;
+      }
+      const days = eachDayOfInterval({ start: blockStartDate, end: blockEndDate });
+      const filtered = days.filter((day) => {
+        if (blockRecurrence === "daily") return true;
+        if (blockRecurrence === "weekly") return blockWeekdays.includes(day.getDay());
+        if (blockRecurrence === "monthly") return day.getDate() === blockStartDate.getDate();
+        return true;
+      });
+      filtered.forEach((day) => {
+        blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") });
+      });
+    }
+  };
+
+  const resetBlock = () => {
+    setBlockOpen(false);
+    setBlockReason("");
+    setBlockTime("");
+    setBlockEndTime("");
+    setBlockCategory("personal");
+    setBlockMode("single");
+    setBlockStartDate(undefined);
+    setBlockEndDate(undefined);
   };
 
   const confirmed = appointments.filter((a: any) => a.status === "scheduled" || a.status === "completed").length;
@@ -328,13 +389,13 @@ export default function Agenda() {
       </Dialog>
 
       {/* Block Schedule Dialog */}
-      <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
-        <DialogContent>
+      <Dialog open={blockOpen} onOpenChange={(open) => { if (!open) resetBlock(); else setBlockOpen(true); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ban className="w-5 h-5 text-muted-foreground" />Bloquear Horário
             </DialogTitle>
-            <DialogDescription>Bloqueie um horário na agenda com um motivo</DialogDescription>
+            <DialogDescription>Bloqueie horários na agenda — pontual, período ou recorrente</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {canCreateForOthers && (
@@ -350,9 +411,150 @@ export default function Agenda() {
                 </Select>
               </div>
             )}
+
+            {/* Category */}
+            <div>
+              <Label className="mb-2 block">Categoria</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {blockCategories.map((cat) => (
+                  <button
+                    key={cat.value}
+                    onClick={() => setBlockCategory(cat.value)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left",
+                      blockCategory === cat.value
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                    )}
+                  >
+                    <cat.icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mode */}
+            <div>
+              <Label className="mb-2 block">Tipo de bloqueio</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "single" as const, label: "Dia único", desc: "Ex: 1 compromisso" },
+                  { value: "period" as const, label: "Período", desc: "Ex: férias, licença" },
+                  { value: "recurring" as const, label: "Recorrente", desc: "Ex: almoço diário" },
+                ].map((m) => (
+                  <button
+                    key={m.value}
+                    onClick={() => setBlockMode(m.value)}
+                    className={cn(
+                      "px-3 py-2.5 rounded-lg border text-left transition-all",
+                      blockMode === m.value
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/50"
+                    )}
+                  >
+                    <p className={cn("text-sm font-medium", blockMode === m.value ? "text-primary" : "text-foreground")}>{m.label}</p>
+                    <p className="text-xs text-muted-foreground">{m.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date selection based on mode */}
+            {blockMode === "single" && (
+              <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3 border border-border">
+                <CalendarIcon className="w-4 h-4 inline mr-1" />
+                Será bloqueado em: <span className="font-medium text-foreground">{format(selectedDate, "dd/MM/yyyy")}</span>
+              </div>
+            )}
+
+            {(blockMode === "period" || blockMode === "recurring") && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data inicial *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !blockStartDate && "text-muted-foreground")}>
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {blockStartDate ? format(blockStartDate, "dd/MM/yyyy") : "Selecione"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={blockStartDate} onSelect={setBlockStartDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label>Data final *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !blockEndDate && "text-muted-foreground")}>
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {blockEndDate ? format(blockEndDate, "dd/MM/yyyy") : "Selecione"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={blockEndDate} onSelect={setBlockEndDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
+
+            {/* Recurrence options */}
+            {blockMode === "recurring" && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Frequência</Label>
+                  <Select value={blockRecurrence} onValueChange={(v: any) => setBlockRecurrence(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Todos os dias</SelectItem>
+                      <SelectItem value="weekly">Dias da semana específicos</SelectItem>
+                      <SelectItem value="monthly">Mensal (mesmo dia)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {blockRecurrence === "weekly" && (
+                  <div>
+                    <Label className="mb-2 block">Dias da semana</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { day: 0, label: "Dom" },
+                        { day: 1, label: "Seg" },
+                        { day: 2, label: "Ter" },
+                        { day: 3, label: "Qua" },
+                        { day: 4, label: "Qui" },
+                        { day: 5, label: "Sex" },
+                        { day: 6, label: "Sáb" },
+                      ].map((d) => (
+                        <button
+                          key={d.day}
+                          onClick={() => {
+                            setBlockWeekdays(prev =>
+                              prev.includes(d.day) ? prev.filter(x => x !== d.day) : [...prev, d.day]
+                            );
+                          }}
+                          className={cn(
+                            "w-10 h-10 rounded-lg text-xs font-medium transition-all border",
+                            blockWeekdays.includes(d.day)
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                          )}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Horário *</Label>
+                <Label>Horário inicial *</Label>
                 <Input type="time" value={blockTime} onChange={e => setBlockTime(e.target.value)} />
               </div>
               <div>
@@ -360,18 +562,42 @@ export default function Agenda() {
                 <Input type="number" value={blockDuration} onChange={e => setBlockDuration(Number(e.target.value))} />
               </div>
             </div>
+
+            {/* Reason */}
             <div>
-              <Label>Motivo</Label>
+              <Label>Descrição / Motivo</Label>
               <Textarea
                 value={blockReason}
                 onChange={e => setBlockReason(e.target.value)}
-                placeholder="Compromisso pessoal, reunião, almoço..."
-                rows={3}
+                placeholder="Detalhe o motivo do bloqueio..."
+                rows={2}
               />
             </div>
+
+            {/* Summary */}
+            {blockMode !== "single" && blockStartDate && blockEndDate && (
+              <div className="bg-muted/50 rounded-lg p-3 border border-border text-sm">
+                <Repeat className="w-4 h-4 inline mr-1 text-primary" />
+                <span className="text-muted-foreground">
+                  {blockMode === "period" && (
+                    <>Bloqueio de <span className="font-medium text-foreground">{format(blockStartDate, "dd/MM")}</span> a <span className="font-medium text-foreground">{format(blockEndDate, "dd/MM")}</span> ({eachDayOfInterval({ start: blockStartDate, end: blockEndDate }).length} dias)</>
+                  )}
+                  {blockMode === "recurring" && blockRecurrence === "daily" && (
+                    <>Todos os dias de <span className="font-medium text-foreground">{format(blockStartDate, "dd/MM")}</span> a <span className="font-medium text-foreground">{format(blockEndDate, "dd/MM")}</span></>
+                  )}
+                  {blockMode === "recurring" && blockRecurrence === "weekly" && (
+                    <>{blockWeekdays.map(d => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][d]).join(", ")} de <span className="font-medium text-foreground">{format(blockStartDate, "dd/MM")}</span> a <span className="font-medium text-foreground">{format(blockEndDate, "dd/MM")}</span></>
+                  )}
+                  {blockMode === "recurring" && blockRecurrence === "monthly" && (
+                    <>Todo dia <span className="font-medium text-foreground">{blockStartDate.getDate()}</span> de cada mês</>
+                  )}
+                  {blockTime && <>, das <span className="font-medium text-foreground">{blockTime}</span> por {blockDuration}min</>}
+                </span>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBlockOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={resetBlock}>Cancelar</Button>
             <Button onClick={handleBlock} disabled={blockMutation.isPending || !blockTime}>
               {blockMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Bloquear
