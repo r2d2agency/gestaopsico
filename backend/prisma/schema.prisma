@@ -34,6 +34,7 @@ model Organization {
   id            String                @id @default(uuid()) @db.Uuid
   name          String                @db.VarChar(255)
   slug          String                @unique @db.VarChar(100)
+  portalSlug    String?               @unique @map("portal_slug") @db.VarChar(100)
   type          String                @default("clinic") @db.VarChar(20)
   planId        String?               @map("plan_id") @db.Uuid
   planRef       Plan?                 @relation(fields: [planId], references: [id])
@@ -190,6 +191,13 @@ model Patient {
   medications      String?
   allergies        String?
   status           String        @default("active") @db.VarChar(20)
+  billingMode      String        @default("per_session") @map("billing_mode") @db.VarChar(20)
+  monthlyValue     Decimal?      @map("monthly_value") @db.Decimal(10, 2)
+  sessionValue     Decimal?      @map("session_value") @db.Decimal(10, 2)
+  chargeNotificationMode String? @default("whatsapp") @map("charge_notification_mode") @db.VarChar(20)
+  chargeDay        Int?          @default(5) @map("charge_day")
+  chargeTime       String?       @default("10:00") @map("charge_time") @db.VarChar(5)
+  chargeEnabled    Boolean       @default(false) @map("charge_enabled")
   createdAt        DateTime      @default(now()) @map("created_at")
   appointments     Appointment[]
   records          Record[]
@@ -236,6 +244,7 @@ model Appointment {
   status         String         @default("scheduled") @db.VarChar(20)
   paymentStatus  String         @default("pending") @map("payment_status") @db.VarChar(20)
   mode           String         @default("video") @db.VarChar(20)
+  attended       Boolean        @default(false)
   notes          String?
   createdAt      DateTime       @default(now()) @map("created_at")
   records        Record[]
@@ -337,6 +346,8 @@ model TestTemplate {
   description    String?
   category       String?          @db.VarChar(50)
   isActive       Boolean          @default(true) @map("is_active")
+  isPreset       Boolean          @default(false) @map("is_preset")
+  scoringRules   Json?            @map("scoring_rules")
   questions      TestQuestion[]
   assignments    TestAssignment[]
   createdAt      DateTime         @default(now()) @map("created_at")
@@ -346,14 +357,16 @@ model TestTemplate {
 }
 
 model TestQuestion {
-  id         String       @id @default(uuid()) @db.Uuid
-  templateId String       @map("template_id") @db.Uuid
-  template   TestTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  text       String
-  type       String       @db.VarChar(20)
-  options    String[]     @default([])
-  orderNum   Int          @default(0) @map("order_num")
-  responses  TestResponse[]
+  id            String       @id @default(uuid()) @db.Uuid
+  templateId    String       @map("template_id") @db.Uuid
+  template      TestTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  text          String
+  type          String       @db.VarChar(20)
+  options       String[]     @default([])
+  orderNum      Int          @default(0) @map("order_num")
+  weight        Int          @default(1)
+  reverseScored Boolean      @default(false) @map("reverse_scored")
+  responses     TestResponse[]
 
   @@map("test_questions")
 }
