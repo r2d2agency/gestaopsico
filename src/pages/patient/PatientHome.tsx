@@ -208,7 +208,7 @@ export default function PatientHome() {
 
       {/* Quick Actions Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {quickActions.map((action, i) => (
+        {getQuickActions(basePath).map((action, i) => (
           <Link key={action.to} to={action.to}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
