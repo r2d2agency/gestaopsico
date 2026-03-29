@@ -380,7 +380,10 @@ model TestTemplate {
   category       String?          @db.VarChar(50)
   isActive       Boolean          @default(true) @map("is_active")
   isPreset       Boolean          @default(false) @map("is_preset")
-  scoringRules   Json?            @map("scoring_rules")
+  scoringRules      Json?            @map("scoring_rules")
+  introText         String?          @map("intro_text")
+  completionMessage String?          @map("completion_message")
+  questionsPerPage  Int              @default(1) @map("questions_per_page")
   questions      TestQuestion[]
   assignments    TestAssignment[]
   createdAt      DateTime         @default(now()) @map("created_at")
@@ -445,6 +448,8 @@ model PatientPortalMessage {
   sender         String   @default("patient") @db.VarChar(20)
   type           String   @db.VarChar(20)
   content        String
+  title          String?  @db.VarChar(255)
+  isDiary        Boolean  @default(false) @map("is_diary")
   fileName       String?  @map("file_name") @db.VarChar(255)
   mimeType       String?  @map("mime_type") @db.VarChar(100)
   readAt         DateTime? @map("read_at")

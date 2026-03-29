@@ -310,7 +310,7 @@ router.get('/templates/:id', async (req, res) => {
 // POST /api/tests/templates
 router.post('/templates', async (req, res) => {
   try {
-    const { title, description, category, scoringRules, questions } = req.body;
+    const { title, description, category, scoringRules, questions, introText, completionMessage, questionsPerPage } = req.body;
     if (!title) return res.status(400).json({ error: 'Título é obrigatório' });
 
     const template = await prisma.testTemplate.create({
@@ -320,6 +320,9 @@ router.post('/templates', async (req, res) => {
         description,
         category,
         scoringRules: scoringRules || null,
+        introText: introText || null,
+        completionMessage: completionMessage || null,
+        questionsPerPage: questionsPerPage || 1,
         questions: questions?.length ? {
           create: questions.map((q, i) => ({
             text: q.text,
@@ -348,13 +351,16 @@ router.put('/templates/:id', async (req, res) => {
     });
     if (!existing) return res.status(404).json({ error: 'Teste não encontrado' });
 
-    const { title, description, category, isActive, scoringRules, questions } = req.body;
+    const { title, description, category, isActive, scoringRules, questions, introText, completionMessage, questionsPerPage } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (category !== undefined) data.category = category;
     if (isActive !== undefined) data.isActive = isActive;
     if (scoringRules !== undefined) data.scoringRules = scoringRules;
+    if (introText !== undefined) data.introText = introText;
+    if (completionMessage !== undefined) data.completionMessage = completionMessage;
+    if (questionsPerPage !== undefined) data.questionsPerPage = questionsPerPage;
 
     if (questions) {
       await prisma.testQuestion.deleteMany({ where: { templateId: req.params.id } });
@@ -655,7 +661,7 @@ router.get('/my', async (req, res) => {
     const assignments = await prisma.testAssignment.findMany({
       where: { patientId: user.patientId },
       include: {
-        template: { select: { title: true, description: true, category: true } },
+        template: { select: { title: true, category: true, introText: true, completionMessage: true, questionsPerPage: true } },
         _count: { select: { responses: true } }
       },
       orderBy: { assignedAt: 'desc' }

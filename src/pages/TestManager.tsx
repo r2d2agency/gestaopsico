@@ -35,6 +35,9 @@ export default function TestManager() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [introText, setIntroText] = useState("");
+  const [completionMessage, setCompletionMessage] = useState("");
+  const [questionsPerPage, setQuestionsPerPage] = useState(1);
   const [questions, setQuestions] = useState<Partial<TestQuestion>[]>([{ text: "", type: "scale", options: [] }]);
   const [assessment, setAssessment] = useState("");
   const [conclusion, setConclusion] = useState("");
@@ -70,7 +73,7 @@ export default function TestManager() {
   const completedAssignments = useMemo(() => assignments.filter((a) => a.status === "completed"), [assignments]);
 
   const createMutation = useMutation({
-    mutationFn: () => testsApi.createTemplate({ title, description, category, questions: questions as TestQuestion[] }),
+    mutationFn: () => testsApi.createTemplate({ title, description, category, questions: questions as TestQuestion[], introText: introText || undefined, completionMessage: completionMessage || undefined, questionsPerPage } as any),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["test-templates"] });
       toast({ title: "Teste criado!" });
@@ -156,6 +159,9 @@ export default function TestManager() {
     setTitle("");
     setDescription("");
     setCategory("");
+    setIntroText("");
+    setCompletionMessage("");
+    setQuestionsPerPage(1);
     setQuestions([{ text: "", type: "scale", options: [] }]);
   };
 
@@ -433,8 +439,28 @@ export default function TestManager() {
               </div>
             </div>
             <div>
-              <Label>Descrição</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Instruções para o paciente..." />
+              <Label>Descrição (interna, só para você)</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Notas internas sobre o teste..." />
+            </div>
+            <div>
+              <Label>Texto introdutório (exibido ao paciente antes de começar)</Label>
+              <Textarea value={introText} onChange={(e) => setIntroText(e.target.value)} rows={2} placeholder="Ex: Este teste avalia como você tem se sentido nas últimas 2 semanas..." />
+            </div>
+            <div>
+              <Label>Mensagem final (exibida após conclusão)</Label>
+              <Textarea value={completionMessage} onChange={(e) => setCompletionMessage(e.target.value)} rows={2} placeholder="Ex: Obrigado por responder! Seu psicólogo irá analisar os resultados..." />
+            </div>
+            <div>
+              <Label>Perguntas por página</Label>
+              <Select value={String(questionsPerPage)} onValueChange={(v) => setQuestionsPerPage(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 pergunta por página</SelectItem>
+                  <SelectItem value="3">3 perguntas por página</SelectItem>
+                  <SelectItem value="5">5 perguntas por página</SelectItem>
+                  <SelectItem value="100">Todas de uma vez</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
