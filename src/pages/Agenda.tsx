@@ -34,7 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
 import { orgSettingsApi } from "@/lib/portalApi";
 
-type ViewMode = "day" | "week" | "month";
+type ViewMode = "day" | "week" | "month" | "pipeline";
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-green-500",
@@ -87,6 +87,28 @@ function getProfessionalColor(professionalId: string, profMap: Map<string, numbe
     profMap.set(professionalId, profMap.size);
   }
   return PROFESSIONAL_COLORS[profMap.get(professionalId)! % PROFESSIONAL_COLORS.length];
+}
+
+function getDateKey(value?: string | Date | null) {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const match = value.match(/^\d{4}-\d{2}-\d{2}/);
+    if (match) return match[0];
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const year = parsed.getUTCFullYear();
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getAppointmentDisplayName(apt: any) {
+  if (apt.type === "blocked") return apt.notes || "Bloqueado";
+  if (apt.type === "couple") return apt.couple?.name || "Casal";
+  return apt.patient?.name || "Paciente";
 }
 
 export default function Agenda() {
@@ -306,7 +328,7 @@ export default function Agenda() {
   const aptsByDate = useMemo(() => {
     const map: Record<string, any[]> = {};
     appointments.forEach((apt: any) => {
-      const d = apt.date ? format(new Date(apt.date), "yyyy-MM-dd") : "";
+      const d = getDateKey(apt.date);
       if (!map[d]) map[d] = [];
       map[d].push(apt);
     });
@@ -314,6 +336,16 @@ export default function Agenda() {
   }, [appointments]);
 
   const getAptsForDate = (d: Date) => aptsByDate[format(d, "yyyy-MM-dd")] || [];
+
+  const professionalsById = useMemo(() => {
+    return new Map((Array.isArray(professionals) ? professionals : []).map((professional: any) => [professional.id, professional]));
+  }, [professionals]);
+
+  const pipelineAppointments = useMemo(() => {
+    return getAptsForDate(selectedDate)
+      .filter((apt: any) => apt.type !== "blocked")
+      .sort((a: any, b: any) => String(a.time || "").localeCompare(String(b.time || "")));
+  }, [selectedDate, aptsByDate]);
 
   const headerTitle = useMemo(() => {
     if (viewMode === "day") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -358,6 +390,7 @@ export default function Agenda() {
             { mode: "day" as ViewMode, icon: List, label: "Dia" },
             { mode: "week" as ViewMode, icon: CalendarDays, label: "Semana" },
             { mode: "month" as ViewMode, icon: LayoutGrid, label: "Mês" },
+            { mode: "pipeline" as ViewMode, icon: Users, label: "Pipeline" },
           ]).map(v => (
             <Button
               key={v.mode}
@@ -423,6 +456,14 @@ export default function Agenda() {
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
           professionals={professionals}
+        />
+      ) : viewMode === "pipeline" ? (
+        <PipelineView
+          selectedDate={selectedDate}
+          appointments={pipelineAppointments}
+          professionalsById={professionalsById}
+          professionalColorMap={professionalColorMap}
+          showProfessionalColors={canCreateForOthers}
         />
       ) : (
         <DayView
@@ -668,6 +709,80 @@ export default function Agenda() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors }: {
+  selectedDate: Date;
+  appointments: any[];
+  professionalsById: Map<string, any>;
+  professionalColorMap: Map<string, number>;
+  showProfessionalColors: boolean;
+}) {
+  return (
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="border-b border-border px-4 py-3">
+        <h2 className="text-sm font-semibold text-foreground">Pipeline do dia</h2>
+        <p className="text-xs text-muted-foreground">
+          {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+        </p>
+      </div>
+
+      {appointments.length === 0 ? (
+        <div className="px-4 py-10 text-sm text-muted-foreground">Nenhum agendamento neste dia.</div>
+      ) : (
+        <div className="divide-y divide-border">
+          {appointments.map((apt: any) => {
+            const professional = apt.professional?.name
+              ? apt.professional
+              : (apt.professionalId ? professionalsById.get(apt.professionalId) : null);
+            const proColor = showProfessionalColors && apt.professionalId
+              ? getProfessionalColor(apt.professionalId, professionalColorMap)
+              : null;
+
+            return (
+              <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-16 shrink-0">
+                    <p className="text-sm font-semibold text-foreground">{apt.time}</p>
+                    <p className="text-[10px] text-muted-foreground">{apt.duration}min</p>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{getAppointmentDisplayName(apt)}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span>{apt.type === "couple" ? "Casal" : "Individual"}</span>
+                      <span>•</span>
+                      <span>{apt.mode === "video" ? "Online" : "Presencial"}</span>
+                      {professional?.name && (
+                        <>
+                          <span>•</span>
+                          <span className={cn("font-medium", proColor?.text)}>
+                            Responsável: {professional.name}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {showProfessionalColors && proColor && (
+                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium", proColor.bg, proColor.text)}>
+                      <span className={cn("h-2 w-2 rounded-full", proColor.dot)} />
+                      {professional?.name?.split(" ")[0] || "Profissional"}
+                    </span>
+                  )}
+                  <Badge variant="outline" className="text-[10px]">
+                    {statusLabels[apt.status] || apt.status}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
