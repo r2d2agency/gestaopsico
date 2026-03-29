@@ -176,6 +176,7 @@ export interface OrgSettings {
   businessEmail?: string;
   businessAddress?: string;
   allowPatientBooking?: boolean;
+  portalSlug?: string;
 }
 
 export const orgSettingsApi = {

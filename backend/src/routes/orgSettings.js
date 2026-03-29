@@ -60,7 +60,7 @@ router.put('/', async (req, res) => {
     const {
       logo, primaryColor, secondaryColor, accentColor,
       businessName, businessPhone, businessEmail, businessAddress,
-      allowPatientBooking
+      allowPatientBooking, portalSlug
     } = req.body;
 
     const data = {};
@@ -74,13 +74,41 @@ router.put('/', async (req, res) => {
     if (businessAddress !== undefined) data.businessAddress = businessAddress;
     if (allowPatientBooking !== undefined) data.allowPatientBooking = allowPatientBooking;
 
+    // Handle portal slug - save to organization table
+    if (portalSlug !== undefined) {
+      // Validate slug uniqueness
+      if (portalSlug) {
+        const existing = await prisma.organization.findFirst({
+          where: { portalSlug, id: { not: user.organizationId } }
+        });
+        if (existing) {
+          return res.status(400).json({ error: 'Este slug já está em uso. Escolha outro.' });
+        }
+        await prisma.organization.update({
+          where: { id: user.organizationId },
+          data: { portalSlug }
+        });
+      } else {
+        await prisma.organization.update({
+          where: { id: user.organizationId },
+          data: { portalSlug: null }
+        });
+      }
+    }
+
     const settings = await prisma.organizationSetting.upsert({
       where: { organizationId: user.organizationId },
       create: { organizationId: user.organizationId, ...data },
       update: data
     });
 
-    res.json(settings);
+    // Include portalSlug in response
+    const org = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: { portalSlug: true }
+    });
+    
+    res.json({ ...settings, portalSlug: org?.portalSlug });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao salvar configurações', details: err.message });
   }

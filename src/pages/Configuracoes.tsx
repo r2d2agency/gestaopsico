@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon, Upload,
-  UserPlus, Users, Power, PowerOff, Shield, CalendarIcon,
+  UserPlus, Users, Power, PowerOff, Shield, CalendarIcon, Link2, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -306,9 +306,46 @@ export default function Configuracoes() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Nome da Clínica</Label>
+                <Label>Nome da Clínica / Profissional</Label>
                 <Input value={form.businessName || ""} onChange={e => set("businessName", e.target.value)} placeholder="Clínica Psicologia Integrada" />
+                <p className="text-xs text-muted-foreground mt-1">Este nome será exibido no app do paciente</p>
               </div>
+
+              {/* Portal Slug */}
+              <div>
+                <Label className="flex items-center gap-1"><Link2 className="w-3 h-3" />Link do Portal (slug)</Label>
+                <div className="flex gap-2 mt-1">
+                  <div className="flex items-center bg-muted rounded-md px-3 text-xs text-muted-foreground whitespace-nowrap border border-border">
+                    {window.location.origin}/portal/
+                  </div>
+                  <Input
+                    value={form.portalSlug || ""}
+                    onChange={e => set("portalSlug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="minha-clinica"
+                    className="font-mono text-sm"
+                  />
+                </div>
+                {form.portalSlug && (
+                  <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded-lg">
+                    <span className="text-xs text-muted-foreground truncate flex-1">
+                      {window.location.origin}/portal/{form.portalSlug}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/portal/${form.portalSlug}`);
+                        toast({ title: "Link copiado!" });
+                      }}
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Este será o link de login dos seus pacientes e seu PWA</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="flex items-center gap-1"><Phone className="w-3 h-3" />Telefone</Label>
