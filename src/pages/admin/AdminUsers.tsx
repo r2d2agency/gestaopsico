@@ -53,6 +53,7 @@ const roleLabels: Record<string, string> = {
   professional: "Profissional",
   secretary: "Secretária",
   financial: "Financeiro",
+  secretary_financial: "Secretária + Financeiro",
   patient: "Paciente",
 };
 
@@ -62,6 +63,7 @@ const roleVariants: Record<string, "default" | "secondary" | "destructive" | "ou
   professional: "secondary",
   secretary: "outline",
   financial: "outline",
+  secretary_financial: "default",
   patient: "secondary",
 };
 
