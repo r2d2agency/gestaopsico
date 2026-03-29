@@ -32,13 +32,27 @@ router.get('/:id', async (req, res) => {
       include: {
         patient1: true,
         patient2: true,
-        appointments: { orderBy: { date: 'desc' }, take: 10 }
+        appointments: { orderBy: { date: 'desc' }, take: 10 },
+        records: { orderBy: { date: 'desc' } }
       }
     });
     if (!couple) return res.status(404).json({ error: 'Casal não encontrado' });
     res.json(couple);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar casal' });
+  }
+});
+
+// GET /api/casais/:id/prontuarios
+router.get('/:id/prontuarios', async (req, res) => {
+  try {
+    const records = await prisma.record.findMany({
+      where: { coupleId: req.params.id, professionalId: req.userId },
+      orderBy: { date: 'desc' }
+    });
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar prontuários do casal' });
   }
 });
 
