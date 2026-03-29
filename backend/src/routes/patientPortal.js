@@ -59,7 +59,22 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
 
-    const [appointments, pendingTests, recentMood, orgSettings] = await Promise.all([
+    const patient = await prisma.patient.findUnique({
+      where: { id: user.patientId },
+      include: {
+        professional: {
+          select: {
+            name: true,
+            organizationId: true,
+          },
+        },
+      },
+    });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    const organizationId = user.organizationId || patient.professional?.organizationId || null;
+
+    const [appointments, pendingTests, recentMood, orgSettings, organization] = await Promise.all([
       prisma.appointment.findMany({
         where: { patientId: user.patientId, status: 'scheduled' },
         orderBy: { date: 'asc' },
@@ -74,10 +89,16 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         orderBy: { date: 'desc' },
         take: 7
       }),
-      user.organizationId
+      organizationId
         ? prisma.organizationSetting.findUnique({
-            where: { organizationId: user.organizationId },
+            where: { organizationId },
             select: { allowPatientBooking: true, businessName: true, logo: true, primaryColor: true, accentColor: true, secondaryColor: true }
+          })
+        : null,
+      organizationId
+        ? prisma.organization.findUnique({
+            where: { id: organizationId },
+            select: { name: true, logo: true }
           })
         : null
     ]);
@@ -88,8 +109,8 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       recentMood,
       patientName: user.name,
       allowBooking: orgSettings?.allowPatientBooking ?? true,
-      clinicName: orgSettings?.businessName || null,
-      clinicLogo: orgSettings?.logo || null,
+      clinicName: orgSettings?.businessName || organization?.name || patient.professional?.name || null,
+      clinicLogo: orgSettings?.logo || organization?.logo || null,
       primaryColor: orgSettings?.primaryColor || null,
       accentColor: orgSettings?.accentColor || orgSettings?.secondaryColor || null,
     });
