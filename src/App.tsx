@@ -20,6 +20,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPlans from "./pages/admin/AdminPlans";
 import AdminAiAgents from "./pages/admin/AdminAiAgents";
 import AdminAiProviders from "./pages/admin/AdminAiProviders";
+import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/admin/planos" element={<AdminPlans />} />
               <Route path="/admin/agentes-ia" element={<AdminAiAgents />} />
               <Route path="/admin/provedores-ia" element={<AdminAiProviders />} />
+              <Route path="/admin/configuracoes" element={<AdminSettings />} />
             </Route>
             {/* App normal */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
