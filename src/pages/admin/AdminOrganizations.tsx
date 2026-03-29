@@ -9,11 +9,13 @@ import {
   PowerOff,
   Pencil,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +64,7 @@ export default function AdminOrganizations() {
   if (search) params.search = search;
   if (filterStatus && filterStatus !== "all") params.status = filterStatus;
 
-  const { data, isLoading } = useOrganizations(Object.keys(params).length ? params : undefined);
+  const { data, isLoading, isError, error } = useOrganizations(Object.keys(params).length ? params : undefined);
   const createOrg = useCreateOrganization();
   const toggleStatus = useToggleOrgStatus();
 
@@ -85,13 +87,15 @@ export default function AdminOrganizations() {
     });
   };
 
+  const unauthorized = error instanceof Error && error.message === "Unauthorized";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Organizações</h1>
           <p className="text-sm text-muted-foreground">
-            {data?.total ?? 0} organizações cadastradas
+            {isError ? "Acesso restrito" : `${data?.total ?? 0} organizações cadastradas`}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -180,7 +184,17 @@ export default function AdminOrganizations() {
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
-      ) : !data?.data?.length ? (
+      ) : isError || !data ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{unauthorized ? "Acesso não autorizado" : "Erro ao carregar organizações"}</AlertTitle>
+          <AlertDescription>
+            {unauthorized
+              ? "Faça login com uma conta superadmin válida para listar organizações."
+              : (error as Error)?.message || "Não foi possível carregar as organizações."}
+          </AlertDescription>
+        </Alert>
+      ) : !data.data.length ? (
         <div className="text-center py-16 text-muted-foreground">
           <Building2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p>Nenhuma organização encontrada</p>

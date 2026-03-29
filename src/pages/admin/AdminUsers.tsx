@@ -8,11 +8,13 @@ import {
   PowerOff,
   Users,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -62,8 +64,8 @@ export default function AdminUsers() {
   if (search) params.search = search;
   if (filterRole && filterRole !== "all") params.role = filterRole;
 
-  const { data, isLoading } = useAdminUsers(Object.keys(params).length ? params : undefined);
-  const { data: orgsData } = useOrganizations();
+  const { data, isLoading, isError, error } = useAdminUsers(Object.keys(params).length ? params : undefined);
+  const { data: orgsData, error: orgsError } = useOrganizations();
   const createUser = useCreateUser();
   const toggleStatus = useToggleUserStatus();
 
@@ -85,12 +87,17 @@ export default function AdminUsers() {
     });
   };
 
+  const activeError = (error || orgsError) as Error | null;
+  const unauthorized = activeError?.message === "Unauthorized";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Usuários</h1>
-          <p className="text-sm text-muted-foreground">{data?.total ?? 0} usuários no sistema</p>
+          <p className="text-sm text-muted-foreground">
+            {isError ? "Acesso restrito" : `${data?.total ?? 0} usuários no sistema`}
+          </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -168,7 +175,17 @@ export default function AdminUsers() {
             <Skeleton key={i} className="h-16 rounded-xl" />
           ))}
         </div>
-      ) : !data?.data?.length ? (
+      ) : isError || orgsError || !data ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{unauthorized ? "Acesso não autorizado" : "Erro ao carregar usuários"}</AlertTitle>
+          <AlertDescription>
+            {unauthorized
+              ? "Faça login com uma conta superadmin válida para listar usuários e organizações."
+              : activeError?.message || "Não foi possível carregar os dados do admin."}
+          </AlertDescription>
+        </Alert>
+      ) : !data.data.length ? (
         <div className="text-center py-16 text-muted-foreground">
           <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p>Nenhum usuário encontrado</p>

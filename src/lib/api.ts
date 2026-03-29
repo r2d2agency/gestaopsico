@@ -9,7 +9,7 @@ interface RequestOptions {
 }
 
 function getAuthToken(): string | null {
-  return localStorage.getItem("auth_token");
+  return localStorage.getItem("auth_token") || localStorage.getItem("token");
 }
 
 export async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -31,6 +31,10 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Unauthorized");
+    }
+
     const error = await response.json().catch(() => ({ message: "Erro desconhecido" }));
     throw new Error(error.message || `Erro ${response.status}`);
   }
@@ -50,6 +54,7 @@ export const authApi = {
   me: () => apiRequest<{ id: string; name: string; email: string; role: string }>("/auth/me"),
   logout: () => {
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
   },
 };
 

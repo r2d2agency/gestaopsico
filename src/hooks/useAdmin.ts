@@ -6,6 +6,7 @@ export function useAdminMetrics() {
   return useQuery({
     queryKey: ["admin", "metrics"],
     queryFn: () => adminApi.getMetrics(),
+    retry: false,
   });
 }
 
@@ -13,6 +14,7 @@ export function useOrganizations(params?: Record<string, string>) {
   return useQuery({
     queryKey: ["admin", "organizations", params],
     queryFn: () => adminApi.listOrganizations(params),
+    retry: false,
   });
 }
 
@@ -20,6 +22,7 @@ export function useAdminUsers(params?: Record<string, string>) {
   return useQuery({
     queryKey: ["admin", "users", params],
     queryFn: () => adminApi.listUsers(params),
+    retry: false,
   });
 }
 
