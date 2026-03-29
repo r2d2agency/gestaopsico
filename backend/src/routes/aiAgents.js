@@ -188,7 +188,8 @@ router.get('/chats', async (req, res) => {
     });
     res.json(chats);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar chats', details: err.message });
+    console.error('AI chats disabled or table missing:', err.message);
+    res.json([]);
   }
 });
 

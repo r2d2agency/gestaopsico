@@ -1,11 +1,24 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppointments } from "@/hooks/useAppointments";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { consultasApi, type Consulta } from "@/lib/api";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import { usePatients } from "@/hooks/usePatients";
 
 const statusColors: Record<string, string> = {
   scheduled: "border-l-success bg-success/5",
@@ -23,17 +36,49 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelada",
 };
 
+const emptyConsulta: Partial<Consulta> = {
+  patient_id: "", type: "individual", date: "", time: "",
+  duration: 50, value: 0, status: "scheduled",
+  payment_status: "pending", mode: "in_person", notes: "",
+};
+
 export default function Agenda() {
   const [view, setView] = useState<"day" | "week">("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<Partial<Consulta>>({ ...emptyConsulta });
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const { data: appointments = [], isLoading } = useAppointments({ date: dateStr });
+  const { data: patients = [] } = usePatients();
+  const qc = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Consulta>) => consultasApi.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta agendada com sucesso!" });
+      setDialogOpen(false);
+      setForm({ ...emptyConsulta });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
 
   const goDay = (dir: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + dir);
     setSelectedDate(d);
+  };
+
+  const set = (field: string, value: string | number) =>
+    setForm(prev => ({ ...prev, [field]: value }));
+
+  const handleSubmit = () => {
+    if (!form.patient_id || !form.date || !form.time) {
+      toast({ title: "Preencha paciente, data e horário", variant: "destructive" });
+      return;
+    }
+    createMutation.mutate(form);
   };
 
   const confirmed = appointments.filter(a => a.status === "scheduled" || a.status === "completed").length;
@@ -49,8 +94,96 @@ export default function Agenda() {
             {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
         </div>
-        <Button><Plus className="w-4 h-4 mr-2" />Nova Consulta</Button>
+        <Button onClick={() => { setForm({ ...emptyConsulta, date: dateStr }); setDialogOpen(true); }}>
+          <Plus className="w-4 h-4 mr-2" />Nova Consulta
+        </Button>
       </div>
+
+      {/* Nova Consulta Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova Consulta</DialogTitle>
+            <p className="text-sm text-muted-foreground">Agende uma nova consulta para um paciente</p>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label>Paciente *</Label>
+              <Select value={form.patient_id || ""} onValueChange={v => set("patient_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <SelectContent>
+                  {(Array.isArray(patients) ? patients : (patients as any)?.data || []).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data *</Label>
+                <Input type="date" value={form.date || ""} onChange={e => set("date", e.target.value)} />
+              </div>
+              <div>
+                <Label>Horário *</Label>
+                <Input type="time" value={form.time || ""} onChange={e => set("time", e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Duração (min)</Label>
+                <Input type="number" value={form.duration || 50} onChange={e => set("duration", Number(e.target.value))} />
+              </div>
+              <div>
+                <Label>Valor (R$)</Label>
+                <Input type="number" value={form.value || 0} onChange={e => set("value", Number(e.target.value))} />
+              </div>
+              <div>
+                <Label>Modalidade</Label>
+                <Select value={form.mode || "in_person"} onValueChange={v => set("mode", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_person">Presencial</SelectItem>
+                    <SelectItem value="video">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Tipo</Label>
+                <Select value={form.type || "individual"} onValueChange={v => set("type", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="couple">Casal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Status Pagamento</Label>
+                <Select value={form.payment_status || "pending"} onValueChange={v => set("payment_status", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="paid">Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Textarea value={form.notes || ""} onChange={e => set("notes", e.target.value)} placeholder="Notas sobre a consulta..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+              {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Agendar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

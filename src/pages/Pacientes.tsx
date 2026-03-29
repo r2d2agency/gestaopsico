@@ -71,9 +71,10 @@ export default function Pacientes() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" />Novo Paciente</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar Novo Paciente</DialogTitle>
+              <p className="text-sm text-muted-foreground">Preencha os dados do paciente abaixo</p>
             </DialogHeader>
 
             <Tabs defaultValue="pessoal" className="mt-2">
