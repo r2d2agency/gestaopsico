@@ -42,13 +42,8 @@ const allNav: NavItem[] = [
   { icon: HelpCircle, label: "Ajuda", path: "/ajuda" },
 ];
 
-const patientNav: NavItem[] = [
-  { icon: LayoutDashboard, label: "Início", path: "/portal" },
-  { icon: Smile, label: "Humor", path: "/portal/humor" },
-  { icon: ClipboardList, label: "Testes", path: "/portal/testes" },
-  { icon: Calendar, label: "Consultas", path: "/portal/consultas" },
-  { icon: CreditCard, label: "Financeiro", path: "/portal/financeiro" },
-];
+// Patient nav is handled by PatientAppLayout bottom tabs, not sidebar
+const patientNav: NavItem[] = [];
 
 export default function AppSidebar() {
   const location = useLocation();
