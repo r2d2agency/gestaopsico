@@ -22,6 +22,7 @@ import AdminAiAgents from "./pages/admin/AdminAiAgents";
 import AdminAiProviders from "./pages/admin/AdminAiProviders";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
+import AdminBranding from "./pages/admin/AdminBranding";
 import SecretarySettings from "./pages/SecretarySettings";
 import Notifications from "./pages/Notifications";
 import Configuracoes from "./pages/Configuracoes";
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/admin/agentes-ia" element={<AdminAiAgents />} />
               <Route path="/admin/provedores-ia" element={<AdminAiProviders />} />
               <Route path="/admin/configuracoes" element={<AdminSettings />} />
+              <Route path="/admin/branding" element={<AdminBranding />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
             </Route>
             {/* Patient Portal */}
