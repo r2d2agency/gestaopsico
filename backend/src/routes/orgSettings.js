@@ -28,6 +28,7 @@ router.get('/portal/:slug', async (req, res) => {
       primaryColor: settings?.primaryColor,
       secondaryColor: settings?.secondaryColor,
       accentColor: settings?.accentColor,
+      timezone: settings?.timezone || 'America/Sao_Paulo',
       portalSlug: org.portalSlug,
     });
   } catch (err) {
@@ -98,7 +99,7 @@ router.put('/', async (req, res) => {
       allowPatientBooking, portalSlug,
       scheduleStartHour, scheduleEndHour,
       patientBookingStartHour, patientBookingEndHour,
-      sessionDuration, bookingWeekdays
+      sessionDuration, bookingWeekdays, timezone
     } = req.body;
 
     const data = {};
@@ -117,6 +118,7 @@ router.put('/', async (req, res) => {
     if (patientBookingEndHour !== undefined) data.patientBookingEndHour = Number(patientBookingEndHour);
     if (sessionDuration !== undefined) data.sessionDuration = Number(sessionDuration);
     if (bookingWeekdays !== undefined) data.bookingWeekdays = bookingWeekdays;
+    if (timezone !== undefined) data.timezone = timezone;
 
     // Handle portal slug - save to organization table
     if (portalSlug !== undefined) {
