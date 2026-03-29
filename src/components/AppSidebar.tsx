@@ -10,6 +10,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
@@ -20,6 +21,7 @@ const navItems = [
   { icon: Video, label: "Consultas", path: "/consultas" },
   { icon: FileText, label: "Prontuários", path: "/prontuarios" },
   { icon: DollarSign, label: "Financeiro", path: "/financeiro" },
+  { icon: Sparkles, label: "Assistente IA", path: "/assistente-ia" },
   { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
 ];
 
@@ -35,10 +37,10 @@ export default function AppSidebar() {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col">
       <div className="flex items-center gap-3 px-6 py-6 border-b border-sidebar-border">
         <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-display font-bold text-sm">CS</span>
+          <span className="text-primary-foreground font-display font-bold text-sm">PG</span>
         </div>
         <div>
-          <h1 className="font-display font-bold text-sm text-sidebar-primary">ClínicaSaúde</h1>
+          <h1 className="font-display font-bold text-sm text-sidebar-primary">PsicoGest</h1>
           <p className="text-xs text-sidebar-foreground/60">Gestão Clínica</p>
         </div>
       </div>
