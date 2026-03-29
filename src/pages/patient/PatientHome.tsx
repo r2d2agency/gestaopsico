@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { patientPortalApi, moodApi } from "@/lib/portalApi";
+import { patientPortalApi, moodApi, testsApi, type TestAssignment } from "@/lib/portalApi";
 
 const MOODS = [
   { value: 1, label: "Muito mal", icon: Frown, color: "text-destructive" },

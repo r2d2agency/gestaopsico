@@ -206,6 +206,8 @@ export interface PatientPortalMessage {
   id: string;
   type: "text" | "audio" | "file";
   content: string;
+  sender?: "patient" | "professional";
+  readAt?: string | null;
   fileName?: string | null;
   mimeType?: string | null;
   createdAt: string;
