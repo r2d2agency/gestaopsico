@@ -45,12 +45,12 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
 // Auth
 export const authApi = {
   login: (email: string, password: string) =>
-    apiRequest<{ token: string; user: { id: string; name: string; role: string } }>("/auth/login", {
+    apiRequest<{ token: string; user: { id: string; name: string; email: string; role: string } }>("/auth/login", {
       method: "POST",
       body: { email, password },
     }),
-  register: (data: { name: string; email: string; password: string; role: string }) =>
-    apiRequest("/auth/register", { method: "POST", body: data }),
+  register: (data: { name: string; email: string; password: string }) =>
+    apiRequest<{ token: string; user: { id: string; name: string; email: string; role: string } }>("/auth/register", { method: "POST", body: data }),
   me: () => apiRequest<{ id: string; name: string; email: string; role: string }>("/auth/me"),
   logout: () => {
     localStorage.removeItem("auth_token");
