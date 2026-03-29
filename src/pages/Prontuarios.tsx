@@ -381,9 +381,12 @@ export default function Prontuarios() {
           /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
           <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <Tabs value={detailTab} onValueChange={setDetailTab}>
-              <TabsList className="grid grid-cols-3 w-full max-w-md">
+              <TabsList className="grid grid-cols-4 w-full max-w-lg">
                 <TabsTrigger value="records" className="flex items-center gap-1.5">
                   <FileText className="w-4 h-4" /> Registros
+                </TabsTrigger>
+                <TabsTrigger value="agenda" className="flex items-center gap-1.5">
+                  <CalendarDays className="w-4 h-4" /> Agenda
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4" /> Evolução
@@ -481,6 +484,69 @@ export default function Prontuarios() {
                 )}
               </TabsContent>
 
+              {/* Agenda tab */}
+              <TabsContent value="agenda" className="space-y-6 mt-4">
+                {selectedEntity.type !== "patient" ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <CalendarDays className="w-12 h-12 text-muted-foreground mb-4" />
+                      <h3 className="font-semibold text-foreground">Agenda disponível para pacientes individuais</h3>
+                    </CardContent>
+                  </Card>
+                ) : aptsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />)}
+                  </div>
+                ) : (
+                  <>
+                    {/* Upcoming */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-primary" /> Próximas Consultas ({selectedPatientApts.upcoming.length})
+                      </h3>
+                      {selectedPatientApts.upcoming.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma consulta agendada.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedPatientApts.upcoming.map((apt: any) => (
+                            <AppointmentCard
+                              key={apt.id}
+                              apt={apt}
+                              onEdit={() => { setEditingApt(apt); setEditAptDialog(true); }}
+                              onCancel={() => cancelAptMutation.mutate(apt.id)}
+                              onAttend={() => attendAptMutation.mutate(apt.id)}
+                              isCancelling={cancelAptMutation.isPending}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Past */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-muted-foreground" /> Histórico ({selectedPatientApts.past.length})
+                      </h3>
+                      {selectedPatientApts.past.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma consulta anterior.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedPatientApts.past.map((apt: any) => (
+                            <AppointmentCard
+                              key={apt.id}
+                              apt={apt}
+                              onEdit={() => { setEditingApt(apt); setEditAptDialog(true); }}
+                              onCancel={() => cancelAptMutation.mutate(apt.id)}
+                              isPast
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
               {/* Timeline tab */}
               <TabsContent value="timeline" className="mt-4">
                 {selectedEntity.type === "patient" ? (
@@ -501,6 +567,65 @@ export default function Prontuarios() {
                 <ClinicalDashboard />
               </TabsContent>
             </Tabs>
+
+            {/* Edit Appointment Dialog */}
+            <Dialog open={editAptDialog} onOpenChange={setEditAptDialog}>
+              <DialogContent className="max-w-md" aria-describedby={undefined}>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Edit className="w-5 h-5 text-primary" /> Editar Consulta
+                  </DialogTitle>
+                </DialogHeader>
+                {editingApt && (
+                  <div className="space-y-4 mt-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Data</Label>
+                        <Input type="date" value={editingApt.date?.split("T")[0] || ""} onChange={e => setEditingApt({ ...editingApt, date: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>Horário</Label>
+                        <Input type="time" value={editingApt.time || ""} onChange={e => setEditingApt({ ...editingApt, time: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={editingApt.status || "scheduled"} onValueChange={v => setEditingApt({ ...editingApt, status: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="scheduled">Agendada</SelectItem>
+                          <SelectItem value="completed">Realizada</SelectItem>
+                          <SelectItem value="cancelled">Cancelada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Modalidade</Label>
+                      <Select value={editingApt.mode || "in_person"} onValueChange={v => setEditingApt({ ...editingApt, mode: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="in_person">Presencial</SelectItem>
+                          <SelectItem value="video">Online</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Observações</Label>
+                      <Textarea value={editingApt.notes || ""} onChange={e => setEditingApt({ ...editingApt, notes: e.target.value })} rows={2} />
+                    </div>
+                    <Button className="w-full gradient-primary border-0" onClick={() => {
+                      if (!editingApt.id) return;
+                      updateAptMutation.mutate({
+                        id: editingApt.id,
+                        data: { date: editingApt.date, time: editingApt.time, status: editingApt.status, mode: editingApt.mode, notes: editingApt.notes },
+                      });
+                    }} disabled={updateAptMutation.isPending}>
+                      {updateAptMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </motion.div>
         )}
       </AnimatePresence>
