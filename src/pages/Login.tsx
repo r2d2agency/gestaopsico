@@ -38,14 +38,22 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
+      let loggedUser;
       if (isRegister) {
-        await register({ name, email, password, planId: selectedPlanId || undefined });
+        loggedUser = await register({ name, email, password, planId: selectedPlanId || undefined });
         toast({ title: "Conta criada com sucesso!" });
       } else {
-        await login(email, password);
+        loggedUser = await login(email, password);
         toast({ title: "Login realizado!" });
       }
-      // Role-based redirect handled in useEffect below
+      // Role-based redirect
+      if (loggedUser.role === "patient") {
+        navigate("/portal");
+      } else if (loggedUser.role === "superadmin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err: unknown) {
       toast({
         title: "Erro",
