@@ -28,7 +28,7 @@ export default function AdminDashboard() {
             Painel Superadmin
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Visão geral de todo o sistema PsicoGest
+            Visão geral de todo o sistema Psico Gleego
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
             Painel Superadmin
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Visão geral de todo o sistema PsicoGest
+            Visão geral de todo o sistema Psico Gleego
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export default function AdminDashboard() {
           Painel Superadmin
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Visão geral de todo o sistema PsicoGest
+          Visão geral de todo o sistema Psico Gleego
         </p>
       </div>
 

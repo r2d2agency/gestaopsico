@@ -123,7 +123,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
               <Heart className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-xl text-foreground">PsicoGest</span>
+            <span className="font-display font-bold text-xl text-foreground">Psico Gleego</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <a href="#como-funciona" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Como funciona</a>
@@ -277,7 +277,7 @@ export default function LandingPage() {
                     <Bot className="w-5 h-5 text-success" />
                   </div>
                   <div>
-                    <p className="font-display font-semibold text-foreground text-sm">Secretária • PsicoGest</p>
+                    <p className="font-display font-semibold text-foreground text-sm">Secretária • Psico Gleego</p>
                     <p className="text-xs text-success">Online agora</p>
                   </div>
                 </div>
@@ -804,7 +804,7 @@ export default function LandingPage() {
                 <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
                   <Heart className="w-4.5 h-4.5 text-primary-foreground" />
                 </div>
-                <span className="font-display font-bold text-lg text-foreground">PsicoGest</span>
+                <span className="font-display font-bold text-lg text-foreground">Psico Gleego</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-sm">
                 Sistema completo de apoio à rotina do psicólogo. 
@@ -831,7 +831,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-border mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-xs text-muted-foreground">© 2026 PsicoGest. Todos os direitos reservados.</span>
+            <span className="text-xs text-muted-foreground">© 2026 Psico Gleego. Todos os direitos reservados.</span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="w-3 h-3" /> Dados protegidos por criptografia AES-256
             </div>

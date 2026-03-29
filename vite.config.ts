@@ -23,8 +23,8 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "PsicoGest - Portal do Paciente",
-        short_name: "PsicoGest",
+        name: "Psico Gleego - Portal do Paciente",
+        short_name: "Psico Gleego",
         description: "Seu portal de acompanhamento psicológico",
         theme_color: "#6366f1",
         background_color: "#ffffff",

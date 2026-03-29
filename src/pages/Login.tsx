@@ -79,7 +79,7 @@ export default function Login() {
           <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
             <Brain className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-xl text-primary-foreground">PsicoGest</span>
+          <span className="font-display font-bold text-xl text-primary-foreground">Psico Gleego</span>
         </div>
         <div className="max-w-md">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
@@ -105,7 +105,7 @@ export default function Login() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
               <Brain className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-xl text-foreground">PsicoGest</span>
+            <span className="font-display font-bold text-xl text-foreground">Psico Gleego</span>
           </div>
 
           <AnimatePresence mode="wait">

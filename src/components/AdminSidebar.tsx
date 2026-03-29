@@ -26,7 +26,7 @@ export default function AdminSidebar() {
           <Shield className="w-5 h-5 text-destructive-foreground" />
         </div>
         <div>
-          <h1 className="font-display font-bold text-sm text-sidebar-primary">PsicoGest</h1>
+          <h1 className="font-display font-bold text-sm text-sidebar-primary">Psico Gleego</h1>
           <p className="text-xs text-sidebar-foreground/60">Superadmin</p>
         </div>
       </div>

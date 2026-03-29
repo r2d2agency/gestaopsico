@@ -25,7 +25,7 @@ import { orgSettingsApi } from "@/lib/portalApi";
 
 type NavItem = { icon: typeof LayoutDashboard; label: string; path: string; roles?: string[] };
 
-const APP_NAME = "PsicoGest";
+const APP_NAME = "Psico Gleego";
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "1.0.0";
 
 const allNav: NavItem[] = [
