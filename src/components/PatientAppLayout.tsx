@@ -25,7 +25,7 @@ export default function PatientAppLayout() {
     queryFn: () => patientPortalApi.dashboard(),
   });
 
-  const clinicName = dashboard?.clinicName || "PsicoGest";
+  const clinicName = dashboard?.clinicName || "Psico Gleego";
   const clinicLogo = (dashboard as any)?.clinicLogo;
   const primaryColor = (dashboard as any)?.primaryColor;
   const accentColor = (dashboard as any)?.accentColor;
@@ -112,7 +112,7 @@ export default function PatientAppLayout() {
     return () => {
       document.documentElement.style.removeProperty("--primary");
       document.documentElement.style.removeProperty("--accent");
-      document.title = "PsicoGest - Sistema para Psicólogos";
+      document.title = "Psico Gleego - Sistema para Psicólogos";
       URL.revokeObjectURL(manifestUrl);
     };
   }, [primaryColor, accentColor, clinicLogo, clinicName, basePath]);

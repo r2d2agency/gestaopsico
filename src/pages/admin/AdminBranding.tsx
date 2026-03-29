@@ -25,7 +25,7 @@ export default function AdminBranding() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
-  const [appName, setAppName] = useState("PsicoGest");
+  const [appName, setAppName] = useState("Psico Gleego");
   const [appSubtitle, setAppSubtitle] = useState("Gestão Clínica");
   const [primaryColor, setPrimaryColor] = useState("234 89% 74%");
   const [accentColor, setAccentColor] = useState("250 95% 76%");
@@ -170,7 +170,7 @@ export default function AdminBranding() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Nome do App</Label>
-                <Input value={appName} onChange={e => setAppName(e.target.value)} placeholder="PsicoGest" />
+                <Input value={appName} onChange={e => setAppName(e.target.value)} placeholder="Psico Gleego" />
               </div>
               <div>
                 <Label>Subtítulo</Label>

@@ -36,7 +36,7 @@ app.use(cors({
 app.use(express.json());
 
 // Root
-app.get('/', (req, res) => res.json({ message: 'PsicoGest API online' }));
+app.get('/', (req, res) => res.json({ message: 'Psico Gleego API online' }));
 
 const healthHandler = (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -70,5 +70,5 @@ app.use('/api/team', teamRoutes);
 app.use('/api/messages', messagesRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 PsicoGest API rodando na porta ${PORT}`);
+  console.log(`🚀 Psico Gleego API rodando na porta ${PORT}`);
 });
