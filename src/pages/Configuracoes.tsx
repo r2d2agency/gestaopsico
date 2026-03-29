@@ -103,7 +103,7 @@ export default function Configuracoes() {
   const { data: teamData } = useQuery<{ data: any[]; total: number }>({
     queryKey: ["team"],
     queryFn: () => apiRequest("/team"),
-    enabled: isAdmin,
+    enabled: isProfessional,
   });
 
   const createTeamMember = useMutation({
