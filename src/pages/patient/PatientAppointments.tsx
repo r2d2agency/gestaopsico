@@ -36,6 +36,13 @@ export default function PatientAppointments() {
     queryFn: () => patientPortalApi.appointments(),
   });
 
+  const { data: dashboardData } = useQuery({
+    queryKey: ["patient-dashboard"],
+    queryFn: () => patientPortalApi.dashboard(),
+  });
+
+  const allowBooking = dashboardData?.allowBooking ?? false;
+
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
 
   const { data: availability, isLoading: loadingSlots } = useQuery({
@@ -92,10 +99,12 @@ export default function PatientAppointments() {
           <h1 className="text-lg font-display font-bold text-foreground">Minhas Consultas</h1>
           <p className="text-xs text-muted-foreground">Próximas sessões e histórico</p>
         </div>
-        <Button size="sm" className="gap-1" onClick={() => setShowBooking(true)}>
-          <Plus className="w-4 h-4" />
-          Agendar
-        </Button>
+        {allowBooking && (
+          <Button size="sm" className="gap-1" onClick={() => setShowBooking(true)}>
+            <Plus className="w-4 h-4" />
+            Agendar
+          </Button>
+        )}
       </div>
 
       {/* Upcoming */}

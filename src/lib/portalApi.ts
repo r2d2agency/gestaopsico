@@ -175,6 +175,7 @@ export interface OrgSettings {
   businessPhone?: string;
   businessEmail?: string;
   businessAddress?: string;
+  allowPatientBooking?: boolean;
 }
 
 export const orgSettingsApi = {
@@ -196,6 +197,8 @@ export interface PatientDashboard {
   pendingTests: number;
   recentMood: MoodEntry[];
   patientName: string;
+  allowBooking?: boolean;
+  clinicName?: string | null;
 }
 
 export interface PatientPortalMessage {

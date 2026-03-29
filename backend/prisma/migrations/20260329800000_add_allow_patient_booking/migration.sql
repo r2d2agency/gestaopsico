@@ -1,0 +1,1 @@
+ALTER TABLE "organization_settings" ADD COLUMN IF NOT EXISTS "allow_patient_booking" BOOLEAN NOT NULL DEFAULT true;

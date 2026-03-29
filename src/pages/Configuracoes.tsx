@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Palette, Building2, Phone, Mail, MapPin, Save, Loader2, ImageIcon, Upload,
-  UserPlus, Users, Power, PowerOff, Shield,
+  UserPlus, Users, Power, PowerOff, Shield, CalendarIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +58,8 @@ export default function Configuracoes() {
 
   const [form, setForm] = useState<Partial<OrgSettings>>({
     logo: "", primaryColor: "", secondaryColor: "", accentColor: "",
-    businessName: "", businessPhone: "", businessEmail: "", businessAddress: ""
+    businessName: "", businessPhone: "", businessEmail: "", businessAddress: "",
+    allowPatientBooking: true
   });
 
   const { data: settings, isLoading } = useQuery({
@@ -328,7 +329,44 @@ export default function Configuracoes() {
       </div>
       )}
 
-      {/* Team Management */}
+      {/* Portal do Paciente */}
+      {isProfessional && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarIcon className="w-5 h-5 text-primary" />
+                Portal do Paciente
+              </CardTitle>
+              <CardDescription>Controle o que os pacientes podem fazer pelo app</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Agendamento pelo paciente</p>
+                  <p className="text-xs text-muted-foreground">Permitir que pacientes agendem consultas diretamente pelo app</p>
+                </div>
+                <button
+                  onClick={() => setForm(prev => ({ ...prev, allowPatientBooking: !prev.allowPatientBooking }))}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${form.allowPatientBooking ? 'bg-primary' : 'bg-muted'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.allowPatientBooking ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              <Button
+                size="sm"
+                className="gap-1"
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                Salvar
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {isAdmin && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>
