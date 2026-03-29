@@ -90,7 +90,7 @@ export default function PatientDashboardPage() {
                   {quickMoodMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                   Registrar
                 </Button>
-                <Link to="/portal/humor" className="flex-1">
+                <Link to={`${basePath}/humor`} className="flex-1">
                   <Button size="sm" variant="outline" className="w-full text-xs">+ Detalhes</Button>
                 </Link>
               </motion.div>
@@ -101,7 +101,7 @@ export default function PatientDashboardPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3">
-        <Link to="/portal/humor">
+        <Link to={`${basePath}/humor`}>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="pt-5 pb-4 flex items-center gap-3">
@@ -116,7 +116,7 @@ export default function PatientDashboardPage() {
             </Card>
           </motion.div>
         </Link>
-        <Link to="/portal/testes">
+        <Link to={`${basePath}/testes`}>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="pt-5 pb-4 flex items-center gap-3">

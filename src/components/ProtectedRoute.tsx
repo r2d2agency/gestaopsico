@@ -29,7 +29,7 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
 
   // Check required role
   if (requiredRole && user.role !== requiredRole && user.role !== "superadmin") {
-    const fallback = user.role === "patient" ? "/portal" : "/dashboard";
+    const fallback = user.role === "patient" ? "/login" : "/dashboard";
     return <Navigate to={fallback} replace />;
   }
 
@@ -38,7 +38,7 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
     const userRoles = user.role === "secretary_financial" ? ["secretary_financial", "secretary", "financial"] : [user.role];
     const hasAccess = userRoles.some(r => allowedRoles.includes(r)) || user.role === "superadmin";
     if (!hasAccess) {
-      const fallback = user.role === "patient" ? "/portal" : "/dashboard";
+      const fallback = user.role === "patient" ? "/login" : "/dashboard";
       return <Navigate to={fallback} replace />;
     }
   }
