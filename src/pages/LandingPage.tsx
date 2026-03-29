@@ -545,9 +545,29 @@ export default function LandingPage() {
                     </ul>
                   </div>
                 )}
-                <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
-                  <Link to="/dashboard">Começar Grátis</Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
+                    <Link to="/dashboard">
+                      {plan.highlighted ? "Começar Grátis" : "Selecionar Plano"}
+                    </Link>
+                  </Button>
+                  {!plan.highlighted && (
+                    <Button variant="ghost" className="w-full text-xs text-primary hover:text-primary" asChild>
+                      <Link to="/dashboard">
+                        <ArrowRight className="w-3 h-3 mr-1" />
+                        Upgrade para {i === 0 ? "Profissional" : "Clínica Enterprise"}
+                      </Link>
+                    </Button>
+                  )}
+                  {plan.highlighted && !withSecretary && (
+                    <button
+                      onClick={() => setWithSecretary(true)}
+                      className="w-full text-xs text-primary hover:underline mt-1 flex items-center justify-center gap-1"
+                    >
+                      <Zap className="w-3 h-3" /> Adicionar Secretária IA (+R$200/mês)
+                    </button>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
