@@ -63,6 +63,7 @@ export default function Configuracoes() {
     scheduleStartHour: 8, scheduleEndHour: 19,
     patientBookingStartHour: 8, patientBookingEndHour: 18,
     sessionDuration: 50, bookingWeekdays: "1,2,3,4,5",
+    timezone: "America/Sao_Paulo",
   });
 
   const { data: settings, isLoading } = useQuery({
