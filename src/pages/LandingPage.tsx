@@ -2,6 +2,12 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Calendar,
   Video,
   FileText,
@@ -220,6 +226,7 @@ export default function LandingPage() {
             <a href="#benefits" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Benefícios</a>
             <a href="#testimonials" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Depoimentos</a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Planos</a>
+            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
@@ -722,6 +729,71 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-24 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+              <span className="text-sm font-medium text-primary uppercase tracking-wider">Perguntas Frequentes</span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mt-3">
+                Tire suas dúvidas
+              </h2>
+            </motion.div>
+          </div>
+          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <Accordion type="single" collapsible className="space-y-3">
+              {[
+                {
+                  q: "O PsicoGest está em conformidade com a LGPD?",
+                  a: "Sim. Todos os dados são criptografados em trânsito (TLS) e em repouso (AES-256). Os prontuários são acessíveis apenas pelo psicólogo responsável, respeitando o sigilo profissional previsto no Código de Ética do CFP. Além disso, o sistema permite exclusão de dados a pedido do paciente, conforme exigido pela LGPD.",
+                },
+                {
+                  q: "Como funciona o app do paciente?",
+                  a: "O paciente acessa um link personalizado com a identidade visual do seu consultório e instala como um app (PWA) no celular. Pelo app, ele registra seu humor diário, responde testes psicológicos enviados por você, visualiza consultas agendadas e acompanha seu financeiro. Tudo com notificações push e por WhatsApp.",
+                },
+                {
+                  q: "Os testes psicológicos já vêm prontos?",
+                  a: "Sim! O sistema inclui modelos validados como Beck (BDI/BAI), PHQ-9, GAD-7, DASS-21 e outros, com análise automática de resultados. Você também pode criar seus próprios testes, importar/exportar em JSON e enviar tanto para pacientes individuais quanto para casais.",
+                },
+                {
+                  q: "Como funciona o monitoramento de humor?",
+                  a: "Funciona como os grandes apps do mercado (Cogni, Daylio). O paciente registra suas emoções ao longo do dia com emojis, notas e intensidade. Você acompanha a evolução em um dashboard exclusivo com gráficos — os dados ficam visíveis apenas para o profissional responsável.",
+                },
+                {
+                  q: "Posso usar em clínica com vários profissionais?",
+                  a: "Sim! O plano Clínica suporta até 10 profissionais, cada um com acesso apenas aos seus pacientes e financeiro (LGPD). A clínica tem painel administrativo, perfis de secretária e financeiro com controle de acesso granular. Há também o perfil híbrido Secretária + Financeiro.",
+                },
+                {
+                  q: "O que é a Secretária IA?",
+                  a: "É um agente de inteligência artificial que funciona 24h no seu WhatsApp. Ela agenda e remarca consultas, envia lembretes, cobra pacientes inadimplentes e responde dúvidas automaticamente. Disponível como add-on em qualquer plano por +R$200/mês.",
+                },
+                {
+                  q: "Posso experimentar antes de pagar?",
+                  a: "Sim! Todos os planos incluem período de teste gratuito (7 a 14 dias dependendo do plano), sem necessidade de cartão de crédito. Você pode explorar todas as funcionalidades antes de decidir.",
+                },
+                {
+                  q: "Meus dados estão seguros?",
+                  a: "Absolutamente. Utilizamos infraestrutura em nuvem com backups automáticos, criptografia AES-256, autenticação com tokens JWT e controle de acesso por perfil (RBAC). Cada organização tem seus dados completamente isolados (multi-tenant).",
+                },
+                {
+                  q: "Consigo personalizar a identidade visual?",
+                  a: "Sim! Você pode subir sua logo, definir cores do sistema e personalizar o link do app do paciente. Cada psicólogo ou clínica tem sua marca refletida em todo o sistema, incluindo o PWA que o paciente instala.",
+                },
+              ].map((item, i) => (
+                <AccordionItem key={i} value={`faq-${i}`} className="bg-card rounded-xl border border-border px-6 shadow-card">
+                  <AccordionTrigger className="text-left text-sm font-medium text-foreground hover:no-underline py-4">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </motion.div>
         </div>
       </section>
 
