@@ -27,7 +27,9 @@ export default function ProtectedRoute({ children, requiredRole }: Props) {
   }
 
   if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+    // Patient users go to portal, others to dashboard
+    const fallback = user.role === "patient" ? "/portal" : "/dashboard";
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;
