@@ -40,59 +40,62 @@ export default function AdminDashboard() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Organizações"
-              value={metrics?.organizations.total ?? 0}
+              label="Organizações"
+              value={String(metrics?.organizations.total ?? 0)}
               icon={Building2}
-              description={`${metrics?.organizations.active ?? 0} ativas`}
+              change={`${metrics?.organizations.active ?? 0} ativas`}
+              changeType="positive"
             />
             <StatCard
-              title="Suspensas"
-              value={metrics?.organizations.suspended ?? 0}
+              label="Suspensas"
+              value={String(metrics?.organizations.suspended ?? 0)}
               icon={AlertTriangle}
-              description="Organizações suspensas"
+              change="Organizações suspensas"
+              changeType="negative"
             />
             <StatCard
-              title="Usuários Ativos"
-              value={metrics?.users.active ?? 0}
+              label="Usuários Ativos"
+              value={String(metrics?.users.active ?? 0)}
               icon={UserCheck}
-              description={`${metrics?.users.total ?? 0} total`}
+              change={`${metrics?.users.total ?? 0} total`}
             />
             <StatCard
-              title="Pacientes"
-              value={metrics?.patients ?? 0}
+              label="Pacientes"
+              value={String(metrics?.patients ?? 0)}
               icon={Users}
-              description="Total no sistema"
+              change="Total no sistema"
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Consultas do Mês"
-              value={metrics?.appointments.monthly ?? 0}
+              label="Consultas do Mês"
+              value={String(metrics?.appointments.monthly ?? 0)}
               icon={Calendar}
-              description={`${metrics?.appointments.total ?? 0} total`}
+              change={`${metrics?.appointments.total ?? 0} total`}
             />
             <StatCard
-              title="Receita Total"
+              label="Receita Total"
               value={fmt(metrics?.revenue.total ?? 0)}
               icon={DollarSign}
-              description="Pagamentos confirmados"
+              change="Pagamentos confirmados"
+              changeType="positive"
             />
             <StatCard
-              title="Planos Ativos"
-              value={metrics?.planBreakdown?.length ?? 0}
+              label="Planos Ativos"
+              value={String(metrics?.planBreakdown?.length ?? 0)}
               icon={TrendingUp}
-              description="Tipos de plano em uso"
+              change="Tipos de plano em uso"
             />
             <StatCard
-              title="Taxa de Atividade"
+              label="Taxa de Atividade"
               value={
                 metrics?.users.total
                   ? `${Math.round((metrics.users.active / metrics.users.total) * 100)}%`
                   : "0%"
               }
               icon={Activity}
-              description="Usuários ativos vs total"
+              change="Usuários ativos vs total"
             />
           </div>
 
