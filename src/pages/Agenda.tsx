@@ -269,6 +269,14 @@ export default function Agenda() {
                       }`}>
                         {statusLabels[aptStatus] || aptStatus}
                       </span>
+                      {aptStatus !== "cancelled" && !apt.attended && (
+                        <Button size="sm" variant="outline" className="gap-1" onClick={(e) => { e.stopPropagation(); attendMutation.mutate(apt.id); }}>
+                          <UserCheck className="w-3.5 h-3.5" />Compareceu
+                        </Button>
+                      )}
+                      {apt.attended && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">✓ Presente</span>
+                      )}
                       {aptStatus !== "cancelled" && (
                         <Button size="sm" variant={apt.mode === "video" ? "default" : "outline"}>
                           {apt.mode === "video" ? "Iniciar Videochamada" : "Ver Detalhes"}
