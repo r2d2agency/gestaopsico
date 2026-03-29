@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { pacientesApi, consultasApi } from "@/lib/api";
+import { pacientesApi, consultasApi, casaisApi } from "@/lib/api";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,24 +17,33 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   FileText, Plus, Search, Calendar, User, Edit, Eye, Sparkles, Brain,
-  AlertTriangle, TrendingUp, Tag, BarChart3, Clock, ChevronRight
+  AlertTriangle, TrendingUp, Tag, BarChart3, Clock, ChevronRight, ArrowLeft,
+  Users, Heart, Filter
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 
 const EMPTY_FORM = {
-  patientId: "", coupleId: "", appointmentId: "", type: "individual" as const,
-  date: new Date().toISOString().split("T")[0], modality: "in_person",
+  patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
+  date: new Date().toISOString().split("T")[0], modality: "in_person" as string,
   content: "", complaint: "", keyPoints: "", clinicalObservations: "",
   interventions: "", evolution: "", nextSteps: "", privateNotes: "", aiContent: "",
 };
 
+type TypeFilter = "all" | "individual" | "couple";
+
 export default function Prontuarios() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState("records");
-  const [filterPatientId, setFilterPatientId] = useState(searchParams.get("patientId") || "");
+  const initialPatientId = searchParams.get("patientId") || "";
+
+  // Two-level: null = patient list, string = selected patient/couple detail
+  const [selectedEntity, setSelectedEntity] = useState<{ type: "patient" | "couple"; id: string; name: string } | null>(
+    initialPatientId ? { type: "patient", id: initialPatientId, name: "" } : null
+  );
+  const [detailTab, setDetailTab] = useState("records");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<RecordData | null>(null);
@@ -43,16 +52,26 @@ export default function Prontuarios() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [aiLoading, setAiLoading] = useState<string | null>(null);
 
-  const { data: records = [], isLoading } = useQuery({
-    queryKey: ["prontuarios", filterPatientId],
-    queryFn: () => recordsApi.listAll(filterPatientId ? { patientId: filterPatientId } : undefined),
-  });
-
+  // Data
   const { data: patients = [] } = useQuery({
     queryKey: ["pacientes-all"],
     queryFn: async () => {
       const res = await pacientesApi.list();
       return Array.isArray(res) ? res : (res as any).data ?? [];
+    },
+  });
+
+  const { data: couples = [] } = useQuery({
+    queryKey: ["couples"],
+    queryFn: () => casaisApi.list(),
+  });
+
+  const { data: records = [], isLoading: recordsLoading } = useQuery({
+    queryKey: ["prontuarios", selectedEntity?.id],
+    queryFn: () => {
+      if (!selectedEntity) return recordsApi.listAll();
+      if (selectedEntity.type === "patient") return recordsApi.listAll({ patientId: selectedEntity.id });
+      return recordsApi.listAll({ coupleId: selectedEntity.id });
     },
   });
 
@@ -62,6 +81,41 @@ export default function Prontuarios() {
     enabled: isCreateOpen,
   });
 
+  // Build card list: patients + couples with record counts
+  const entityCards = useMemo(() => {
+    const allRecords = records;
+    const patientCards = patients.map((p: any) => ({
+      type: "patient" as const,
+      id: p.id,
+      name: p.name,
+      recordCount: 0, // will use all records if not filtered
+      lastDate: null as string | null,
+    }));
+
+    const coupleCards = (couples as any[]).map((c: any) => ({
+      type: "couple" as const,
+      id: c.id,
+      name: c.name || `${c.patient1?.name} & ${c.patient2?.name}`,
+      recordCount: 0,
+      lastDate: null as string | null,
+    }));
+
+    return [...patientCards, ...coupleCards];
+  }, [patients, couples]);
+
+  // Filter cards
+  const filteredCards = useMemo(() => {
+    let cards = entityCards;
+    if (typeFilter === "individual") cards = cards.filter(c => c.type === "patient");
+    if (typeFilter === "couple") cards = cards.filter(c => c.type === "couple");
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      cards = cards.filter(c => c.name.toLowerCase().includes(term));
+    }
+    return cards;
+  }, [entityCards, typeFilter, searchTerm]);
+
+  // Mutations
   const createMutation = useMutation({
     mutationFn: (data: Partial<RecordData>) => recordsApi.create(data),
     onSuccess: () => {
@@ -107,10 +161,7 @@ export default function Prontuarios() {
     try {
       const result = await recordsApi.organizeWithAi(recordId);
       queryClient.invalidateQueries({ queryKey: ["prontuarios"] });
-      if (result.record) {
-        setSelectedRecord(result.record);
-        loadFormFromRecord(result.record);
-      }
+      if (result.record) { setSelectedRecord(result.record); loadFormFromRecord(result.record); }
       toast.success("Prontuário organizado com IA!");
     } catch (err: any) {
       toast.error(err.message || "Erro ao organizar com IA");
@@ -123,10 +174,7 @@ export default function Prontuarios() {
       const result = await recordsApi.clinicalSupport(recordId);
       queryClient.invalidateQueries({ queryKey: ["prontuarios"] });
       toast.success("Apoio clínico gerado!");
-      // Show the result in view mode
-      if (selectedRecord) {
-        setSelectedRecord({ ...selectedRecord, aiClinicalSupport: result.clinicalSupport });
-      }
+      if (selectedRecord) setSelectedRecord({ ...selectedRecord, aiClinicalSupport: result.clinicalSupport });
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar apoio clínico");
     } finally { setAiLoading(null); }
@@ -143,30 +191,55 @@ export default function Prontuarios() {
     });
   };
 
-  const filteredRecords = records.filter((r: RecordData) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return r.patient?.name?.toLowerCase().includes(term) || r.couple?.name?.toLowerCase().includes(term) ||
-      r.content?.toLowerCase().includes(term) || r.complaint?.toLowerCase().includes(term);
-  });
+  const handleSelectEntity = (type: "patient" | "couple", id: string, name: string) => {
+    setSelectedEntity({ type, id, name });
+    setDetailTab("records");
+  };
+
+  const handleBack = () => {
+    setSelectedEntity(null);
+    setDetailTab("records");
+  };
 
   const patientAppointments = form.patientId
     ? appointments.filter((a) => a.patient_id === form.patientId)
     : appointments;
 
+  // Update name if we came from URL param and now have patients loaded
+  if (selectedEntity && !selectedEntity.name && patients.length > 0) {
+    const found = patients.find((p: any) => p.id === selectedEntity.id);
+    if (found) setSelectedEntity({ ...selectedEntity, name: found.name });
+  }
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">Prontuário Clínico</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Registre, organize e acompanhe a evolução dos seus pacientes
-          </p>
+        <div className="flex items-center gap-3">
+          {selectedEntity && (
+            <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          )}
+          <div>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+              {selectedEntity ? selectedEntity.name : "Prontuário Clínico"}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {selectedEntity
+                ? `${selectedEntity.type === "couple" ? "Casal" : "Paciente"} — prontuários e evolução`
+                : "Selecione um paciente ou casal para ver seus prontuários"}
+            </p>
+          </div>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary border-0 shadow-glow" onClick={() => setForm({ ...EMPTY_FORM })}>
+            <Button className="gradient-primary border-0 shadow-glow" onClick={() => {
+              const newForm = { ...EMPTY_FORM };
+              if (selectedEntity?.type === "patient") newForm.patientId = selectedEntity.id;
+              if (selectedEntity?.type === "couple") { newForm.coupleId = selectedEntity.id; newForm.type = "couple"; }
+              setForm(newForm);
+            }}>
               <Plus className="w-4 h-4 mr-2" /> Novo Prontuário
             </Button>
           </DialogTrigger>
@@ -186,130 +259,199 @@ export default function Prontuarios() {
         </Dialog>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
-          <TabsTrigger value="records" className="flex items-center gap-1.5">
-            <FileText className="w-4 h-4" /> Registros
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="flex items-center gap-1.5">
-            <TrendingUp className="w-4 h-4" /> Evolução
-          </TabsTrigger>
-          <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4" /> Dashboard
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Records tab */}
-        <TabsContent value="records" className="space-y-4 mt-4">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+      <AnimatePresence mode="wait">
+        {!selectedEntity ? (
+          /* =================== PATIENT/COUPLE CARDS VIEW =================== */
+          <motion.div key="cards" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Buscar paciente ou casal..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <div className="flex gap-2">
+                {(["all", "individual", "couple"] as TypeFilter[]).map((f) => (
+                  <Button key={f} size="sm" variant={typeFilter === f ? "default" : "outline"}
+                    onClick={() => setTypeFilter(f)}
+                    className={typeFilter === f ? "gradient-primary border-0" : ""}
+                  >
+                    {f === "all" && <><Filter className="w-3.5 h-3.5 mr-1" /> Todos</>}
+                    {f === "individual" && <><User className="w-3.5 h-3.5 mr-1" /> Individual</>}
+                    {f === "couple" && <><Heart className="w-3.5 h-3.5 mr-1" /> Casal</>}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <Select value={filterPatientId || "_all"} onValueChange={(v) => setFilterPatientId(v === "_all" ? "" : v)}>
-              <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Todos os pacientes" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todos os pacientes</SelectItem>
-                {patients.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Records List */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => <div key={i} className="h-44 rounded-xl bg-muted animate-pulse" />)}
+            {/* Dashboard summary row */}
+            <div className="mb-6">
+              <ClinicalDashboard />
             </div>
-          ) : filteredRecords.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <FileText className="w-12 h-12 text-muted-foreground mb-4" />
-                <h3 className="font-display font-semibold text-foreground text-lg">Nenhum prontuário encontrado</h3>
-                <p className="text-muted-foreground text-sm mt-1 max-w-sm">
-                  Crie um novo prontuário para registrar informações clínicas.
-                </p>
-                <Button className="mt-4 gradient-primary border-0" onClick={() => { setForm({ ...EMPTY_FORM }); setIsCreateOpen(true); }}>
-                  <Plus className="w-4 h-4 mr-2" /> Criar Prontuário
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRecords.map((record: RecordData, i: number) => (
-                <motion.div key={record.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                  <Card className="hover:shadow-lg transition-shadow group">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-primary" />
-                          <CardTitle className="text-base">{record.patient?.name || record.couple?.name || "—"}</CardTitle>
-                        </div>
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <Badge variant={record.type === "couple" ? "secondary" : "default"} className="text-xs">
-                            {record.type === "couple" ? "Casal" : "Individual"}
-                          </Badge>
-                          {record.modality && (
-                            <Badge variant="outline" className="text-xs">
-                              {record.modality === "video" || record.modality === "online" ? "Online" : "Presencial"}
+
+            {/* Cards grid */}
+            {filteredCards.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="font-semibold text-foreground text-lg">Nenhum resultado encontrado</h3>
+                  <p className="text-muted-foreground text-sm mt-1">Ajuste os filtros ou cadastre novos pacientes.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredCards.map((card, i) => (
+                  <motion.div key={`${card.type}-${card.id}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                    <Card
+                      className="hover:shadow-lg transition-all cursor-pointer group border-border/60 hover:border-primary/40"
+                      onClick={() => handleSelectEntity(card.type, card.id, card.name)}
+                    >
+                      <CardContent className="pt-5 pb-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2.5 rounded-xl ${card.type === "couple" ? "bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400" : "bg-primary/10 text-primary"}`}>
+                            {card.type === "couple" ? <Heart className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">{card.name}</h3>
+                            <Badge variant="outline" className="text-[10px] mt-1">
+                              {card.type === "couple" ? "Casal" : "Individual"}
                             </Badge>
-                          )}
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        <Clock className="w-3 h-3 inline mr-1" />
-                        {format(new Date(record.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                        {record.appointment && ` • ${record.appointment.time}`}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
+          <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <Tabs value={detailTab} onValueChange={setDetailTab}>
+              <TabsList className="grid grid-cols-3 w-full max-w-md">
+                <TabsTrigger value="records" className="flex items-center gap-1.5">
+                  <FileText className="w-4 h-4" /> Registros
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4" /> Evolução
+                </TabsTrigger>
+                <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4" /> Dashboard
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Records tab */}
+              <TabsContent value="records" className="space-y-4 mt-4">
+                {recordsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((i) => <div key={i} className="h-44 rounded-xl bg-muted animate-pulse" />)}
+                  </div>
+                ) : records.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <FileText className="w-12 h-12 text-muted-foreground mb-4" />
+                      <h3 className="font-display font-semibold text-foreground text-lg">Nenhum prontuário</h3>
+                      <p className="text-muted-foreground text-sm mt-1 max-w-sm">
+                        Crie o primeiro prontuário para {selectedEntity.name}.
                       </p>
-                      {record.complaint && (
-                        <p className="text-sm font-medium text-foreground mb-1 line-clamp-1">
-                          📋 {record.complaint}
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {record.keyPoints || record.content || "Sem conteúdo"}
-                      </p>
-                      {record.themes && record.themes.length > 0 && (
-                        <div className="flex gap-1 mt-2 flex-wrap">
-                          {record.themes.slice(0, 4).map((t) => (
-                            <Badge key={t} variant="outline" className="text-[10px] py-0"><Tag className="w-2.5 h-2.5 mr-0.5" />{t}</Badge>
-                          ))}
-                        </div>
-                      )}
-                      {(record.aiContent || record.aiClinicalSupport) && (
-                        <p className="text-xs text-primary mt-2 flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" /> Contém análise de IA
-                        </p>
-                      )}
-                      <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => { setSelectedRecord(record); setIsViewOpen(true); }}>
-                          <Eye className="w-3 h-3 mr-1" /> Ver
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => { setSelectedRecord(record); loadFormFromRecord(record); setIsEditOpen(true); }}>
-                          <Edit className="w-3 h-3 mr-1" /> Editar
-                        </Button>
-                      </div>
+                      <Button className="mt-4 gradient-primary border-0" onClick={() => {
+                        const newForm = { ...EMPTY_FORM };
+                        if (selectedEntity.type === "patient") newForm.patientId = selectedEntity.id;
+                        if (selectedEntity.type === "couple") { newForm.coupleId = selectedEntity.id; newForm.type = "couple"; }
+                        setForm(newForm);
+                        setIsCreateOpen(true);
+                      }}>
+                        <Plus className="w-4 h-4 mr-2" /> Criar Prontuário
+                      </Button>
                     </CardContent>
                   </Card>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {records.map((record: RecordData, i: number) => (
+                      <motion.div key={record.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                        <Card className="hover:shadow-lg transition-shadow group">
+                          <CardHeader className="pb-2">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-primary" />
+                                <CardTitle className="text-base">{record.patient?.name || record.couple?.name || "—"}</CardTitle>
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <Badge variant={record.type === "couple" ? "secondary" : "default"} className="text-xs">
+                                  {record.type === "couple" ? "Casal" : "Individual"}
+                                </Badge>
+                                {record.modality && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {record.modality === "video" || record.modality === "online" ? "Online" : "Presencial"}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              <Clock className="w-3 h-3 inline mr-1" />
+                              {format(new Date(record.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                              {record.appointment && ` • ${record.appointment.time}`}
+                            </p>
+                            {record.complaint && (
+                              <p className="text-sm font-medium text-foreground mb-1 line-clamp-1">📋 {record.complaint}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {record.keyPoints || record.content || "Sem conteúdo"}
+                            </p>
+                            {record.themes && record.themes.length > 0 && (
+                              <div className="flex gap-1 mt-2 flex-wrap">
+                                {record.themes.slice(0, 4).map((t) => (
+                                  <Badge key={t} variant="outline" className="text-[10px] py-0"><Tag className="w-2.5 h-2.5 mr-0.5" />{t}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            {(record.aiContent || record.aiClinicalSupport) && (
+                              <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" /> Contém análise de IA
+                              </p>
+                            )}
+                            <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button size="sm" variant="outline" className="text-xs" onClick={() => { setSelectedRecord(record); setIsViewOpen(true); }}>
+                                <Eye className="w-3 h-3 mr-1" /> Ver
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-xs" onClick={() => { setSelectedRecord(record); loadFormFromRecord(record); setIsEditOpen(true); }}>
+                                <Edit className="w-3 h-3 mr-1" /> Editar
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
-        {/* Timeline Tab */}
-        <TabsContent value="timeline" className="mt-4">
-          <PatientTimeline patients={patients} selectedPatientId={filterPatientId} onSelectPatient={setFilterPatientId} />
-        </TabsContent>
+              {/* Timeline tab */}
+              <TabsContent value="timeline" className="mt-4">
+                {selectedEntity.type === "patient" ? (
+                  <PatientTimeline patients={patients} selectedPatientId={selectedEntity.id} onSelectPatient={() => {}} />
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <TrendingUp className="w-12 h-12 text-muted-foreground mb-4" />
+                      <h3 className="font-semibold text-foreground">Evolução disponível para pacientes individuais</h3>
+                      <p className="text-muted-foreground text-sm mt-1">Selecione um paciente individual para ver a linha do tempo.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
 
-        {/* Dashboard Tab */}
-        <TabsContent value="dashboard" className="mt-4">
-          <ClinicalDashboard />
-        </TabsContent>
-      </Tabs>
+              {/* Dashboard tab */}
+              <TabsContent value="dashboard" className="mt-4">
+                <ClinicalDashboard />
+              </TabsContent>
+            </Tabs>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
@@ -335,25 +477,19 @@ export default function Prontuarios() {
                 )}
               </div>
 
-              {/* AI Actions */}
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" className="text-primary border-primary/30"
-                  onClick={() => handleOrganizeAi(selectedRecord.id)}
-                  disabled={!!aiLoading}
-                >
+                  onClick={() => handleOrganizeAi(selectedRecord.id)} disabled={!!aiLoading}>
                   <Sparkles className="w-4 h-4 mr-1" />
                   {aiLoading === "organize-" + selectedRecord.id ? "Organizando..." : "Organizar com IA"}
                 </Button>
                 <Button size="sm" variant="outline" className="text-primary border-primary/30"
-                  onClick={() => handleClinicalSupport(selectedRecord.id)}
-                  disabled={!!aiLoading}
-                >
+                  onClick={() => handleClinicalSupport(selectedRecord.id)} disabled={!!aiLoading}>
                   <Brain className="w-4 h-4 mr-1" />
                   {aiLoading === "support-" + selectedRecord.id ? "Gerando..." : "Gerar Apoio Clínico"}
                 </Button>
               </div>
 
-              {/* Structured sections */}
               {selectedRecord.complaint && <RecordSection label="Motivo / Demanda" content={selectedRecord.complaint} />}
               {selectedRecord.keyPoints && <RecordSection label="Principais Pontos da Sessão" content={selectedRecord.keyPoints} />}
               {selectedRecord.clinicalObservations && <RecordSection label="Observações Clínicas" content={selectedRecord.clinicalObservations} />}
@@ -440,7 +576,6 @@ export default function Prontuarios() {
   );
 }
 
-// Reusable section display
 function RecordSection({ label, content, icon }: { label: string; content: string; icon?: React.ReactNode }) {
   return (
     <div>
@@ -450,7 +585,6 @@ function RecordSection({ label, content, icon }: { label: string; content: strin
   );
 }
 
-// Structured record form
 function RecordForm({
   form, setForm, patients, appointments, onSubmit, isLoading, submitLabel, isEdit
 }: {
@@ -465,7 +599,6 @@ function RecordForm({
 }) {
   return (
     <div className="space-y-4 mt-4">
-      {/* Basic info */}
       {!isEdit && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -520,7 +653,6 @@ function RecordForm({
         </>
       )}
 
-      {/* Structured fields */}
       <div>
         <Label className="flex items-center gap-1">📋 Motivo / Demanda <span className="text-muted-foreground text-xs">(queixa principal)</span></Label>
         <Textarea value={form.complaint} onChange={(e) => setForm({ ...form, complaint: e.target.value })}
