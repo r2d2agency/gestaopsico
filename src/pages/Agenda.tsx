@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
   UserCheck, Heart, Ban, Filter, Users, CalendarIcon, Repeat, Briefcase,
-  Plane, Stethoscope, GraduationCap, Home, Coffee
+  Plane, Stethoscope, GraduationCap, Home, Coffee, LayoutGrid, List, CalendarDays
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAppointments } from "@/hooks/useAppointments";
-import { format, addDays, eachDayOfInterval, parse } from "date-fns";
+import {
+  format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek,
+  startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parse
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { consultasApi, casaisApi, apiRequest, type Consulta, type Casal } from "@/lib/api";
@@ -30,7 +33,20 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
 
+type ViewMode = "day" | "week" | "month";
+
+const BUSINESS_HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h-19h
+
 const statusColors: Record<string, string> = {
+  scheduled: "bg-green-500",
+  confirmed: "bg-green-500",
+  completed: "bg-primary",
+  pending: "bg-yellow-500",
+  cancelled: "bg-destructive",
+  blocked: "bg-muted-foreground",
+};
+
+const statusBgColors: Record<string, string> = {
   scheduled: "border-l-green-500 bg-green-500/5",
   confirmed: "border-l-green-500 bg-green-500/5",
   completed: "border-l-primary bg-primary/5",
@@ -62,6 +78,7 @@ export default function Agenda() {
   const canCreateForOthers = isSecretary || isAdmin;
 
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [form, setForm] = useState<Partial<Consulta>>({ ...emptyConsulta });
@@ -76,18 +93,32 @@ export default function Agenda() {
   const [blockEndDate, setBlockEndDate] = useState<Date | undefined>(undefined);
   const [blockRecurrence, setBlockRecurrence] = useState<"daily" | "weekly" | "monthly">("daily");
   const [blockWeekdays, setBlockWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-  // Fetch professionals list for secretary/admin
+  // Compute date range based on view
+  const dateRange = useMemo(() => {
+    if (viewMode === "day") {
+      return { startDate: dateStr, endDate: dateStr };
+    } else if (viewMode === "week") {
+      const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      const end = endOfWeek(selectedDate, { weekStartsOn: 1 });
+      return { startDate: format(start, "yyyy-MM-dd"), endDate: format(end, "yyyy-MM-dd") };
+    } else {
+      const start = startOfMonth(selectedDate);
+      const end = endOfMonth(selectedDate);
+      return { startDate: format(start, "yyyy-MM-dd"), endDate: format(end, "yyyy-MM-dd") };
+    }
+  }, [selectedDate, viewMode, dateStr]);
+
   const { data: professionals = [] } = useQuery<any[]>({
     queryKey: ["professionals"],
     queryFn: () => apiRequest<any[]>("/settings/professionals"),
     enabled: canCreateForOthers,
   });
 
-  // Fetch appointments - secretary/admin can filter by professional
-  const queryParams: Record<string, string> = { date: dateStr };
-  if (canCreateForOthers && selectedProfessional) {
+  const queryParams: Record<string, string> = { ...dateRange };
+  if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
     queryParams.professional_id = selectedProfessional;
   }
   const { data: appointments = [], isLoading } = useAppointments(queryParams);
@@ -119,11 +150,7 @@ export default function Agenda() {
   });
 
   const blockMutation = useMutation({
-    mutationFn: (data: any) => consultasApi.create({
-      ...data,
-      type: "blocked",
-      status: "blocked",
-    }),
+    mutationFn: (data: any) => consultasApi.create({ ...data, type: "blocked", status: "blocked" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments"] });
       toast({ title: "Horário bloqueado!" });
@@ -131,10 +158,10 @@ export default function Agenda() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
-  const goDay = (dir: number) => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + dir);
-    setSelectedDate(d);
+  const navigate = (dir: number) => {
+    if (viewMode === "day") setSelectedDate(prev => addDays(prev, dir));
+    else if (viewMode === "week") setSelectedDate(prev => addWeeks(prev, dir));
+    else setSelectedDate(prev => addMonths(prev, dir));
   };
 
   const set = (field: string, value: string | number) =>
@@ -152,7 +179,6 @@ export default function Agenda() {
         return;
       }
     }
-    // If secretary creating for a professional, include professional_id
     const payload = { ...form };
     if (canCreateForOthers && selectedProfessional) {
       (payload as any).professional_id = selectedProfessional;
@@ -174,48 +200,28 @@ export default function Agenda() {
       toast({ title: "Selecione o horário inicial", variant: "destructive" });
       return;
     }
-
     const catLabel = blockCategories.find(c => c.value === blockCategory)?.label || blockCategory;
     const note = blockReason ? `[${catLabel}] ${blockReason}` : catLabel;
-
-    const baseData: any = {
-      time: blockTime,
-      duration: blockDuration,
-      notes: note,
-    };
-    if (canCreateForOthers && selectedProfessional) {
-      baseData.professional_id = selectedProfessional;
-    }
+    const baseData: any = { time: blockTime, duration: blockDuration, notes: note };
+    if (canCreateForOthers && selectedProfessional) baseData.professional_id = selectedProfessional;
 
     if (blockMode === "single") {
-      // Single day block
       blockMutation.mutate({ ...baseData, date: dateStr });
     } else if (blockMode === "period") {
-      // Block a date range (e.g. vacation)
-      if (!blockStartDate || !blockEndDate) {
-        toast({ title: "Selecione data inicial e final", variant: "destructive" });
-        return;
-      }
-      const days = eachDayOfInterval({ start: blockStartDate, end: blockEndDate });
-      days.forEach((day) => {
+      if (!blockStartDate || !blockEndDate) { toast({ title: "Selecione data inicial e final", variant: "destructive" }); return; }
+      eachDayOfInterval({ start: blockStartDate, end: blockEndDate }).forEach(day => {
         blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") });
       });
     } else if (blockMode === "recurring") {
-      // Recurring blocks (daily/weekly) within a date range
-      if (!blockStartDate || !blockEndDate) {
-        toast({ title: "Selecione o período de recorrência", variant: "destructive" });
-        return;
-      }
+      if (!blockStartDate || !blockEndDate) { toast({ title: "Selecione o período de recorrência", variant: "destructive" }); return; }
       const days = eachDayOfInterval({ start: blockStartDate, end: blockEndDate });
-      const filtered = days.filter((day) => {
+      const filtered = days.filter(day => {
         if (blockRecurrence === "daily") return true;
         if (blockRecurrence === "weekly") return blockWeekdays.includes(day.getDay());
         if (blockRecurrence === "monthly") return day.getDate() === blockStartDate.getDate();
         return true;
       });
-      filtered.forEach((day) => {
-        blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") });
-      });
+      filtered.forEach(day => { blockMutation.mutate({ ...baseData, date: format(day, "yyyy-MM-dd") }); });
     }
   };
 
@@ -230,23 +236,46 @@ export default function Agenda() {
     setBlockEndDate(undefined);
   };
 
-  const confirmed = appointments.filter((a: any) => a.status === "scheduled" || a.status === "completed").length;
-  const pending = appointments.filter((a: any) => a.status === "pending").length;
-  const cancelled = appointments.filter((a: any) => a.status === "cancelled").length;
-  const blocked = appointments.filter((a: any) => a.status === "blocked" || a.type === "blocked").length;
+  // Group appointments by date string
+  const aptsByDate = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    appointments.forEach((apt: any) => {
+      const d = apt.date ? format(new Date(apt.date), "yyyy-MM-dd") : "";
+      if (!map[d]) map[d] = [];
+      map[d].push(apt);
+    });
+    return map;
+  }, [appointments]);
+
+  const getAptsForDate = (d: Date) => aptsByDate[format(d, "yyyy-MM-dd")] || [];
+
+  const headerTitle = useMemo(() => {
+    if (viewMode === "day") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "week") {
+      const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      const end = endOfWeek(selectedDate, { weekStartsOn: 1 });
+      return `${format(start, "dd MMM", { locale: ptBR })} — ${format(end, "dd MMM yyyy", { locale: ptBR })}`;
+    }
+    return format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR });
+  }, [selectedDate, viewMode]);
+
+  // Stats
+  const totalCount = appointments.length;
+  const scheduledCount = appointments.filter((a: any) => a.status === "scheduled" || a.status === "confirmed").length;
+  const pendingCount = appointments.filter((a: any) => a.status === "pending").length;
+  const blockedCount = appointments.filter((a: any) => a.status === "blocked" || a.type === "blocked").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Agenda</h1>
-          <p className="text-muted-foreground mt-1">
-            {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-          </p>
+          <p className="text-muted-foreground text-sm capitalize">{headerTitle}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setBlockOpen(true); }} size="sm">
-            <Ban className="w-4 h-4 mr-2" />Bloquear Horário
+          <Button variant="outline" onClick={() => setBlockOpen(true)} size="sm">
+            <Ban className="w-4 h-4 mr-2" />Bloquear
           </Button>
           <Button onClick={() => { setForm({ ...emptyConsulta, date: dateStr }); setDialogOpen(true); }} size="sm">
             <Plus className="w-4 h-4 mr-2" />Nova Consulta
@@ -254,32 +283,85 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Professional Filter (secretary/admin) */}
+      {/* View switcher + nav */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => navigate(-1)}><ChevronLeft className="w-4 h-4" /></Button>
+          <Button variant="outline" onClick={() => setSelectedDate(new Date())} size="sm">Hoje</Button>
+          <Button variant="outline" size="icon" onClick={() => navigate(1)}><ChevronRight className="w-4 h-4" /></Button>
+        </div>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          {([
+            { mode: "day" as ViewMode, icon: List, label: "Dia" },
+            { mode: "week" as ViewMode, icon: CalendarDays, label: "Semana" },
+            { mode: "month" as ViewMode, icon: LayoutGrid, label: "Mês" },
+          ]).map(v => (
+            <Button
+              key={v.mode}
+              variant={viewMode === v.mode ? "default" : "ghost"}
+              size="sm"
+              className={cn("gap-1.5 text-xs", viewMode !== v.mode && "text-muted-foreground")}
+              onClick={() => setViewMode(v.mode)}
+            >
+              <v.icon className="w-3.5 h-3.5" />{v.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Professional Filter */}
       {canCreateForOthers && (
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <Label className="text-sm font-medium">Profissional:</Label>
           <Select value={selectedProfessional} onValueChange={setSelectedProfessional}>
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Todos os profissionais" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[250px]"><SelectValue placeholder="Todos" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {(Array.isArray(professionals) ? professionals : []).map((p: any) => (
-                <SelectItem key={p.id} value={p.id}>
-                  <span className="flex items-center gap-2">
-                    <Users className="w-3 h-3" />{p.name}
-                  </span>
-                </SelectItem>
+                <SelectItem key={p.id} value={p.id}><Users className="w-3 h-3 inline mr-1" />{p.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {selectedProfessional && selectedProfessional !== "all" && (
-            <Badge variant="outline" className="text-xs">
-              Filtrando por profissional
-            </Badge>
-          )}
         </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: "Total", value: totalCount, color: "text-foreground" },
+          { label: "Agendadas", value: scheduledCount, color: "text-green-600" },
+          { label: "Pendentes", value: pendingCount, color: "text-yellow-600" },
+          { label: "Bloqueados", value: blockedCount, color: "text-muted-foreground" },
+        ].map(s => (
+          <div key={s.label} className="bg-card rounded-xl border border-border p-3 text-center">
+            <p className={cn("text-xl font-bold", s.color)}>{s.value}</p>
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar views */}
+      {isLoading ? (
+        <div className="space-y-3">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+      ) : viewMode === "month" ? (
+        <MonthView
+          selectedDate={selectedDate}
+          aptsByDate={aptsByDate}
+          onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
+        />
+      ) : viewMode === "week" ? (
+        <WeekView
+          selectedDate={selectedDate}
+          aptsByDate={aptsByDate}
+          onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
+          onAttend={(id) => attendMutation.mutate(id)}
+        />
+      ) : (
+        <DayView
+          appointments={getAptsForDate(selectedDate)}
+          onAttend={(id) => attendMutation.mutate(id)}
+        />
       )}
 
       {/* Nova Consulta Dialog */}
@@ -290,7 +372,6 @@ export default function Agenda() {
             <DialogDescription>Agende uma nova consulta</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
-            {/* Professional selector for secretary/admin */}
             {canCreateForOthers && (
               <div>
                 <Label>Profissional *</Label>
@@ -304,7 +385,6 @@ export default function Agenda() {
                 </Select>
               </div>
             )}
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Tipo</Label>
@@ -325,7 +405,7 @@ export default function Agenda() {
                       <SelectContent>
                         {(Array.isArray(couples) ? couples : []).map((c: Casal) => (
                           <SelectItem key={c.id} value={c.id}>
-                            <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-primary" />{c.name || `${c.patient1?.name} & ${c.patient2?.name}`}</span>
+                            <Heart className="w-3 h-3 inline mr-1 text-primary" />{c.name || `${c.patient1?.name} & ${c.patient2?.name}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -388,14 +468,12 @@ export default function Agenda() {
         </DialogContent>
       </Dialog>
 
-      {/* Block Schedule Dialog */}
+      {/* Block Dialog */}
       <Dialog open={blockOpen} onOpenChange={(open) => { if (!open) resetBlock(); else setBlockOpen(true); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Ban className="w-5 h-5 text-muted-foreground" />Bloquear Horário
-            </DialogTitle>
-            <DialogDescription>Bloqueie horários na agenda — pontual, período ou recorrente</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Ban className="w-5 h-5 text-muted-foreground" />Bloquear Horário</DialogTitle>
+            <DialogDescription>Bloqueie horários — pontual, período ou recorrente</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {canCreateForOthers && (
@@ -411,147 +489,91 @@ export default function Agenda() {
                 </Select>
               </div>
             )}
-
-            {/* Category */}
             <div>
-              <Label className="mb-2 block">Categoria</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {blockCategories.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setBlockCategory(cat.value)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left",
-                      blockCategory === cat.value
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/50"
+              <Label>Categoria</Label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                {blockCategories.map(cat => (
+                  <button key={cat.value} onClick={() => setBlockCategory(cat.value)}
+                    className={cn("flex items-center gap-1.5 text-xs p-2 rounded-lg border transition-all",
+                      blockCategory === cat.value ? "border-primary bg-primary/5 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/50"
                     )}
                   >
-                    <cat.icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{cat.label}</span>
+                    <cat.icon className="w-3.5 h-3.5" />{cat.label}
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Mode */}
             <div>
-              <Label className="mb-2 block">Tipo de bloqueio</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: "single" as const, label: "Dia único", desc: "Ex: 1 compromisso" },
-                  { value: "period" as const, label: "Período", desc: "Ex: férias, licença" },
-                  { value: "recurring" as const, label: "Recorrente", desc: "Ex: almoço diário" },
-                ].map((m) => (
-                  <button
-                    key={m.value}
-                    onClick={() => setBlockMode(m.value)}
-                    className={cn(
-                      "px-3 py-2.5 rounded-lg border text-left transition-all",
-                      blockMode === m.value
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-card hover:border-primary/50"
-                    )}
-                  >
-                    <p className={cn("text-sm font-medium", blockMode === m.value ? "text-primary" : "text-foreground")}>{m.label}</p>
-                    <p className="text-xs text-muted-foreground">{m.desc}</p>
-                  </button>
-                ))}
-              </div>
+              <Label>Modo de bloqueio</Label>
+              <Select value={blockMode} onValueChange={(v: any) => setBlockMode(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Dia único</SelectItem>
+                  <SelectItem value="period">Período (férias)</SelectItem>
+                  <SelectItem value="recurring">Recorrente</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Date selection based on mode */}
-            {blockMode === "single" && (
-              <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3 border border-border">
-                <CalendarIcon className="w-4 h-4 inline mr-1" />
-                Será bloqueado em: <span className="font-medium text-foreground">{format(selectedDate, "dd/MM/yyyy")}</span>
-              </div>
-            )}
-
-            {(blockMode === "period" || blockMode === "recurring") && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Data inicial *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !blockStartDate && "text-muted-foreground")}>
-                        <CalendarIcon className="w-4 h-4 mr-2" />
-                        {blockStartDate ? format(blockStartDate, "dd/MM/yyyy") : "Selecione"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={blockStartDate} onSelect={setBlockStartDate} initialFocus className={cn("p-3 pointer-events-auto")} />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div>
-                  <Label>Data final *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !blockEndDate && "text-muted-foreground")}>
-                        <CalendarIcon className="w-4 h-4 mr-2" />
-                        {blockEndDate ? format(blockEndDate, "dd/MM/yyyy") : "Selecione"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={blockEndDate} onSelect={setBlockEndDate} initialFocus className={cn("p-3 pointer-events-auto")} />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            )}
-
-            {/* Recurrence options */}
-            {blockMode === "recurring" && (
+            {blockMode !== "single" && (
               <div className="space-y-3">
-                <div>
-                  <Label>Frequência</Label>
-                  <Select value={blockRecurrence} onValueChange={(v: any) => setBlockRecurrence(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Todos os dias</SelectItem>
-                      <SelectItem value="weekly">Dias da semana específicos</SelectItem>
-                      <SelectItem value="monthly">Mensal (mesmo dia)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {blockRecurrence === "weekly" && (
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="mb-2 block">Dias da semana</Label>
-                    <div className="flex gap-2">
-                      {[
-                        { day: 0, label: "Dom" },
-                        { day: 1, label: "Seg" },
-                        { day: 2, label: "Ter" },
-                        { day: 3, label: "Qua" },
-                        { day: 4, label: "Qui" },
-                        { day: 5, label: "Sex" },
-                        { day: 6, label: "Sáb" },
-                      ].map((d) => (
-                        <button
-                          key={d.day}
-                          onClick={() => {
-                            setBlockWeekdays(prev =>
-                              prev.includes(d.day) ? prev.filter(x => x !== d.day) : [...prev, d.day]
-                            );
-                          }}
-                          className={cn(
-                            "w-10 h-10 rounded-lg text-xs font-medium transition-all border",
-                            blockWeekdays.includes(d.day)
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-card text-muted-foreground border-border hover:border-primary/50"
-                          )}
-                        >
-                          {d.label}
-                        </button>
-                      ))}
-                    </div>
+                    <Label>Data inicial</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {blockStartDate ? format(blockStartDate, "dd/MM/yyyy") : "Selecione"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={blockStartDate} onSelect={setBlockStartDate} className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div>
+                    <Label>Data final</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {blockEndDate ? format(blockEndDate, "dd/MM/yyyy") : "Selecione"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={blockEndDate} onSelect={setBlockEndDate} className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                {blockMode === "recurring" && (
+                  <div className="space-y-2">
+                    <Label>Recorrência</Label>
+                    <Select value={blockRecurrence} onValueChange={(v: any) => setBlockRecurrence(v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Diária</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {blockRecurrence === "weekly" && (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[{ day: 0, label: "Dom" }, { day: 1, label: "Seg" }, { day: 2, label: "Ter" },
+                          { day: 3, label: "Qua" }, { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }
+                        ].map(d => (
+                          <button key={d.day} onClick={() => setBlockWeekdays(prev => prev.includes(d.day) ? prev.filter(x => x !== d.day) : [...prev, d.day])}
+                            className={cn("w-10 h-10 rounded-lg text-xs font-medium transition-all border",
+                              blockWeekdays.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                            )}
+                          >{d.label}</button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
-
-            {/* Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Horário inicial *</Label>
@@ -562,39 +584,10 @@ export default function Agenda() {
                 <Input type="number" value={blockDuration} onChange={e => setBlockDuration(Number(e.target.value))} />
               </div>
             </div>
-
-            {/* Reason */}
             <div>
               <Label>Descrição / Motivo</Label>
-              <Textarea
-                value={blockReason}
-                onChange={e => setBlockReason(e.target.value)}
-                placeholder="Detalhe o motivo do bloqueio..."
-                rows={2}
-              />
+              <Textarea value={blockReason} onChange={e => setBlockReason(e.target.value)} placeholder="Detalhe o motivo..." rows={2} />
             </div>
-
-            {/* Summary */}
-            {blockMode !== "single" && blockStartDate && blockEndDate && (
-              <div className="bg-muted/50 rounded-lg p-3 border border-border text-sm">
-                <Repeat className="w-4 h-4 inline mr-1 text-primary" />
-                <span className="text-muted-foreground">
-                  {blockMode === "period" && (
-                    <>Bloqueio de <span className="font-medium text-foreground">{format(blockStartDate, "dd/MM")}</span> a <span className="font-medium text-foreground">{format(blockEndDate, "dd/MM")}</span> ({eachDayOfInterval({ start: blockStartDate, end: blockEndDate }).length} dias)</>
-                  )}
-                  {blockMode === "recurring" && blockRecurrence === "daily" && (
-                    <>Todos os dias de <span className="font-medium text-foreground">{format(blockStartDate, "dd/MM")}</span> a <span className="font-medium text-foreground">{format(blockEndDate, "dd/MM")}</span></>
-                  )}
-                  {blockMode === "recurring" && blockRecurrence === "weekly" && (
-                    <>{blockWeekdays.map(d => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][d]).join(", ")} de <span className="font-medium text-foreground">{format(blockStartDate, "dd/MM")}</span> a <span className="font-medium text-foreground">{format(blockEndDate, "dd/MM")}</span></>
-                  )}
-                  {blockMode === "recurring" && blockRecurrence === "monthly" && (
-                    <>Todo dia <span className="font-medium text-foreground">{blockStartDate.getDate()}</span> de cada mês</>
-                  )}
-                  {blockTime && <>, das <span className="font-medium text-foreground">{blockTime}</span> por {blockDuration}min</>}
-                </span>
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetBlock}>Cancelar</Button>
@@ -605,131 +598,239 @@ export default function Agenda() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
 
-      {/* Day navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => goDay(-1)}><ChevronLeft className="w-4 h-4" /></Button>
-          <Button variant="outline" onClick={() => setSelectedDate(new Date())}>Hoje</Button>
-          <Button variant="outline" size="icon" onClick={() => goDay(1)}><ChevronRight className="w-4 h-4" /></Button>
-        </div>
+// ========== MONTH VIEW ==========
+function MonthView({ selectedDate, aptsByDate, onSelectDate }: {
+  selectedDate: Date;
+  aptsByDate: Record<string, any[]>;
+  onSelectDate: (d: Date) => void;
+}) {
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const days = eachDayOfInterval({ start: calStart, end: calEnd });
+
+  return (
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="grid grid-cols-7 border-b border-border">
+        {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map(d => (
+          <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
+        ))}
       </div>
+      <div className="grid grid-cols-7">
+        {days.map((day, i) => {
+          const key = format(day, "yyyy-MM-dd");
+          const apts = aptsByDate[key] || [];
+          const inMonth = isSameMonth(day, selectedDate);
+          const today = isToday(day);
+          return (
+            <button
+              key={i}
+              onClick={() => onSelectDate(day)}
+              className={cn(
+                "min-h-[80px] p-1.5 border-b border-r border-border text-left transition-colors hover:bg-accent/50",
+                !inMonth && "opacity-40",
+                today && "bg-primary/5"
+              )}
+            >
+              <span className={cn(
+                "text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full",
+                today && "bg-primary text-primary-foreground"
+              )}>
+                {format(day, "d")}
+              </span>
+              <div className="mt-0.5 space-y-0.5">
+                {apts.slice(0, 3).map((apt: any, j: number) => {
+                  const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
+                  return (
+                    <div key={j} className={cn("text-[10px] px-1 py-0.5 rounded truncate", `${statusColors[aptStatus]}/10 text-foreground`)}>
+                      <span className={cn("inline-block w-1.5 h-1.5 rounded-full mr-1", statusColors[aptStatus])} />
+                      {apt.time} {apt.type === "blocked" ? "Bloq." : apt.patient?.name?.split(" ")[0] || "—"}
+                    </div>
+                  );
+                })}
+                {apts.length > 3 && (
+                  <span className="text-[10px] text-muted-foreground pl-1">+{apts.length - 3} mais</span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-      {/* Appointments list */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 space-y-3">
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))
-          ) : appointments.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-lg font-medium">Nenhuma consulta neste dia</p>
-              <p className="text-sm mt-1">Agende uma nova consulta clicando no botão acima.</p>
+// ========== WEEK VIEW ==========
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend }: {
+  selectedDate: Date;
+  aptsByDate: Record<string, any[]>;
+  onSelectDate: (d: Date) => void;
+  onAttend: (id: string) => void;
+}) {
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Only show weekdays (Mon-Fri) for cleaner business view, but keep Sat for possible schedules
+  const displayDays = weekDays.filter((_, i) => i < 6); // Mon-Sat
+
+  return (
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      {/* Day headers */}
+      <div className="grid border-b border-border" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
+        <div className="p-2 border-r border-border" />
+        {displayDays.map((day, i) => {
+          const today = isToday(day);
+          return (
+            <button
+              key={i}
+              onClick={() => onSelectDate(day)}
+              className={cn(
+                "p-2 text-center border-r border-border last:border-r-0 hover:bg-accent/50 transition-colors",
+                today && "bg-primary/5"
+              )}
+            >
+              <p className="text-[10px] uppercase text-muted-foreground">{format(day, "EEE", { locale: ptBR })}</p>
+              <p className={cn(
+                "text-sm font-semibold inline-flex w-7 h-7 items-center justify-center rounded-full",
+                today && "bg-primary text-primary-foreground"
+              )}>
+                {format(day, "d")}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+      {/* Time grid */}
+      <div className="max-h-[600px] overflow-y-auto">
+        {BUSINESS_HOURS.map(hour => (
+          <div key={hour} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
+            <div className="p-1.5 text-[11px] text-muted-foreground text-right pr-3 border-r border-border font-mono">
+              {String(hour).padStart(2, "0")}:00
             </div>
-          ) : (
-            appointments.map((apt: any, i: number) => {
-              const patientName = apt.patient?.name || (apt.type === "blocked" ? "Bloqueado" : "Paciente");
-              const aptStatus = apt.type === "blocked" ? "blocked" : (apt.status as string);
+            {displayDays.map((day, di) => {
+              const key = format(day, "yyyy-MM-dd");
+              const hourApts = (aptsByDate[key] || []).filter((a: any) => {
+                if (!a.time) return false;
+                const h = parseInt(a.time.split(":")[0], 10);
+                return h === hour;
+              });
               return (
-                <motion.div
-                  key={apt.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`bg-card rounded-xl border border-border shadow-card p-4 border-l-4 ${statusColors[aptStatus] || "border-l-muted"} hover:shadow-card-hover transition-shadow`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center min-w-[60px]">
-                        <p className="text-lg font-display font-bold text-foreground">{apt.time}</p>
-                        <p className="text-xs text-muted-foreground">{apt.duration}min</p>
+                <div key={di} className={cn("min-h-[48px] p-0.5 border-r border-border last:border-r-0 relative", isToday(day) && "bg-primary/[0.02]")}>
+                  {hourApts.map((apt: any, j: number) => {
+                    const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
+                    return (
+                      <div
+                        key={j}
+                        className={cn(
+                          "text-[10px] px-1.5 py-1 rounded border-l-2 mb-0.5 truncate cursor-pointer hover:opacity-80",
+                          statusBgColors[aptStatus] || "bg-muted border-l-muted-foreground"
+                        )}
+                        title={`${apt.time} - ${apt.type === "blocked" ? apt.notes || "Bloqueado" : apt.patient?.name || "—"}`}
+                      >
+                        <span className="font-medium">{apt.time}</span>{" "}
+                        {apt.type === "blocked" ? "Bloq." : apt.patient?.name?.split(" ")[0] || "—"}
                       </div>
-                      <div className="h-10 w-px bg-border" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {apt.type === "blocked" ? (
-                            <span className="flex items-center gap-1.5 text-muted-foreground">
-                              <Ban className="w-3.5 h-3.5" />
-                              {apt.notes || "Horário Bloqueado"}
-                            </span>
-                          ) : patientName}
-                        </p>
-                        {apt.type !== "blocked" && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              apt.type === "couple" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
-                            }`}>
-                              {apt.type === "couple" ? "Casal" : "Individual"}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              {apt.mode === "video" ? <Video className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-                              {apt.mode === "video" ? "Online" : "Presencial"}
-                            </span>
-                          </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ========== DAY VIEW ==========
+function DayView({ appointments, onAttend }: {
+  appointments: any[];
+  onAttend: (id: string) => void;
+}) {
+  return (
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="max-h-[600px] overflow-y-auto">
+        {BUSINESS_HOURS.map(hour => {
+          const hourApts = appointments.filter((a: any) => {
+            if (!a.time) return false;
+            return parseInt(a.time.split(":")[0], 10) === hour;
+          });
+          return (
+            <div key={hour} className="flex border-b border-border last:border-b-0">
+              <div className="w-16 shrink-0 p-2 text-right pr-3 border-r border-border text-xs text-muted-foreground font-mono">
+                {String(hour).padStart(2, "0")}:00
+              </div>
+              <div className="flex-1 min-h-[56px] p-1.5 space-y-1">
+                {hourApts.map((apt: any, i: number) => {
+                  const aptStatus = apt.type === "blocked" ? "blocked" : apt.status;
+                  const patientName = apt.patient?.name || (apt.type === "blocked" ? apt.notes || "Bloqueado" : "Paciente");
+                  return (
+                    <motion.div
+                      key={apt.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className={cn(
+                        "flex items-center justify-between p-2.5 rounded-lg border-l-3 transition-shadow hover:shadow-md",
+                        statusBgColors[aptStatus] || "bg-muted border-l-muted-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{apt.time}</p>
+                          <p className="text-[10px] text-muted-foreground">{apt.duration}min</p>
+                        </div>
+                        <div className="h-8 w-px bg-border" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {apt.type === "blocked" ? (
+                              <span className="flex items-center gap-1 text-muted-foreground"><Ban className="w-3 h-3" />{patientName}</span>
+                            ) : patientName}
+                          </p>
+                          {apt.type !== "blocked" && (
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full",
+                                apt.type === "couple" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
+                              )}>
+                                {apt.type === "couple" ? "Casal" : "Individual"}
+                              </span>
+                              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                {apt.mode === "video" ? <Video className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                                {apt.mode === "video" ? "Online" : "Presencial"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn("text-[10px]",
+                          aptStatus === "scheduled" || aptStatus === "confirmed" ? "border-green-500/30 text-green-600" :
+                          aptStatus === "pending" ? "border-yellow-500/30 text-yellow-600" :
+                          aptStatus === "blocked" ? "border-muted text-muted-foreground" :
+                          "border-destructive/30 text-destructive"
+                        )}>
+                          {statusLabels[aptStatus] || aptStatus}
+                        </Badge>
+                        {apt.type !== "blocked" && aptStatus !== "cancelled" && !apt.attended && (
+                          <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={() => onAttend(apt.id)}>
+                            <UserCheck className="w-3 h-3" />Compareceu
+                          </Button>
+                        )}
+                        {apt.attended && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 font-medium">✓</span>
                         )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                        aptStatus === "scheduled" || aptStatus === "confirmed" ? "bg-green-500/10 text-green-600" :
-                        aptStatus === "pending" ? "bg-yellow-500/10 text-yellow-600" :
-                        aptStatus === "blocked" ? "bg-muted text-muted-foreground" :
-                        "bg-destructive/10 text-destructive"
-                      }`}>
-                        {statusLabels[aptStatus] || aptStatus}
-                      </span>
-                      {apt.type !== "blocked" && aptStatus !== "cancelled" && !apt.attended && (
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => attendMutation.mutate(apt.id)}>
-                          <UserCheck className="w-3.5 h-3.5" />Compareceu
-                        </Button>
-                      )}
-                      {apt.attended && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600 font-medium">✓ Presente</span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Sidebar Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
-          <div className="bg-card rounded-xl border border-border shadow-card p-5">
-            <h3 className="font-display font-semibold text-foreground mb-4">Resumo do Dia</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total</span>
-                <span className="text-sm font-semibold text-foreground">{appointments.length} itens</span>
+                    </motion.div>
+                  );
+                })}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Agendadas</span>
-                <span className="text-sm font-semibold text-green-600">{confirmed}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Pendentes</span>
-                <span className="text-sm font-semibold text-yellow-600">{pending}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Canceladas</span>
-                <span className="text-sm font-semibold text-destructive">{cancelled}</span>
-              </div>
-              {blocked > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Bloqueados</span>
-                  <span className="text-sm font-semibold text-muted-foreground">{blocked}</span>
-                </div>
-              )}
             </div>
-          </div>
-        </motion.div>
+          );
+        })}
       </div>
     </div>
   );
