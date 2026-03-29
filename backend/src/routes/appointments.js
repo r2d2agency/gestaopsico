@@ -7,13 +7,78 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
+function normalizeAppointmentInput(body = {}, fallbackProfessionalId) {
+  const raw = Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [key, value === '' ? null : value])
+  );
+
+  const professionalId =
+    raw.professionalId === 'all' || raw.professional_id === 'all'
+      ? fallbackProfessionalId
+      : raw.professionalId ?? raw.professional_id ?? fallbackProfessionalId;
+
+  const data = {
+    type: raw.type,
+    date: raw.date,
+    time: raw.time,
+    duration: raw.duration,
+    value: raw.value,
+    status: raw.status,
+    paymentStatus: raw.paymentStatus ?? raw.payment_status,
+    mode: raw.mode,
+    attended: raw.attended,
+    notes: raw.notes,
+    patientId: raw.patientId ?? raw.patient_id,
+    coupleId: raw.coupleId ?? raw.couple_id,
+    professionalId,
+  };
+
+  if (data.date) {
+    const parsedDate = new Date(
+      String(data.date).includes('T') ? String(data.date) : `${String(data.date)}T00:00:00.000Z`
+    );
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw new Error('Data inválida para a consulta');
+    }
+    data.date = parsedDate;
+  }
+
+  if (data.duration != null) {
+    const duration = Number(data.duration);
+    if (Number.isNaN(duration)) {
+      throw new Error('Duração inválida');
+    }
+    data.duration = duration;
+  }
+
+  if (data.value != null) {
+    const value = Number(data.value);
+    if (Number.isNaN(value)) {
+      throw new Error('Valor inválido');
+    }
+    data.value = value;
+  }
+
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+}
+
+function validateAppointmentPayload(data) {
+  if (!data.type) return 'Tipo da consulta é obrigatório';
+  if (!data.date) return 'Data da consulta é obrigatória';
+  if (!data.time) return 'Horário da consulta é obrigatório';
+  if (!data.professionalId) return 'Profissional da consulta é obrigatório';
+  if (data.type === 'couple' && !data.coupleId) return 'Casal é obrigatório';
+  if (data.type !== 'couple' && data.type !== 'blocked' && !data.patientId) return 'Paciente é obrigatório';
+  return null;
+}
+
 // GET /api/consultas
 router.get('/', async (req, res) => {
   try {
     const { date, status, professional_id, startDate, endDate } = req.query;
     const where = { professionalId: professional_id || req.userId };
     if (status) where.status = status;
-    
+
     if (startDate && endDate) {
       where.date = {
         gte: new Date(startDate + 'T00:00:00.000Z'),
@@ -56,51 +121,21 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-function normalizeAppointmentInput(body = {}, fallbackProfessionalId) {
-  const raw = Object.fromEntries(
-    Object.entries(body).map(([key, value]) => [key, value === '' ? null : value])
-  );
-
-  const data = {
-    type: raw.type,
-    date: raw.date,
-    time: raw.time,
-    duration: raw.duration,
-    value: raw.value,
-    status: raw.status,
-    paymentStatus: raw.paymentStatus ?? raw.payment_status,
-    mode: raw.mode,
-    attended: raw.attended,
-    notes: raw.notes,
-    patientId: raw.patientId ?? raw.patient_id,
-    coupleId: raw.coupleId ?? raw.couple_id,
-    professionalId: raw.professionalId ?? raw.professional_id ?? fallbackProfessionalId,
-  };
-
-  if (data.date) {
-    data.date = new Date(String(data.date).includes('T') ? String(data.date) : `${String(data.date)}T00:00:00.000Z`);
-  }
-
-  if (data.duration != null) {
-    const duration = Number(data.duration);
-    data.duration = Number.isNaN(duration) ? undefined : duration;
-  }
-
-  if (data.value != null) {
-    const value = Number(data.value);
-    data.value = Number.isNaN(value) ? undefined : value;
-  }
-
-  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
-}
-
 // POST /api/consultas
 router.post('/', async (req, res) => {
   try {
     const data = normalizeAppointmentInput(req.body, req.userId);
+    const validationError = validateAppointmentPayload(data);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
     const appointment = await prisma.appointment.create({
       data,
-      include: { patient: { select: { id: true, name: true } } }
+      include: {
+        patient: { select: { id: true, name: true } },
+        couple: { select: { id: true, name: true } }
+      }
     });
     res.status(201).json(appointment);
   } catch (err) {
@@ -113,6 +148,11 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const data = normalizeAppointmentInput(req.body, req.userId);
+    const validationError = validateAppointmentPayload({ ...data, type: data.type || 'individual' });
+    if (validationError && validationError !== 'Paciente é obrigatório') {
+      return res.status(400).json({ error: validationError });
+    }
+
     const appointment = await prisma.appointment.updateMany({
       where: { id: req.params.id, professionalId: req.userId },
       data
@@ -120,7 +160,10 @@ router.put('/:id', async (req, res) => {
     if (appointment.count === 0) return res.status(404).json({ error: 'Consulta não encontrada' });
     const updated = await prisma.appointment.findUnique({
       where: { id: req.params.id },
-      include: { patient: { select: { id: true, name: true } } }
+      include: {
+        patient: { select: { id: true, name: true } },
+        couple: { select: { id: true, name: true } }
+      }
     });
     res.json(updated);
   } catch (err) {
@@ -161,7 +204,7 @@ router.post('/:id/attend', async (req, res) => {
     if (apt.patientId && apt.patient) {
       const patient = apt.patient;
       const value = patient.billingMode === 'monthly'
-        ? null // monthly billing is handled separately
+        ? null
         : (patient.sessionValue ? Number(patient.sessionValue) : (apt.value ? Number(apt.value) : 0));
 
       if (value && value > 0) {
