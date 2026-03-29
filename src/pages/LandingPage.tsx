@@ -468,7 +468,122 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Patient App PWA */}
+      <section className="py-24 px-6 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-info/10 text-info text-sm font-medium border border-info/20">
+                <Smartphone className="w-4 h-4" /> App do Paciente
+              </span>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mt-4 leading-tight">
+                Seu paciente com o <span className="text-primary">app na mão</span>
+              </h2>
+              <p className="text-muted-foreground mt-4 text-lg">
+                Um aplicativo instalável (PWA) com a identidade visual do seu consultório. 
+                Link personalizado, push notifications e tudo que o paciente precisa no celular.
+              </p>
+              <div className="mt-8 space-y-4">
+                {[
+                  { icon: Smile, text: "Registro de humor diário — emoções, notas e intensidade" },
+                  { icon: ClipboardList, text: "Testes psicológicos enviados pelo profissional" },
+                  { icon: Calendar, text: "Agendamento e visualização de consultas" },
+                  { icon: DollarSign, text: "Financeiro — cobranças, sessões e pagamentos" },
+                  { icon: Bell, text: "Notificações push e por WhatsApp" },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -12 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <item.icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-foreground text-sm">{item.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <div className="bg-card rounded-3xl border border-border shadow-xl p-6 max-w-sm mx-auto">
+                <div className="bg-muted/50 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
+                      <Smile className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-display font-semibold text-foreground text-sm">Como você está hoje?</p>
+                      <p className="text-xs text-muted-foreground">Registre seu humor</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between px-2">
+                    {["😢", "😟", "😐", "🙂", "😄"].map((e, i) => (
+                      <button key={i} className={`text-3xl p-2 rounded-xl transition-all ${i === 3 ? "bg-primary/10 scale-110 ring-2 ring-primary/30" : "hover:scale-105"}`}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
+                      <p className="text-xs font-medium text-primary mb-1">📋 Novo teste disponível</p>
+                      <p className="text-xs text-muted-foreground">Inventário de Ansiedade de Beck (BAI)</p>
+                    </div>
+                    <div className="bg-success/5 rounded-lg p-3 border border-success/10">
+                      <p className="text-xs font-medium text-success mb-1">📅 Próxima consulta</p>
+                      <p className="text-xs text-muted-foreground">Ter, 01 Abr às 14:00</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tests & Instruments */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-warm/10 text-warm text-sm font-medium border border-warm/20">
+                <ClipboardList className="w-4 h-4" /> Testes Psicológicos
+              </span>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mt-4">
+                Aplique testes com <span className="text-primary">um clique</span>
+              </h2>
+              <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
+                Modelos prontos, validados e analisados. Crie os seus, importe em JSON e envie para pacientes ou casais.
+              </p>
+            </motion.div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { title: "Modelos Prontos", desc: "Beck (BDI/BAI), PHQ-9, GAD-7, DASS-21 e outros — prontos para usar, com análise automática de resultados.", icon: "📊" },
+              { title: "Crie Seus Testes", desc: "Editor completo: questões de múltipla escolha, escala Likert, texto livre. Importe e exporte em JSON.", icon: "✏️" },
+              { title: "Envie ao Paciente", desc: "O paciente recebe notificação no app, responde pelo celular e os resultados vão direto pro prontuário.", icon: "📲" },
+              { title: "Dashboard de Resultados", desc: "Visualize respostas, gráficos de evolução e comparativos entre aplicações — tudo privado ao profissional.", icon: "📈" },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-card rounded-2xl p-6 border border-border shadow-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center"
+              >
+                <span className="text-4xl">{item.icon}</span>
+                <h3 className="font-display font-semibold text-foreground text-base mt-4">{item.title}</h3>
+                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="testimonials" className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
