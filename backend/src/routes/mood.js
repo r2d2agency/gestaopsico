@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
-// POST /api/mood - create mood entry (patient portal)
+// POST /api/mood - create mood entry (patient portal) - multiple per day allowed
 router.post('/', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
@@ -16,21 +16,8 @@ router.post('/', async (req, res) => {
     const { mood, emotions, notes, energyLevel, sleepQuality, anxietyLevel } = req.body;
     if (!mood || mood < 1 || mood > 5) return res.status(400).json({ error: 'Humor deve ser entre 1 e 5' });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Check if already registered today
-    const existing = await prisma.moodEntry.findFirst({
-      where: { patientId: user.patientId, date: today }
-    });
-
-    if (existing) {
-      const updated = await prisma.moodEntry.update({
-        where: { id: existing.id },
-        data: { mood, emotions: emotions || [], notes, energyLevel, sleepQuality, anxietyLevel }
-      });
-      return res.json(updated);
-    }
+    // Always create a new entry with current timestamp
+    const now = new Date();
 
     const entry = await prisma.moodEntry.create({
       data: {
@@ -41,7 +28,7 @@ router.post('/', async (req, res) => {
         energyLevel,
         sleepQuality,
         anxietyLevel,
-        date: today
+        date: now
       }
     });
 
