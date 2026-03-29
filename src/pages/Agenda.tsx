@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
@@ -70,6 +70,28 @@ const emptyConsulta: Partial<Consulta> = {
   payment_status: "pending", mode: "in_person", notes: "",
 };
 
+// Full day hours (6am to 22pm) - scrollable
+const ALL_HOURS = Array.from({ length: 17 }, (_, i) => i + 6);
+
+// Distinct colors for professionals
+const PROFESSIONAL_COLORS = [
+  { bg: "bg-blue-500/10", border: "border-l-blue-500", text: "text-blue-700", dot: "bg-blue-500" },
+  { bg: "bg-emerald-500/10", border: "border-l-emerald-500", text: "text-emerald-700", dot: "bg-emerald-500" },
+  { bg: "bg-violet-500/10", border: "border-l-violet-500", text: "text-violet-700", dot: "bg-violet-500" },
+  { bg: "bg-amber-500/10", border: "border-l-amber-500", text: "text-amber-700", dot: "bg-amber-500" },
+  { bg: "bg-rose-500/10", border: "border-l-rose-500", text: "text-rose-700", dot: "bg-rose-500" },
+  { bg: "bg-cyan-500/10", border: "border-l-cyan-500", text: "text-cyan-700", dot: "bg-cyan-500" },
+  { bg: "bg-orange-500/10", border: "border-l-orange-500", text: "text-orange-700", dot: "bg-orange-500" },
+  { bg: "bg-indigo-500/10", border: "border-l-indigo-500", text: "text-indigo-700", dot: "bg-indigo-500" },
+];
+
+function getProfessionalColor(professionalId: string, profMap: Map<string, number>) {
+  if (!profMap.has(professionalId)) {
+    profMap.set(professionalId, profMap.size);
+  }
+  return PROFESSIONAL_COLORS[profMap.get(professionalId)! % PROFESSIONAL_COLORS.length];
+}
+
 export default function Agenda() {
   const { user } = useAuth();
   const role = user?.role || "professional";
@@ -122,11 +144,27 @@ export default function Agenda() {
     queryFn: () => orgSettingsApi.get(),
   });
 
+  const businessStartHour = orgSettings?.scheduleStartHour ?? 8;
+  const businessEndHour = orgSettings?.scheduleEndHour ?? 19;
+
   const businessHours = useMemo(() => {
-    const start = orgSettings?.scheduleStartHour ?? 8;
-    const end = orgSettings?.scheduleEndHour ?? 19;
-    return Array.from({ length: end - start + 1 }, (_, i) => i + start);
-  }, [orgSettings]);
+    return Array.from({ length: businessEndHour - businessStartHour + 1 }, (_, i) => i + businessStartHour);
+  }, [businessStartHour, businessEndHour]);
+
+  // Build a stable map of professional ID -> color index
+  const professionalColorMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (Array.isArray(professionals)) {
+      professionals.forEach((p: any, i: number) => map.set(p.id, i));
+    }
+    // Also index from appointments
+    appointments.forEach((apt: any) => {
+      if (apt.professionalId && !map.has(apt.professionalId)) {
+        map.set(apt.professionalId, map.size);
+      }
+    });
+    return map;
+  }, [professionals, appointments]);
 
   const queryParams: Record<string, string> = { ...dateRange };
   if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
