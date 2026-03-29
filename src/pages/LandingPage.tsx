@@ -547,13 +547,13 @@ export default function LandingPage() {
                 )}
                 <div className="space-y-2">
                   <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
-                    <Link to="/dashboard">
+                    <Link to={`/login?plan=${plan.name.toLowerCase()}`}>
                       {plan.highlighted ? "Começar Grátis" : "Selecionar Plano"}
                     </Link>
                   </Button>
                   {!plan.highlighted && (
                     <Button variant="ghost" className="w-full text-xs text-primary hover:text-primary" asChild>
-                      <Link to="/dashboard">
+                      <Link to={`/login?plan=${i === 0 ? "profissional" : "clinica"}`}>
                         <ArrowRight className="w-3 h-3 mr-1" />
                         Upgrade para {i === 0 ? "Profissional" : "Clínica Enterprise"}
                       </Link>
