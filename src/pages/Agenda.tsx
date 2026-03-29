@@ -68,8 +68,14 @@ export default function Agenda() {
   const [selectedProfessional, setSelectedProfessional] = useState("");
   const [blockReason, setBlockReason] = useState("");
   const [blockTime, setBlockTime] = useState("");
+  const [blockEndTime, setBlockEndTime] = useState("");
   const [blockDuration, setBlockDuration] = useState(60);
-
+  const [blockCategory, setBlockCategory] = useState("personal");
+  const [blockMode, setBlockMode] = useState<"single" | "period" | "recurring">("single");
+  const [blockStartDate, setBlockStartDate] = useState<Date | undefined>(undefined);
+  const [blockEndDate, setBlockEndDate] = useState<Date | undefined>(undefined);
+  const [blockRecurrence, setBlockRecurrence] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [blockWeekdays, setBlockWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   // Fetch professionals list for secretary/admin
