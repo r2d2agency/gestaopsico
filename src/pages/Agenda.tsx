@@ -111,6 +111,8 @@ function getAppointmentDisplayName(apt: any) {
   return apt.patient?.name || "Paciente";
 }
 
+type PipelineFilter = "today" | "week" | "month" | "custom";
+
 export default function Agenda() {
   const { user } = useAuth();
   const role = user?.role || "professional";
@@ -134,11 +136,28 @@ export default function Agenda() {
   const [blockEndDate, setBlockEndDate] = useState<Date | undefined>(undefined);
   const [blockRecurrence, setBlockRecurrence] = useState<"daily" | "weekly" | "monthly">("daily");
   const [blockWeekdays, setBlockWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("today");
+  const [pipelineCustomStart, setPipelineCustomStart] = useState<Date | undefined>(undefined);
+  const [pipelineCustomEnd, setPipelineCustomEnd] = useState<Date | undefined>(undefined);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const dateRange = useMemo(() => {
-    if (viewMode === "day" || viewMode === "pipeline") {
+    if (viewMode === "pipeline") {
+      const today = new Date();
+      if (pipelineFilter === "today") {
+        const d = format(today, "yyyy-MM-dd");
+        return { startDate: d, endDate: d };
+      } else if (pipelineFilter === "week") {
+        return { startDate: format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd"), endDate: format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd") };
+      } else if (pipelineFilter === "month") {
+        return { startDate: format(startOfMonth(today), "yyyy-MM-dd"), endDate: format(endOfMonth(today), "yyyy-MM-dd") };
+      } else if (pipelineFilter === "custom" && pipelineCustomStart && pipelineCustomEnd) {
+        return { startDate: format(pipelineCustomStart, "yyyy-MM-dd"), endDate: format(pipelineCustomEnd, "yyyy-MM-dd") };
+      }
+      const d = format(today, "yyyy-MM-dd");
+      return { startDate: d, endDate: d };
+    } else if (viewMode === "day") {
       return { startDate: dateStr, endDate: dateStr };
     } else if (viewMode === "week") {
       const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -149,7 +168,7 @@ export default function Agenda() {
       const end = endOfMonth(selectedDate);
       return { startDate: format(start, "yyyy-MM-dd"), endDate: format(end, "yyyy-MM-dd") };
     }
-  }, [selectedDate, viewMode, dateStr]);
+  }, [selectedDate, viewMode, dateStr, pipelineFilter, pipelineCustomStart, pipelineCustomEnd]);
 
   const { data: professionals = [] } = useQuery<any[]>({
     queryKey: ["professionals"],
@@ -342,20 +361,33 @@ export default function Agenda() {
   }, [professionals]);
 
   const pipelineAppointments = useMemo(() => {
-    return getAptsForDate(selectedDate)
+    return appointments
       .filter((apt: any) => apt.type !== "blocked")
       .sort((a: any, b: any) => String(a.time || "").localeCompare(String(b.time || "")));
-  }, [selectedDate, aptsByDate]);
+  }, [appointments]);
 
   const headerTitle = useMemo(() => {
-    if (viewMode === "day" || viewMode === "pipeline") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "day") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "pipeline") {
+      if (pipelineFilter === "today") return "Hoje — " + format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      if (pipelineFilter === "week") {
+        const s = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const e = endOfWeek(new Date(), { weekStartsOn: 1 });
+        return `${format(s, "dd MMM", { locale: ptBR })} — ${format(e, "dd MMM yyyy", { locale: ptBR })}`;
+      }
+      if (pipelineFilter === "month") return format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+      if (pipelineFilter === "custom" && pipelineCustomStart && pipelineCustomEnd) {
+        return `${format(pipelineCustomStart, "dd/MM/yyyy")} — ${format(pipelineCustomEnd, "dd/MM/yyyy")}`;
+      }
+      return "Pipeline";
+    }
     if (viewMode === "week") {
       const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
       const end = endOfWeek(selectedDate, { weekStartsOn: 1 });
       return `${format(start, "dd MMM", { locale: ptBR })} — ${format(end, "dd MMM yyyy", { locale: ptBR })}`;
     }
     return format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR });
-  }, [selectedDate, viewMode]);
+  }, [selectedDate, viewMode, pipelineFilter, pipelineCustomStart, pipelineCustomEnd]);
 
   const totalCount = appointments.length;
   const scheduledCount = appointments.filter((a: any) => a.status === "scheduled" || a.status === "confirmed").length;
@@ -464,6 +496,12 @@ export default function Agenda() {
           professionalsById={professionalsById}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
+          pipelineFilter={pipelineFilter}
+          onFilterChange={setPipelineFilter}
+          customStart={pipelineCustomStart}
+          customEnd={pipelineCustomEnd}
+          onCustomStartChange={setPipelineCustomStart}
+          onCustomEndChange={setPipelineCustomEnd}
         />
       ) : (
         <DayView
@@ -713,74 +751,156 @@ export default function Agenda() {
   );
 }
 
-function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors }: {
+function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors, pipelineFilter, onFilterChange, customStart, customEnd, onCustomStartChange, onCustomEndChange }: {
   selectedDate: Date;
   appointments: any[];
   professionalsById: Map<string, any>;
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
+  pipelineFilter: PipelineFilter;
+  onFilterChange: (f: PipelineFilter) => void;
+  customStart?: Date;
+  customEnd?: Date;
+  onCustomStartChange: (d: Date | undefined) => void;
+  onCustomEndChange: (d: Date | undefined) => void;
 }) {
+  const groupedByDate = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    appointments.forEach((apt: any) => {
+      const d = getDateKey(apt.date);
+      if (!map[d]) map[d] = [];
+      map[d].push(apt);
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [appointments]);
+
+  const filterButtons: { value: PipelineFilter; label: string }[] = [
+    { value: "today", label: "Hoje" },
+    { value: "week", label: "Esta semana" },
+    { value: "month", label: "Este mês" },
+    { value: "custom", label: "Personalizado" },
+  ];
+
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Pipeline do dia</h2>
-        <p className="text-xs text-muted-foreground">
-          {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-        </p>
+      <div className="border-b border-border px-4 py-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Pipeline</h2>
+            <p className="text-xs text-muted-foreground">{appointments.length} agendamento(s)</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          {filterButtons.map(fb => (
+            <Button
+              key={fb.value}
+              variant={pipelineFilter === fb.value ? "default" : "outline"}
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => onFilterChange(fb.value)}
+            >
+              {fb.label}
+            </Button>
+          ))}
+        </div>
+        {pipelineFilter === "custom" && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs h-7 gap-1">
+                  <CalendarIcon className="w-3 h-3" />
+                  {customStart ? format(customStart, "dd/MM/yyyy") : "Início"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customStart} onSelect={onCustomStartChange} className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">até</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs h-7 gap-1">
+                  <CalendarIcon className="w-3 h-3" />
+                  {customEnd ? format(customEnd, "dd/MM/yyyy") : "Fim"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customEnd} onSelect={onCustomEndChange} className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       {appointments.length === 0 ? (
-        <div className="px-4 py-10 text-sm text-muted-foreground">Nenhum agendamento neste dia.</div>
+        <div className="px-4 py-10 text-sm text-muted-foreground text-center">Nenhum agendamento no período selecionado.</div>
       ) : (
-        <div className="divide-y divide-border">
-          {appointments.map((apt: any) => {
-            const professional = apt.professional?.name
-              ? apt.professional
-              : (apt.professionalId ? professionalsById.get(apt.professionalId) : null);
-            const proColor = showProfessionalColors && apt.professionalId
-              ? getProfessionalColor(apt.professionalId, professionalColorMap)
-              : null;
+        <div className="max-h-[600px] overflow-y-auto">
+          {groupedByDate.map(([dateKey, dayApts]) => (
+            <div key={dateKey}>
+              {pipelineFilter !== "today" && (
+                <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm px-4 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border">
+                  {(() => {
+                    try {
+                      const [y, m, d] = dateKey.split("-").map(Number);
+                      return format(new Date(y, m - 1, d), "EEEE, dd 'de' MMMM", { locale: ptBR });
+                    } catch { return dateKey; }
+                  })()}
+                  <span className="ml-2 text-[10px] font-normal">({dayApts.length})</span>
+                </div>
+              )}
+              <div className="divide-y divide-border">
+                {dayApts.map((apt: any) => {
+                  const professional = apt.professional?.name
+                    ? apt.professional
+                    : (apt.professionalId ? professionalsById.get(apt.professionalId) : null);
+                  const proColor = showProfessionalColors && apt.professionalId
+                    ? getProfessionalColor(apt.professionalId, professionalColorMap)
+                    : null;
 
-            return (
-              <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-16 shrink-0">
-                    <p className="text-sm font-semibold text-foreground">{apt.time}</p>
-                    <p className="text-[10px] text-muted-foreground">{apt.duration}min</p>
-                  </div>
+                  return (
+                    <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-16 shrink-0">
+                          <p className="text-sm font-semibold text-foreground">{apt.time}</p>
+                          <p className="text-[10px] text-muted-foreground">{apt.duration}min</p>
+                        </div>
 
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{getAppointmentDisplayName(apt)}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>{apt.type === "couple" ? "Casal" : "Individual"}</span>
-                      <span>•</span>
-                      <span>{apt.mode === "video" ? "Online" : "Presencial"}</span>
-                      {professional?.name && (
-                        <>
-                          <span>•</span>
-                          <span className={cn("font-medium", proColor?.text)}>
-                            Responsável: {professional.name}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">{getAppointmentDisplayName(apt)}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                            <span>{apt.type === "couple" ? "Casal" : "Individual"}</span>
+                            <span>•</span>
+                            <span>{apt.mode === "video" ? "Online" : "Presencial"}</span>
+                            {professional?.name && (
+                              <>
+                                <span>•</span>
+                                <span className={cn("font-medium", proColor?.text)}>
+                                  Responsável: {professional.name}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {showProfessionalColors && proColor && (
+                          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium", proColor.bg, proColor.text)}>
+                            <span className={cn("h-2 w-2 rounded-full", proColor.dot)} />
+                            {professional?.name?.split(" ")[0] || "Profissional"}
                           </span>
-                        </>
-                      )}
+                        )}
+                        <Badge variant="outline" className="text-[10px]">
+                          {statusLabels[apt.status] || apt.status}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {showProfessionalColors && proColor && (
-                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium", proColor.bg, proColor.text)}>
-                      <span className={cn("h-2 w-2 rounded-full", proColor.dot)} />
-                      {professional?.name?.split(" ")[0] || "Profissional"}
-                    </span>
-                  )}
-                  <Badge variant="outline" className="text-[10px]">
-                    {statusLabels[apt.status] || apt.status}
-                  </Badge>
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>
