@@ -7,11 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Plan {
+  id               String         @id @default(uuid()) @db.Uuid
+  name             String         @db.VarChar(100)
+  slug             String         @unique @db.VarChar(50)
+  description      String?
+  price            Decimal        @db.Decimal(10, 2)
+  priceWithAi      Decimal?       @map("price_with_ai") @db.Decimal(10, 2)
+  maxPatients      Int            @default(10) @map("max_patients")
+  maxUsers         Int            @default(1) @map("max_users")
+  maxPsychologists Int            @default(1) @map("max_psychologists")
+  trialDays        Int            @default(7) @map("trial_days")
+  hasAiSecretary   Boolean        @default(false) @map("has_ai_secretary")
+  hasWhatsapp      Boolean        @default(false) @map("has_whatsapp")
+  isRecommended    Boolean        @default(false) @map("is_recommended")
+  isActive         Boolean        @default(true) @map("is_active")
+  features         String[]       @default([])
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  organizations    Organization[]
+
+  @@map("plans")
+}
+
 model Organization {
   id            String         @id @default(uuid()) @db.Uuid
   name          String         @db.VarChar(255)
   slug          String         @unique @db.VarChar(100)
   type          String         @default("clinic") @db.VarChar(20)
+  planId        String?        @map("plan_id") @db.Uuid
+  planRef       Plan?          @relation(fields: [planId], references: [id])
   plan          String         @default("basic") @db.VarChar(50)
   status        String         @default("active") @db.VarChar(20)
   maxUsers      Int            @default(1) @map("max_users")
@@ -36,7 +61,7 @@ model Subscription {
   organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan           String       @db.VarChar(50)
-  status         String       @default("active") @db.VarChar(20) // active | cancelled | expired | trial
+  status         String       @default("active") @db.VarChar(20)
   startDate      DateTime     @map("start_date")
   endDate        DateTime?    @map("end_date")
   value          Decimal      @db.Decimal(10, 2)
@@ -180,6 +205,16 @@ model Payment {
   @@map("payments")
 }
 
+model SystemSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique @db.VarChar(100)
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
 model AiAgent {
   id             String   @id @default(uuid()) @db.Uuid
   name           String   @db.VarChar(255)
@@ -216,7 +251,7 @@ model AiAgentCustomization {
 
 model AiProviderKey {
   id             String        @id @default(uuid()) @db.Uuid
-  provider       String        @db.VarChar(50) // openai | gemini | claude
+  provider       String        @db.VarChar(50)
   apiKey         String        @map("api_key")
   isGlobal       Boolean       @default(false) @map("is_global")
   organizationId String?       @map("organization_id") @db.Uuid
@@ -245,7 +280,7 @@ model AiChatMessage {
   id        String   @id @default(uuid()) @db.Uuid
   chatId    String   @map("chat_id") @db.Uuid
   chat      AiChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  role      String   @db.VarChar(20) // user | assistant
+  role      String   @db.VarChar(20)
   content   String
   model     String?  @db.VarChar(50)
   createdAt DateTime @default(now()) @map("created_at")
