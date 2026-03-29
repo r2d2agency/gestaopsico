@@ -51,12 +51,18 @@ const roleLabels: Record<string, string> = {
   superadmin: "Superadmin",
   admin: "Administrador",
   professional: "Profissional",
+  secretary: "Secretária",
+  financial: "Financeiro",
+  patient: "Paciente",
 };
 
 const roleVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   superadmin: "destructive",
   admin: "default",
   professional: "secondary",
+  secretary: "outline",
+  financial: "outline",
+  patient: "secondary",
 };
 
 export default function AdminUsers() {
@@ -80,14 +86,23 @@ export default function AdminUsers() {
     password: "",
     role: "professional",
     organizationId: "",
+    crp: "",
+    phone: "",
+    specialty: "",
   });
 
   const handleCreate = () => {
-    const payload = { ...form, organizationId: form.organizationId || undefined };
+    const payload = {
+      ...form,
+      organizationId: form.organizationId || undefined,
+      crp: form.crp || undefined,
+      phone: form.phone || undefined,
+      specialty: form.specialty || undefined,
+    };
     createUser.mutate(payload, {
       onSuccess: () => {
         setDialogOpen(false);
-        setForm({ name: "", email: "", password: "", role: "professional", organizationId: "" });
+        setForm({ name: "", email: "", password: "", role: "professional", organizationId: "", crp: "", phone: "", specialty: "" });
       },
     });
   };
@@ -113,17 +128,35 @@ export default function AdminUsers() {
               <DialogTitle>Criar Usuário</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label>Nome</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome completo" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Nome</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome completo" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Email</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Senha</Label>
+                  <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Telefone</Label>
+                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Senha</Label>
-                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>CRP</Label>
+                  <Input value={form.crp} onChange={(e) => setForm({ ...form, crp: e.target.value })} placeholder="CRP 06/123456" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Especialidade</Label>
+                  <Input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} placeholder="Ex: Terapia Cognitivo-Comportamental" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -131,8 +164,10 @@ export default function AdminUsers() {
                   <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="professional">Profissional</SelectItem>
+                      <SelectItem value="professional">Profissional (Psicólogo)</SelectItem>
                       <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="secretary">Secretária</SelectItem>
+                      <SelectItem value="financial">Financeiro</SelectItem>
                       <SelectItem value="superadmin">Superadmin</SelectItem>
                     </SelectContent>
                   </Select>
@@ -150,6 +185,11 @@ export default function AdminUsers() {
                   </Select>
                 </div>
               </div>
+              {form.role === "professional" && (
+                <p className="text-xs text-muted-foreground">
+                  💡 O CRP é obrigatório para psicólogos. Formato: CRP XX/XXXXXX
+                </p>
+              )}
               <Button onClick={handleCreate} disabled={createUser.isPending || !form.name || !form.email || !form.password}>
                 {createUser.isPending ? "Criando..." : "Criar Usuário"}
               </Button>
@@ -169,6 +209,8 @@ export default function AdminUsers() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="professional">Profissional</SelectItem>
             <SelectItem value="admin">Administrador</SelectItem>
+            <SelectItem value="secretary">Secretária</SelectItem>
+            <SelectItem value="financial">Financeiro</SelectItem>
             <SelectItem value="superadmin">Superadmin</SelectItem>
           </SelectContent>
         </Select>
@@ -218,6 +260,18 @@ export default function AdminUsers() {
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                     <span>{user.email}</span>
+                    {user.crp && (
+                      <>
+                        <span>•</span>
+                        <span className="font-medium text-primary">{user.crp}</span>
+                      </>
+                    )}
+                    {user.specialty && (
+                      <>
+                        <span>•</span>
+                        <span>{user.specialty}</span>
+                      </>
+                    )}
                     {user.organization && (
                       <>
                         <span>•</span>
@@ -226,8 +280,6 @@ export default function AdminUsers() {
                     )}
                     <span>•</span>
                     <span>{user._count?.patients ?? 0} pacientes</span>
-                    <span>•</span>
-                    <span>{user._count?.appointments ?? 0} consultas</span>
                   </div>
                 </div>
               </div>
