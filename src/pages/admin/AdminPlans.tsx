@@ -92,6 +92,9 @@ export default function AdminPlans() {
             <div className="mb-6">
               <span className="text-3xl font-display font-bold text-foreground">{plan.price}</span>
               <span className="text-muted-foreground text-sm">{plan.period}</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                Com Secretária IA: <span className="font-semibold text-primary">{plan.priceWithSecretary}</span>{plan.period}
+              </p>
             </div>
 
             <ul className="space-y-2 mb-6">
