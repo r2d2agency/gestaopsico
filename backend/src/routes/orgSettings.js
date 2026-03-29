@@ -1,0 +1,87 @@
+const express = require('express');
+const { PrismaClient } = require('@prisma/client');
+const { authMiddleware } = require('../middleware/auth');
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+router.use(authMiddleware);
+
+// GET /api/org-settings - get organization settings (white-label)
+router.get('/', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { organizationId: true, role: true }
+    });
+
+    if (!user?.organizationId) {
+      return res.json(null);
+    }
+
+    let settings = await prisma.organizationSetting.findUnique({
+      where: { organizationId: user.organizationId }
+    });
+
+    if (!settings) {
+      // Create default settings
+      const org = await prisma.organization.findUnique({ where: { id: user.organizationId } });
+      settings = await prisma.organizationSetting.create({
+        data: {
+          organizationId: user.organizationId,
+          businessName: org?.name || ''
+        }
+      });
+    }
+
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar configurações', details: err.message });
+  }
+});
+
+// PUT /api/org-settings - update organization settings
+router.put('/', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { organizationId: true, role: true }
+    });
+
+    if (!user?.organizationId) {
+      return res.status(400).json({ error: 'Usuário sem organização' });
+    }
+
+    // Only admin or professional can update
+    if (!['admin', 'professional', 'superadmin'].includes(user.role)) {
+      return res.status(403).json({ error: 'Sem permissão para alterar configurações' });
+    }
+
+    const {
+      logo, primaryColor, secondaryColor, accentColor,
+      businessName, businessPhone, businessEmail, businessAddress
+    } = req.body;
+
+    const data = {};
+    if (logo !== undefined) data.logo = logo;
+    if (primaryColor !== undefined) data.primaryColor = primaryColor;
+    if (secondaryColor !== undefined) data.secondaryColor = secondaryColor;
+    if (accentColor !== undefined) data.accentColor = accentColor;
+    if (businessName !== undefined) data.businessName = businessName;
+    if (businessPhone !== undefined) data.businessPhone = businessPhone;
+    if (businessEmail !== undefined) data.businessEmail = businessEmail;
+    if (businessAddress !== undefined) data.businessAddress = businessAddress;
+
+    const settings = await prisma.organizationSetting.upsert({
+      where: { organizationId: user.organizationId },
+      create: { organizationId: user.organizationId, ...data },
+      update: data
+    });
+
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar configurações', details: err.message });
+  }
+});
+
+module.exports = router;
