@@ -2,16 +2,17 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ClipboardList, Plus, Send, Eye, Edit, Trash2, CheckCircle,
-  Clock, ChevronRight, Loader2, FileText
+  ClipboardList, Plus, Send, Trash2, Loader2, FileText,
+  Download, Upload, BookOpen, Eye, BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
@@ -19,15 +20,20 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { testsApi, type TestTemplate, type TestQuestion } from "@/lib/portalApi";
+import { testsApi, type TestTemplate, type TestQuestion, type PresetTest } from "@/lib/portalApi";
 import { usePatients } from "@/hooks/usePatients";
 
 export default function TestManager() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState("meus");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
-  const [selectedPatient, setSelectedPatient] = useState<string>("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState("");
+  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
+  const [jsonInput, setJsonInput] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -40,7 +46,18 @@ export default function TestManager() {
     queryFn: () => testsApi.listTemplates(),
   });
 
+  const { data: presets = [] } = useQuery({
+    queryKey: ["test-presets"],
+    queryFn: () => testsApi.listPresets(),
+  });
+
   const { data: patients = [] } = usePatients();
+
+  const { data: results } = useQuery({
+    queryKey: ["test-results", selectedAssignment],
+    queryFn: () => testsApi.getResults(selectedAssignment!),
+    enabled: !!selectedAssignment,
+  });
 
   const createMutation = useMutation({
     mutationFn: () => testsApi.createTemplate({ title, description, category, questions: questions as TestQuestion[] }),
@@ -51,6 +68,34 @@ export default function TestManager() {
       resetForm();
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const importPresetMutation = useMutation({
+    mutationFn: (index: number) => testsApi.importPreset(index),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-templates"] });
+      toast({ title: "Teste importado com sucesso!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const importJsonMutation = useMutation({
+    mutationFn: (data: any) => testsApi.importJson(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-templates"] });
+      toast({ title: "Teste importado do JSON!" });
+      setImportOpen(false);
+      setJsonInput("");
+    },
+    onError: (err: Error) => toast({ title: "Erro no JSON", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => testsApi.deleteTemplate(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-templates"] });
+      toast({ title: "Teste removido" });
+    },
   });
 
   const assignMutation = useMutation({
@@ -68,9 +113,7 @@ export default function TestManager() {
     setQuestions([{ text: "", type: "scale", options: [] }]);
   };
 
-  const addQuestion = () => {
-    setQuestions([...questions, { text: "", type: "scale", options: [] }]);
-  };
+  const addQuestion = () => setQuestions([...questions, { text: "", type: "scale", options: [] }]);
 
   const updateQuestion = (i: number, field: string, value: unknown) => {
     const updated = [...questions];
@@ -83,82 +126,183 @@ export default function TestManager() {
     setQuestions(questions.filter((_, idx) => idx !== i));
   };
 
+  const handleExport = async (id: string) => {
+    try {
+      const data = await testsApi.exportTemplate(id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `teste-${data.title?.replace(/\s+/g, "-").toLowerCase() || id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Teste exportado!" });
+    } catch {
+      toast({ title: "Erro ao exportar", variant: "destructive" });
+    }
+  };
+
+  const handleImportJson = () => {
+    try {
+      const data = JSON.parse(jsonInput);
+      importJsonMutation.mutate(data);
+    } catch {
+      toast({ title: "JSON inválido", variant: "destructive" });
+    }
+  };
+
+  const patientList = Array.isArray(patients) ? patients : (patients as any)?.data || [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Testes Psicológicos</h1>
-          <p className="text-sm text-muted-foreground">Crie testes e envie para seus pacientes</p>
+          <p className="text-sm text-muted-foreground">Crie, importe e envie testes para seus pacientes</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setAssignOpen(true)}>
-            <Send className="w-4 h-4" />Enviar Teste
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-1" />Importar JSON
           </Button>
-          <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-            <Plus className="w-4 h-4" />Novo Teste
+          <Button variant="outline" size="sm" onClick={() => setAssignOpen(true)}>
+            <Send className="w-4 h-4 mr-1" />Enviar Teste
+          </Button>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" />Novo Teste
           </Button>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
-        </div>
-      ) : templates.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">Nenhum teste criado</p>
-          <p className="text-sm mt-1">Crie seu primeiro teste psicológico</p>
-          <Button className="mt-3" onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Criar Teste</Button>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {templates.map((t, i) => (
-            <motion.div key={t.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{t.title}</CardTitle>
-                    <Badge variant={t.isActive ? "default" : "secondary"}>{t.isActive ? "Ativo" : "Inativo"}</Badge>
-                  </div>
-                  {t.category && <Badge variant="outline" className="w-fit text-xs">{t.category}</Badge>}
-                </CardHeader>
-                <CardContent>
-                  {t.description && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{t.description}</p>}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <FileText className="w-3 h-3" />{t._count?.questions || 0} perguntas
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Send className="w-3 h-3" />{t._count?.assignments || 0} envios
-                    </span>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => {
-                      setSelectedTemplate(t.id);
-                      setAssignOpen(true);
-                    }}>
-                      <Send className="w-3.5 h-3.5" />Enviar
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="meus" className="gap-2"><ClipboardList className="w-4 h-4" />Meus Testes</TabsTrigger>
+          <TabsTrigger value="modelos" className="gap-2"><BookOpen className="w-4 h-4" />Modelos Prontos</TabsTrigger>
+        </TabsList>
+
+        {/* Meus Testes */}
+        <TabsContent value="meus" className="mt-4">
+          {isLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-40" />
+              <p className="font-medium">Nenhum teste criado</p>
+              <p className="text-sm mt-1">Importe um modelo pronto ou crie do zero</p>
+              <div className="flex gap-2 justify-center mt-3">
+                <Button variant="outline" onClick={() => setTab("modelos")}>
+                  <BookOpen className="w-4 h-4 mr-2" />Ver Modelos
+                </Button>
+                <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Criar Teste</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {templates.map((t, i) => (
+                <motion.div key={t.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{t.title}</CardTitle>
+                        <div className="flex gap-1">
+                          {t.isPreset && <Badge variant="outline" className="text-[10px]">Modelo</Badge>}
+                          <Badge variant={t.isActive ? "default" : "secondary"}>{t.isActive ? "Ativo" : "Inativo"}</Badge>
+                        </div>
+                      </div>
+                      {t.category && <Badge variant="outline" className="w-fit text-xs mt-1">{t.category}</Badge>}
+                    </CardHeader>
+                    <CardContent>
+                      {t.description && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{t.description}</p>}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-3 h-3" />{t._count?.questions || 0} perguntas
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Send className="w-3 h-3" />{t._count?.assignments || 0} envios
+                        </span>
+                      </div>
+                      <div className="flex gap-1.5 mt-3">
+                        <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs" onClick={() => {
+                          setSelectedTemplate(t.id);
+                          setAssignOpen(true);
+                        }}>
+                          <Send className="w-3 h-3" />Enviar
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => handleExport(t.id)}>
+                          <Download className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={() => deleteMutation.mutate(t.id)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Modelos Prontos */}
+        <TabsContent value="modelos" className="mt-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {presets.map((p, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                <Card className="border-primary/20 hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{p.title}</CardTitle>
+                      <Badge variant="outline" className="bg-primary/5 text-primary text-[10px]">Validado</Badge>
+                    </div>
+                    <Badge variant="outline" className="w-fit text-xs">{p.category}</Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-3">{p.description}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" />{p.questions.length} perguntas
+                      </span>
+                      {p.scoringRules?.ranges && (
+                        <span className="flex items-center gap-1">
+                          <BarChart3 className="w-3 h-3" />{p.scoringRules.ranges.length} faixas
+                        </span>
+                      )}
+                    </div>
+                    {p.scoringRules?.ranges && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {p.scoringRules.ranges.map((r: any, ri: number) => (
+                          <span key={ri} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                            {r.label}: {r.min}-{r.max}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <Button size="sm" className="w-full gap-2" onClick={() => importPresetMutation.mutate(i)}
+                      disabled={importPresetMutation.isPending}>
+                      {importPresetMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      Importar para Meus Testes
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Create Test Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Teste Psicológico</DialogTitle>
+            <p className="text-sm text-muted-foreground">Defina as perguntas e opções de resposta</p>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Título *</Label>
-                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Inventário de Ansiedade" />
+                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nome do teste" />
               </div>
               <div>
                 <Label>Categoria</Label>
@@ -200,12 +344,12 @@ export default function TestManager() {
                   <Select value={q.type} onValueChange={v => updateQuestion(i, "type", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="scale">Escala (1-5)</SelectItem>
+                      <SelectItem value="scale">Escala (Likert)</SelectItem>
                       <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
                       <SelectItem value="text">Texto Livre</SelectItem>
                     </SelectContent>
                   </Select>
-                  {q.type === "multiple_choice" && (
+                  {(q.type === "multiple_choice" || q.type === "scale") && (
                     <Input
                       value={(q.options || []).join(", ")}
                       onChange={e => updateQuestion(i, "options", e.target.value.split(",").map(s => s.trim()))}
@@ -230,6 +374,7 @@ export default function TestManager() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enviar Teste para Paciente</DialogTitle>
+            <p className="text-sm text-muted-foreground">Selecione o teste e o paciente</p>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
@@ -248,7 +393,7 @@ export default function TestManager() {
               <Select value={selectedPatient} onValueChange={setSelectedPatient}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {patients.map(p => (
+                  {patientList.map((p: any) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -260,6 +405,35 @@ export default function TestManager() {
             <Button onClick={() => assignMutation.mutate()} disabled={assignMutation.isPending || !selectedTemplate || !selectedPatient}>
               {assignMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               Enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import JSON Dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Importar Teste via JSON</DialogTitle>
+            <p className="text-sm text-muted-foreground">Cole o JSON do teste exportado</p>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Textarea
+              value={jsonInput}
+              onChange={e => setJsonInput(e.target.value)}
+              rows={12}
+              placeholder='{"title": "...", "questions": [...]}'
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              O JSON deve conter: title, questions (array com text, type, options). Campos opcionais: description, category, scoringRules.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
+            <Button onClick={handleImportJson} disabled={importJsonMutation.isPending || !jsonInput.trim()}>
+              {importJsonMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              Importar
             </Button>
           </DialogFooter>
         </DialogContent>
