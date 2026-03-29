@@ -21,7 +21,7 @@ export default function Login() {
   const [name, setName] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [step, setStep] = useState<"form" | "plan">("form");
-  const { login, register } = useAuth();
+  const { login, register, user: authUser } = useAuth();
   const navigate = useNavigate();
 
   const { data: plans = [], isLoading: plansLoading } = useQuery<Plan[]>({
@@ -38,14 +38,22 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
+      let loggedUser;
       if (isRegister) {
-        await register({ name, email, password, planId: selectedPlanId || undefined });
+        loggedUser = await register({ name, email, password, planId: selectedPlanId || undefined });
         toast({ title: "Conta criada com sucesso!" });
       } else {
-        await login(email, password);
+        loggedUser = await login(email, password);
         toast({ title: "Login realizado!" });
       }
-      navigate("/dashboard");
+      // Role-based redirect
+      if (loggedUser.role === "patient") {
+        navigate("/portal");
+      } else if (loggedUser.role === "superadmin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err: unknown) {
       toast({
         title: "Erro",
