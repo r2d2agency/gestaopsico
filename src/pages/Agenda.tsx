@@ -138,7 +138,7 @@ export default function Agenda() {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const dateRange = useMemo(() => {
-    if (viewMode === "day") {
+    if (viewMode === "day" || viewMode === "pipeline") {
       return { startDate: dateStr, endDate: dateStr };
     } else if (viewMode === "week") {
       const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -348,7 +348,7 @@ export default function Agenda() {
   }, [selectedDate, aptsByDate]);
 
   const headerTitle = useMemo(() => {
-    if (viewMode === "day") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "day" || viewMode === "pipeline") return format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
     if (viewMode === "week") {
       const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
       const end = endOfWeek(selectedDate, { weekStartsOn: 1 });
