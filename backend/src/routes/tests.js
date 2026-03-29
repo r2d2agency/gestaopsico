@@ -415,6 +415,46 @@ router.get('/assignments', async (req, res) => {
   }
 });
 
+// DELETE /api/tests/assignments/:id
+router.delete('/assignments/:id', async (req, res) => {
+  try {
+    const assignment = await prisma.testAssignment.findUnique({
+      where: { id: req.params.id },
+      include: { template: { select: { professionalId: true } } }
+    });
+    if (!assignment) return res.status(404).json({ error: 'Não encontrado' });
+    if (assignment.template.professionalId !== req.userId) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    await prisma.testResponse.deleteMany({ where: { assignmentId: req.params.id } });
+    await prisma.testAssignment.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Envio removido' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao remover envio', details: err.message });
+  }
+});
+
+// POST /api/tests/assignments/:id/resend (reset status to pending)
+router.post('/assignments/:id/resend', async (req, res) => {
+  try {
+    const assignment = await prisma.testAssignment.findUnique({
+      where: { id: req.params.id },
+      include: { template: { select: { professionalId: true } } }
+    });
+    if (!assignment) return res.status(404).json({ error: 'Não encontrado' });
+    if (assignment.template.professionalId !== req.userId) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const updated = await prisma.testAssignment.update({
+      where: { id: req.params.id },
+      data: { status: 'pending', completedAt: null, assignedAt: new Date() }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao reenviar teste', details: err.message });
+  }
+});
+
 // POST /api/tests/assign
 router.post('/assign', async (req, res) => {
   try {
