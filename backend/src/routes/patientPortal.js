@@ -118,6 +118,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       clinicLogo: orgSettings?.logo || organization?.logo || null,
       primaryColor: orgSettings?.primaryColor || null,
       accentColor: orgSettings?.accentColor || orgSettings?.secondaryColor || null,
+      bookingStartHour: orgSettings?.patientBookingStartHour ?? 8,
+      bookingEndHour: orgSettings?.patientBookingEndHour ?? 18,
+      sessionDuration: orgSettings?.sessionDuration ?? 50,
+      bookingWeekdays: orgSettings?.bookingWeekdays || "1,2,3,4,5",
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar dashboard' });
