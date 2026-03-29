@@ -241,7 +241,7 @@ router.patch('/users/:id/role', async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!['professional', 'admin', 'superadmin'].includes(role)) {
+    if (!['professional', 'admin', 'superadmin', 'secretary', 'financial', 'secretary_financial', 'patient'].includes(role)) {
       return res.status(400).json({ error: 'Perfil inválido' });
     }
 
