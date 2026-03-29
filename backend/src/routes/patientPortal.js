@@ -181,19 +181,29 @@ router.get('/availability', authMiddleware, async (req, res) => {
 
     const patient = await prisma.patient.findUnique({
       where: { id: user.patientId },
-      select: { professionalId: true, professional: { select: { name: true } } }
+      select: { professionalId: true, professional: { select: { name: true, organizationId: true } } }
     });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
-    const targetDate = new Date(date + 'T00:00:00.000Z');
-    const dayOfWeek = targetDate.getDay(); // 0=Sunday
+    // Load scheduling settings
+    const orgId = user.organizationId || patient.professional?.organizationId;
+    const orgSettings = orgId ? await prisma.organizationSetting.findUnique({
+      where: { organizationId: orgId },
+      select: { patientBookingStartHour: true, patientBookingEndHour: true, sessionDuration: true, bookingWeekdays: true }
+    }) : null;
 
-    // Don't allow weekends
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return res.json({ slots: [], professionalName: patient.professional.name });
+    const startHour = orgSettings?.patientBookingStartHour ?? 8;
+    const endHour = orgSettings?.patientBookingEndHour ?? 18;
+    const duration = orgSettings?.sessionDuration ?? 50;
+    const allowedWeekdays = (orgSettings?.bookingWeekdays || '1,2,3,4,5').split(',').map(Number);
+
+    const targetDate = new Date(date + 'T00:00:00.000Z');
+    const dayOfWeek = targetDate.getDay();
+
+    if (!allowedWeekdays.includes(dayOfWeek)) {
+      return res.json({ slots: [], professionalName: patient.professional.name, date });
     }
 
-    // Get existing appointments for that professional on that date
     const existingAppointments = await prisma.appointment.findMany({
       where: {
         professionalId: patient.professionalId,
@@ -205,17 +215,16 @@ router.get('/availability', authMiddleware, async (req, res) => {
 
     const bookedTimes = new Set(existingAppointments.map(a => a.time));
 
-    // Generate slots from 08:00 to 18:00 (50-minute sessions)
+    // Generate slots based on configured hours and duration
     const slots = [];
-    for (let hour = 8; hour < 18; hour++) {
-      for (const minute of ['00', '50']) {
-        if (hour === 17 && minute === '50') continue; // skip 17:50
-        const time = `${String(hour).padStart(2, '0')}:${minute}`;
-        slots.push({
-          time,
-          available: !bookedTimes.has(time)
-        });
-      }
+    let currentMinutes = startHour * 60;
+    const endMinutes = endHour * 60;
+    while (currentMinutes + duration <= endMinutes) {
+      const h = Math.floor(currentMinutes / 60);
+      const m = currentMinutes % 60;
+      const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      slots.push({ time, available: !bookedTimes.has(time) });
+      currentMinutes += duration;
     }
 
     res.json({
