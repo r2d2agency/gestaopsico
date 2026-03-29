@@ -1,14 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  CreditCard,
-  ArrowLeft,
-  Shield,
-  Bot,
-  Key,
-  Settings,
+  LayoutDashboard, Building2, Users, CreditCard, ArrowLeft,
+  Shield, Bot, Key, Settings, MessageSquare,
 } from "lucide-react";
 
 const navItems = [
@@ -16,6 +9,7 @@ const navItems = [
   { icon: Building2, label: "Organizações", path: "/admin/organizacoes" },
   { icon: Users, label: "Usuários", path: "/admin/usuarios" },
   { icon: CreditCard, label: "Planos", path: "/admin/planos" },
+  { icon: MessageSquare, label: "WhatsApp", path: "/admin/whatsapp" },
   { icon: Bot, label: "Agentes de IA", path: "/admin/agentes-ia" },
   { icon: Key, label: "Provedores IA", path: "/admin/provedores-ia" },
   { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },

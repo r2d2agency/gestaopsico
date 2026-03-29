@@ -21,6 +21,9 @@ import AdminPlans from "./pages/admin/AdminPlans";
 import AdminAiAgents from "./pages/admin/AdminAiAgents";
 import AdminAiProviders from "./pages/admin/AdminAiProviders";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
+import SecretarySettings from "./pages/SecretarySettings";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +47,7 @@ const App = () => (
               <Route path="/admin/agentes-ia" element={<AdminAiAgents />} />
               <Route path="/admin/provedores-ia" element={<AdminAiProviders />} />
               <Route path="/admin/configuracoes" element={<AdminSettings />} />
+              <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
             </Route>
             {/* App normal */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -52,6 +56,8 @@ const App = () => (
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/assistente-ia" element={<AiAssistant />} />
+              <Route path="/secretaria-ia" element={<SecretarySettings />} />
+              <Route path="/notificacoes" element={<Notifications />} />
               <Route path="/casais" element={<Dashboard />} />
               <Route path="/consultas" element={<Dashboard />} />
               <Route path="/prontuarios" element={<Dashboard />} />
