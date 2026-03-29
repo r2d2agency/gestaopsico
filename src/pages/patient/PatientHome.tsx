@@ -95,6 +95,13 @@ export default function PatientHome() {
     queryFn: () => patientPortalApi.dashboard(),
   });
 
+  const { data: myTests = [] } = useQuery<TestAssignment[]>({
+    queryKey: ["my-tests"],
+    queryFn: () => testsApi.myTests(),
+  });
+
+  const pendingTests = myTests.filter(t => t.status === "pending");
+
   const moodMutation = useMutation({
     mutationFn: (mood: number) =>
       moodApi.create({ mood, emotions: [], energyLevel: 3, sleepQuality: 3, anxietyLevel: 3 }),
