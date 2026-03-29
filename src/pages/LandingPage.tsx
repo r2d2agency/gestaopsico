@@ -479,6 +479,18 @@ export default function LandingPage() {
               Invista no seu consultório
             </h2>
             <p className="text-muted-foreground mt-3">Comece grátis, escale quando quiser.</p>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <span className={`text-sm font-medium ${!withSecretary ? "text-foreground" : "text-muted-foreground"}`}>Sem Secretária IA</span>
+              <button
+                onClick={() => setWithSecretary(!withSecretary)}
+                className={`relative w-14 h-7 rounded-full transition-colors ${withSecretary ? "bg-primary" : "bg-muted-foreground/30"}`}
+              >
+                <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-primary-foreground shadow transition-transform ${withSecretary ? "translate-x-7" : "translate-x-0.5"}`} />
+              </button>
+              <span className={`text-sm font-medium ${withSecretary ? "text-foreground" : "text-muted-foreground"}`}>
+                Com Secretária IA <span className="text-xs text-primary">(+R$200)</span>
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan, i) => (
@@ -502,10 +514,15 @@ export default function LandingPage() {
                 <h3 className="font-display font-bold text-lg text-foreground">{plan.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{plan.desc}</p>
                 <div className="mt-5 mb-6">
-                  <span className="text-4xl font-display font-extrabold text-foreground">{plan.price}</span>
+                  <span className="text-4xl font-display font-extrabold text-foreground">
+                    {withSecretary ? plan.priceWithSecretary : plan.price}
+                  </span>
                   <span className="text-muted-foreground text-sm">{plan.period}</span>
+                  {withSecretary && (
+                    <p className="text-xs text-primary mt-1">Inclui Secretária IA no WhatsApp</p>
+                  )}
                 </div>
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-3 mb-4">
                   {plan.features.map((f, fi) => (
                     <li key={fi} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <CheckCircle className="w-4 h-4 text-success shrink-0" />
@@ -513,6 +530,21 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
+                {withSecretary && (
+                  <div className="border-t border-border pt-4 mb-4">
+                    <p className="text-xs font-medium text-primary mb-2 flex items-center gap-1">
+                      <Bot className="w-3.5 h-3.5" /> Secretária IA
+                    </p>
+                    <ul className="space-y-2">
+                      {plan.secretaryFeatures.map((f, fi) => (
+                        <li key={fi} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <Button className={`w-full ${plan.highlighted ? "gradient-primary border-0 shadow-glow" : ""}`} variant={plan.highlighted ? "default" : "outline"} asChild>
                   <Link to="/dashboard">Começar Grátis</Link>
                 </Button>
