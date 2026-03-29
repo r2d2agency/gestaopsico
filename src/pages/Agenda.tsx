@@ -117,6 +117,17 @@ export default function Agenda() {
     enabled: canCreateForOthers,
   });
 
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings"],
+    queryFn: () => orgSettingsApi.get(),
+  });
+
+  const businessHours = useMemo(() => {
+    const start = orgSettings?.scheduleStartHour ?? 8;
+    const end = orgSettings?.scheduleEndHour ?? 19;
+    return Array.from({ length: end - start + 1 }, (_, i) => i + start);
+  }, [orgSettings]);
+
   const queryParams: Record<string, string> = { ...dateRange };
   if (canCreateForOthers && selectedProfessional && selectedProfessional !== "all") {
     queryParams.professional_id = selectedProfessional;
@@ -356,11 +367,13 @@ export default function Agenda() {
           aptsByDate={aptsByDate}
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
+          businessHours={businessHours}
         />
       ) : (
         <DayView
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
+          businessHours={businessHours}
         />
       )}
 
