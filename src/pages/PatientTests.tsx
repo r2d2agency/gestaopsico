@@ -23,7 +23,7 @@ export default function PatientTests() {
     queryFn: () => testsApi.myTests(),
   });
 
-  const { data: testDetail, isLoading: detailLoading } = useQuery({
+  const { data: testDetail, isLoading: detailLoading } = useQuery<any>({
     queryKey: ["my-test", activeTest],
     queryFn: () => testsApi.getMyTest(activeTest!),
     enabled: !!activeTest,

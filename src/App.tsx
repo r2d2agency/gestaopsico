@@ -10,7 +10,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Pacientes from "./pages/Pacientes";
 import Agenda from "./pages/Agenda";
-import Financeiro from "./pages/Financeiro";
+import FinanceiroCompleto from "./pages/FinanceiroCompleto";
 import AiAssistant from "./pages/AiAssistant";
 import AppLayout from "./components/AppLayout";
 import AdminLayout from "./components/AdminLayout";
@@ -24,6 +24,11 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
 import SecretarySettings from "./pages/SecretarySettings";
 import Notifications from "./pages/Notifications";
+import Configuracoes from "./pages/Configuracoes";
+import TestManager from "./pages/TestManager";
+import PatientDashboard from "./pages/PatientDashboard";
+import PatientMood from "./pages/PatientMood";
+import PatientTests from "./pages/PatientTests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,20 +54,29 @@ const App = () => (
               <Route path="/admin/configuracoes" element={<AdminSettings />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
             </Route>
-            {/* App normal */}
+            {/* Patient Portal */}
+            <Route element={<ProtectedRoute requiredRole="patient"><AppLayout /></ProtectedRoute>}>
+              <Route path="/portal" element={<PatientDashboard />} />
+              <Route path="/portal/humor" element={<PatientMood />} />
+              <Route path="/portal/testes" element={<PatientTests />} />
+              <Route path="/portal/consultas" element={<PatientDashboard />} />
+              <Route path="/portal/financeiro" element={<PatientDashboard />} />
+            </Route>
+            {/* App normal (professional) */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/pacientes" element={<Pacientes />} />
               <Route path="/agenda" element={<Agenda />} />
-              <Route path="/financeiro" element={<Financeiro />} />
+              <Route path="/financeiro" element={<FinanceiroCompleto />} />
               <Route path="/assistente-ia" element={<AiAssistant />} />
               <Route path="/secretaria-ia" element={<SecretarySettings />} />
               <Route path="/notificacoes" element={<Notifications />} />
+              <Route path="/testes" element={<TestManager />} />
               <Route path="/casais" element={<Dashboard />} />
               <Route path="/consultas" element={<Dashboard />} />
               <Route path="/prontuarios" element={<Dashboard />} />
               <Route path="/relatorios" element={<Dashboard />} />
-              <Route path="/configuracoes" element={<Dashboard />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
