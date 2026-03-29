@@ -27,7 +27,7 @@ export default function PatientAppLayout() {
   const primaryColor = (dashboard as any)?.primaryColor;
   const accentColor = (dashboard as any)?.accentColor;
 
-  // Apply clinic colors as CSS variables
+  // Apply clinic colors + favicon + manifest dynamically
   useEffect(() => {
     if (primaryColor) {
       document.documentElement.style.setProperty("--primary", primaryColor);
@@ -35,12 +35,46 @@ export default function PatientAppLayout() {
     if (accentColor) {
       document.documentElement.style.setProperty("--accent", accentColor);
     }
+
+    // Dynamic favicon from clinic logo
+    if (clinicLogo) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = clinicLogo;
+
+      // Apple touch icon
+      let appleLink = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
+      if (!appleLink) {
+        appleLink = document.createElement("link");
+        appleLink.rel = "apple-touch-icon";
+        document.head.appendChild(appleLink);
+      }
+      appleLink.href = clinicLogo;
+    }
+
+    // Update page title and theme-color
+    if (clinicName) {
+      document.title = `${clinicName} - Portal do Paciente`;
+    }
+    if (primaryColor) {
+      let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
+      if (meta) meta.content = primaryColor;
+    }
+    if (clinicName) {
+      let metaApple = document.querySelector("meta[name='apple-mobile-web-app-title']") as HTMLMetaElement;
+      if (metaApple) metaApple.content = clinicName;
+    }
+
     return () => {
-      // Reset on unmount
       document.documentElement.style.removeProperty("--primary");
       document.documentElement.style.removeProperty("--accent");
+      document.title = "PsicoGest - Sistema para Psicólogos";
     };
-  }, [primaryColor, accentColor]);
+  }, [primaryColor, accentColor, clinicLogo, clinicName]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
