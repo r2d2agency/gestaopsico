@@ -1,8 +1,17 @@
 import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import { Bell, Search } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AppLayout() {
+  const { user } = useAuth();
+  const initials = user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "??";
+
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar />
@@ -23,11 +32,11 @@ export default function AppLayout() {
             </button>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xs font-bold">DR</span>
+                <span className="text-primary-foreground text-xs font-bold">{initials}</span>
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-foreground">Dra. Renata</p>
-                <p className="text-xs text-muted-foreground">Psicóloga</p>
+                <p className="text-sm font-medium text-foreground">{user?.name || "Usuário"}</p>
+                <p className="text-xs text-muted-foreground capitalize">{user?.role || "profissional"}</p>
               </div>
             </div>
           </div>
