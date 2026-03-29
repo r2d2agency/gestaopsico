@@ -24,7 +24,6 @@ router.get('/', async (req, res) => {
     });
 
     if (!settings) {
-      // Create default settings
       const org = await prisma.organization.findUnique({ where: { id: user.organizationId } });
       settings = await prisma.organizationSetting.create({
         data: {
@@ -34,7 +33,13 @@ router.get('/', async (req, res) => {
       });
     }
 
-    res.json(settings);
+    // Include portalSlug from organization
+    const org = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: { portalSlug: true }
+    });
+
+    res.json({ ...settings, portalSlug: org?.portalSlug });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar configurações', details: err.message });
   }
