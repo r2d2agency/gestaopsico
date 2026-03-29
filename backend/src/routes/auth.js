@@ -23,11 +23,11 @@ router.post('/register', async (req, res) => {
     const name = req.body?.name?.trim();
     const email = req.body?.email?.trim()?.toLowerCase();
     const password = req.body?.password;
+    const planId = req.body?.planId;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     }
-
     if (password.length < 6) {
       return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
     }
@@ -36,6 +36,33 @@ router.post('/register', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
 
     const passwordHash = await bcrypt.hash(password, 10);
+
+    // If planId provided, create organization with trial
+    let organizationId = null;
+    if (planId) {
+      const plan = await prisma.plan.findUnique({ where: { id: planId } });
+      if (plan) {
+        const slug = email.split('@')[0].replace(/[^a-z0-9]/g, '') + '-' + Date.now().toString(36);
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + (plan.trialDays || 7));
+
+        const org = await prisma.organization.create({
+          data: {
+            name: `Consultório ${name.split(' ')[0]}`,
+            slug,
+            type: 'individual',
+            plan: plan.slug,
+            planId: plan.id,
+            maxUsers: plan.maxUsers,
+            status: 'active',
+            trialEndsAt,
+            email
+          }
+        });
+        organizationId = org.id;
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -43,6 +70,7 @@ router.post('/register', async (req, res) => {
         passwordHash,
         role: 'professional',
         status: 'active',
+        organizationId,
         createdAt: new Date()
       },
       select: { id: true, name: true, email: true, role: true }
@@ -54,11 +82,9 @@ router.post('/register', async (req, res) => {
     if (isDuplicateConstraintError(err)) {
       return res.status(409).json({ error: 'Email já cadastrado' });
     }
-
     if (err instanceof Prisma.PrismaClientValidationError) {
       return res.status(400).json({ error: 'Dados inválidos para criar a conta' });
     }
-
     console.error('register error:', err);
     res.status(500).json({ error: 'Erro interno ao criar conta' });
   }
