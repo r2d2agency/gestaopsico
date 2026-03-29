@@ -58,6 +58,18 @@ export const authApi = {
   },
 };
 
+// Setup
+export const setupApi = {
+  promoteSuperadmin: () =>
+    apiRequest<{ message: string; user: { id: string; name: string; email: string; role: string } }>(
+      "/setup/promote-superadmin", { method: "POST" }
+    ),
+  promoteByEmail: (email: string, role: string = "superadmin") =>
+    apiRequest<{ message: string; user: { id: string; name: string; email: string; role: string } }>(
+      "/setup/promote-by-email", { method: "POST", body: { email, role } }
+    ),
+};
+
 // Pacientes
 export const pacientesApi = {
   list: (params?: { search?: string; page?: number }) =>
