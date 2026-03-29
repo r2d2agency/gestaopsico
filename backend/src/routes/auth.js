@@ -6,6 +6,17 @@ const { authMiddleware, generateToken } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+function isDuplicateConstraintError(error) {
+  return Boolean(
+    (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') ||
+    error?.code === 'P2002' ||
+    error?.code === '23505' ||
+    error?.meta?.cause?.includes?.('Unique constraint failed') ||
+    error?.message?.includes?.('Unique constraint failed') ||
+    error?.message?.toLowerCase?.().includes('duplicate key')
+  );
+}
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
@@ -33,7 +44,7 @@ router.post('/register', async (req, res) => {
     const token = generateToken(user.id);
     res.status(201).json({ user, token });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+    if (isDuplicateConstraintError(err)) {
       return res.status(409).json({ error: 'Email já cadastrado' });
     }
 
