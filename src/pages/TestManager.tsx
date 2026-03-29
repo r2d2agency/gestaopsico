@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, ClipboardList, Plus, Send, Trash2, Loader2, FileText, Download, Upload, BookOpen, BarChart3, Eye, CheckCircle2, Clock3, Sparkles } from "lucide-react";
+import { Heart, ClipboardList, Plus, Send, Trash2, Loader2, FileText, Download, Upload, BookOpen, BarChart3, Eye, CheckCircle2, Clock3, Sparkles, RefreshCw, ExternalLink, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import { usePatients } from "@/hooks/usePatients";
 import { casaisApi, type Casal } from "@/lib/api";
 
 export default function TestManager() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState("meus");
   const [dialogOpen, setDialogOpen] = useState(false);
