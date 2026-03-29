@@ -35,6 +35,9 @@ export default function TestManager() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [introText, setIntroText] = useState("");
+  const [completionMessage, setCompletionMessage] = useState("");
+  const [questionsPerPage, setQuestionsPerPage] = useState(1);
   const [questions, setQuestions] = useState<Partial<TestQuestion>[]>([{ text: "", type: "scale", options: [] }]);
   const [assessment, setAssessment] = useState("");
   const [conclusion, setConclusion] = useState("");
@@ -70,7 +73,7 @@ export default function TestManager() {
   const completedAssignments = useMemo(() => assignments.filter((a) => a.status === "completed"), [assignments]);
 
   const createMutation = useMutation({
-    mutationFn: () => testsApi.createTemplate({ title, description, category, questions: questions as TestQuestion[] }),
+    mutationFn: () => testsApi.createTemplate({ title, description, category, questions: questions as TestQuestion[], introText: introText || undefined, completionMessage: completionMessage || undefined, questionsPerPage } as any),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["test-templates"] });
       toast({ title: "Teste criado!" });
@@ -156,6 +159,9 @@ export default function TestManager() {
     setTitle("");
     setDescription("");
     setCategory("");
+    setIntroText("");
+    setCompletionMessage("");
+    setQuestionsPerPage(1);
     setQuestions([{ text: "", type: "scale", options: [] }]);
   };
 
