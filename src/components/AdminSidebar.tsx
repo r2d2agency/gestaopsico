@@ -8,6 +8,7 @@ import {
   Shield,
   Bot,
   Key,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
   { icon: CreditCard, label: "Planos", path: "/admin/planos" },
   { icon: Bot, label: "Agentes de IA", path: "/admin/agentes-ia" },
   { icon: Key, label: "Provedores IA", path: "/admin/provedores-ia" },
+  { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
 ];
 
 export default function AdminSidebar() {
