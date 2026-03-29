@@ -1,0 +1,9 @@
+-- Expand address into structured fields
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "cep" VARCHAR(9);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "street" VARCHAR(255);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "number" VARCHAR(20);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "complement" VARCHAR(100);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "neighborhood" VARCHAR(100);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "city" VARCHAR(100);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "state" VARCHAR(2);
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "whatsapp_valid" BOOLEAN DEFAULT false;

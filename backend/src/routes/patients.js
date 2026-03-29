@@ -18,6 +18,14 @@ function mapPatient(p) {
     phone: p.phone,
     email: p.email,
     address: p.address,
+    cep: p.cep,
+    street: p.street,
+    number: p.number,
+    complement: p.complement,
+    neighborhood: p.neighborhood,
+    city: p.city,
+    state: p.state,
+    whatsapp_valid: p.whatsappValid,
     gender: p.gender,
     emergency_contact: p.emergencyContact,
     clinical_notes: p.clinicalNotes,
@@ -37,7 +45,6 @@ function mapPatient(p) {
   };
 }
 
-// Helper: map snake_case frontend input to camelCase Prisma input
 function mapInput(body) {
   const data = {};
   if (body.name !== undefined) data.name = body.name;
@@ -46,6 +53,14 @@ function mapInput(body) {
   if (body.phone !== undefined) data.phone = body.phone || null;
   if (body.email !== undefined) data.email = body.email || null;
   if (body.address !== undefined) data.address = body.address || null;
+  if (body.cep !== undefined) data.cep = body.cep || null;
+  if (body.street !== undefined) data.street = body.street || null;
+  if (body.number !== undefined) data.number = body.number || null;
+  if (body.complement !== undefined) data.complement = body.complement || null;
+  if (body.neighborhood !== undefined) data.neighborhood = body.neighborhood || null;
+  if (body.city !== undefined) data.city = body.city || null;
+  if (body.state !== undefined) data.state = body.state || null;
+  if (body.whatsapp_valid !== undefined) data.whatsappValid = Boolean(body.whatsapp_valid);
   if (body.gender !== undefined) data.gender = body.gender || null;
   if (body.emergency_contact !== undefined) data.emergencyContact = body.emergency_contact || null;
   if (body.clinical_notes !== undefined) data.clinicalNotes = body.clinical_notes || null;
@@ -53,7 +68,6 @@ function mapInput(body) {
   if (body.medications !== undefined) data.medications = body.medications || null;
   if (body.allergies !== undefined) data.allergies = body.allergies || null;
   if (body.status !== undefined) data.status = body.status;
-  // Billing fields
   if (body.billing_mode !== undefined) data.billingMode = body.billing_mode;
   if (body.monthly_value !== undefined) data.monthlyValue = body.monthly_value ? parseFloat(body.monthly_value) : null;
   if (body.session_value !== undefined) data.sessionValue = body.session_value ? parseFloat(body.session_value) : null;
@@ -62,6 +76,22 @@ function mapInput(body) {
   if (body.charge_time !== undefined) data.chargeTime = body.charge_time;
   if (body.charge_enabled !== undefined) data.chargeEnabled = Boolean(body.charge_enabled);
   return data;
+}
+
+// CPF validation
+function isValidCPF(cpf) {
+  const cleaned = (cpf || '').replace(/\D/g, '');
+  if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(cleaned[i]) * (10 - i);
+  let d1 = 11 - (sum % 11);
+  if (d1 >= 10) d1 = 0;
+  if (parseInt(cleaned[9]) !== d1) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(cleaned[i]) * (11 - i);
+  let d2 = 11 - (sum % 11);
+  if (d2 >= 10) d2 = 0;
+  return parseInt(cleaned[10]) === d2;
 }
 
 // GET /api/pacientes
@@ -98,15 +128,52 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET /api/pacientes/cep/:cep - ViaCEP lookup
+router.get('/cep/:cep', async (req, res) => {
+  try {
+    const cep = (req.params.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return res.status(400).json({ error: 'CEP inválido' });
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await response.json();
+    if (data.erro) return res.status(404).json({ error: 'CEP não encontrado' });
+    res.json({
+      cep: data.cep,
+      street: data.logradouro,
+      complement: data.complemento,
+      neighborhood: data.bairro,
+      city: data.localidade,
+      state: data.uf,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao consultar CEP' });
+  }
+});
+
+// GET /api/pacientes/validate-cpf/:cpf
+router.get('/validate-cpf/:cpf', async (req, res) => {
+  const cpf = (req.params.cpf || '').replace(/\D/g, '');
+  if (!isValidCPF(cpf)) return res.json({ valid: false, message: 'CPF inválido' });
+  // Check if already exists
+  const existing = await prisma.patient.findFirst({ where: { cpf: { contains: cpf } } });
+  if (existing && existing.professionalId === req.userId) {
+    return res.json({ valid: true, exists: true, message: 'CPF já cadastrado' });
+  }
+  res.json({ valid: true, exists: false });
+});
+
 // POST /api/pacientes
 router.post('/', async (req, res) => {
   try {
     const data = mapInput(req.body);
     data.professionalId = req.userId;
     if (!data.name) return res.status(400).json({ error: 'Nome é obrigatório' });
+    if (data.cpf && !isValidCPF(data.cpf)) return res.status(400).json({ error: 'CPF inválido' });
     const patient = await prisma.patient.create({ data });
     res.status(201).json(mapPatient(patient));
   } catch (err) {
+    if (err.code === 'P2002' && err.meta?.target?.includes('cpf')) {
+      return res.status(400).json({ error: 'CPF já cadastrado para outro paciente' });
+    }
     res.status(500).json({ error: 'Erro ao criar paciente', details: err.message });
   }
 });

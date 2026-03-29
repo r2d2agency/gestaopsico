@@ -78,6 +78,10 @@ export const pacientesApi = {
   create: (data: Partial<Patient>) => apiRequest<Patient>("/pacientes", { method: "POST", body: data }),
   update: (id: string, data: Partial<Patient>) => apiRequest<Patient>(`/pacientes/${id}`, { method: "PUT", body: data }),
   delete: (id: string) => apiRequest(`/pacientes/${id}`, { method: "DELETE" }),
+  lookupCep: (cep: string) =>
+    apiRequest<{ cep: string; street: string; complement: string; neighborhood: string; city: string; state: string }>(`/pacientes/cep/${cep}`),
+  validateCpf: (cpf: string) =>
+    apiRequest<{ valid: boolean; exists?: boolean; message?: string }>(`/pacientes/validate-cpf/${cpf}`),
 };
 
 // Consultas
@@ -131,6 +135,14 @@ export interface Patient {
   phone: string;
   email: string;
   address?: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  whatsapp_valid?: boolean;
   gender: string;
   emergency_contact?: string;
   clinical_notes?: string;
