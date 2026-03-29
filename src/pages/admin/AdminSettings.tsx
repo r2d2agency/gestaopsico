@@ -71,7 +71,7 @@ export default function AdminSettings() {
             <CardContent className="space-y-4">
               {hasToken && (
                 <Alert>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-success" />
                   <AlertDescription>Token configurado</AlertDescription>
                 </Alert>
               )}
