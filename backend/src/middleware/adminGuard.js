@@ -74,4 +74,28 @@ async function tenantMiddleware(req, res, next) {
   }
 }
 
-module.exports = { superadminGuard, adminGuard, tenantMiddleware };
+/**
+ * Middleware que permite admin, superadmin ou professional
+ */
+async function professionalGuard(req, res, next) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { role: true, status: true, organizationId: true }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (user.status !== 'active') return res.status(403).json({ error: 'Conta desativada' });
+    if (!['superadmin', 'admin', 'professional'].includes(user.role)) {
+      return res.status(403).json({ error: 'Acesso restrito a profissionais e administradores' });
+    }
+
+    req.userRole = user.role;
+    req.userOrgId = user.organizationId;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Erro de autorização', details: err.message });
+  }
+}
+
+module.exports = { superadminGuard, adminGuard, tenantMiddleware, professionalGuard };

@@ -2,13 +2,13 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const { authMiddleware } = require('../middleware/auth');
-const { adminGuard } = require('../middleware/adminGuard');
+const { professionalGuard } = require('../middleware/adminGuard');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 router.use(authMiddleware);
-router.use(adminGuard);
+router.use(professionalGuard);
 
 // GET /api/team - list users in the same organization
 router.get('/', async (req, res) => {
