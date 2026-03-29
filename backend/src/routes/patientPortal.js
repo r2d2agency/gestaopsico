@@ -129,7 +129,115 @@ router.get('/financial', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/patient-portal/messages - patient's messages history
+// GET /api/patient-portal/availability?date=YYYY-MM-DD - get available slots for a date
+router.get('/availability', authMiddleware, async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'Parâmetro date é obrigatório' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const patient = await prisma.patient.findUnique({
+      where: { id: user.patientId },
+      select: { professionalId: true, professional: { select: { name: true } } }
+    });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    const targetDate = new Date(date);
+    const dayOfWeek = targetDate.getDay(); // 0=Sunday
+
+    // Don't allow weekends
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return res.json({ slots: [], professionalName: patient.professional.name });
+    }
+
+    // Get existing appointments for that professional on that date
+    const existingAppointments = await prisma.appointment.findMany({
+      where: {
+        professionalId: patient.professionalId,
+        date: targetDate,
+        status: { notIn: ['cancelled'] }
+      },
+      select: { time: true, duration: true }
+    });
+
+    const bookedTimes = new Set(existingAppointments.map(a => a.time));
+
+    // Generate slots from 08:00 to 18:00 (50-minute sessions)
+    const slots = [];
+    for (let hour = 8; hour < 18; hour++) {
+      for (const minute of ['00', '50']) {
+        if (hour === 17 && minute === '50') continue; // skip 17:50
+        const time = `${String(hour).padStart(2, '0')}:${minute}`;
+        slots.push({
+          time,
+          available: !bookedTimes.has(time)
+        });
+      }
+    }
+
+    res.json({
+      slots,
+      professionalName: patient.professional.name,
+      date
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar disponibilidade', details: err.message });
+  }
+});
+
+// POST /api/patient-portal/book - patient books an appointment
+router.post('/book', authMiddleware, async (req, res) => {
+  try {
+    const { date, time, mode, notes } = req.body;
+    if (!date || !time) {
+      return res.status(400).json({ error: 'Data e horário são obrigatórios' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const patient = await prisma.patient.findUnique({
+      where: { id: user.patientId },
+      select: { id: true, professionalId: true, sessionValue: true }
+    });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    // Check if slot is still available
+    const targetDate = new Date(date);
+    const existing = await prisma.appointment.findFirst({
+      where: {
+        professionalId: patient.professionalId,
+        date: targetDate,
+        time,
+        status: { notIn: ['cancelled'] }
+      }
+    });
+    if (existing) return res.status(409).json({ error: 'Horário não disponível' });
+
+    const appointment = await prisma.appointment.create({
+      data: {
+        professionalId: patient.professionalId,
+        patientId: patient.id,
+        type: 'individual',
+        date: targetDate,
+        time,
+        duration: 50,
+        value: patient.sessionValue || 0,
+        status: 'scheduled',
+        paymentStatus: 'pending',
+        mode: mode || 'in_person',
+        notes: notes || null
+      },
+      include: { professional: { select: { name: true } } }
+    });
+
+    res.status(201).json(appointment);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao agendar consulta', details: err.message });
+  }
+});
 router.get('/messages', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
