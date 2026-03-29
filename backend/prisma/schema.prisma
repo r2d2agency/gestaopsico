@@ -270,20 +270,31 @@ model Appointment {
 }
 
 model Record {
-  id             String       @id @default(uuid()) @db.Uuid
-  appointmentId  String?      @map("appointment_id") @db.Uuid
-  appointment    Appointment? @relation(fields: [appointmentId], references: [id])
-  patientId      String?      @map("patient_id") @db.Uuid
-  patient        Patient?     @relation(fields: [patientId], references: [id])
-  coupleId       String?      @map("couple_id") @db.Uuid
-  couple         Couple?      @relation(fields: [coupleId], references: [id])
-  professionalId String       @map("professional_id") @db.Uuid
-  professional   User         @relation(fields: [professionalId], references: [id])
-  type           String       @db.VarChar(20)
-  content        String?
-  aiContent      String?      @map("ai_content")
-  date           DateTime     @db.Date
-  createdAt      DateTime     @default(now()) @map("created_at")
+  id                   String       @id @default(uuid()) @db.Uuid
+  appointmentId        String?      @map("appointment_id") @db.Uuid
+  appointment          Appointment? @relation(fields: [appointmentId], references: [id])
+  patientId            String?      @map("patient_id") @db.Uuid
+  patient              Patient?     @relation(fields: [patientId], references: [id])
+  coupleId             String?      @map("couple_id") @db.Uuid
+  couple               Couple?      @relation(fields: [coupleId], references: [id])
+  professionalId       String       @map("professional_id") @db.Uuid
+  professional         User         @relation(fields: [professionalId], references: [id])
+  type                 String       @db.VarChar(20)
+  content              String?
+  aiContent            String?      @map("ai_content")
+  complaint            String?
+  keyPoints            String?      @map("key_points")
+  clinicalObservations String?      @map("clinical_observations")
+  interventions        String?
+  evolution            String?
+  nextSteps            String?      @map("next_steps")
+  privateNotes         String?      @map("private_notes")
+  modality             String?      @default("in_person") @db.VarChar(20)
+  aiClinicalSupport    String?      @map("ai_clinical_support")
+  themes               String[]
+  date                 DateTime     @db.Date
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime?    @default(now()) @map("updated_at")
 
   @@map("records")
 }
