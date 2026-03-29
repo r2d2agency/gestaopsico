@@ -42,7 +42,7 @@ export default function CasaisPage() {
 
   const { data: coupleRecords = [] } = useQuery({
     queryKey: ["couple-records", selectedCouple?.id],
-    queryFn: () => prontuariosApi.list(selectedCouple!.id),
+    queryFn: () => casaisApi.records(selectedCouple!.id),
     enabled: !!selectedCouple,
   });
 
