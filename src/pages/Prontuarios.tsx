@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { pacientesApi, consultasApi, casaisApi } from "@/lib/api";
+import { pacientesApi, consultasApi, casaisApi, type Consulta } from "@/lib/api";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +79,45 @@ export default function Prontuarios() {
     queryKey: ["consultas-for-prontuario", form.patientId],
     queryFn: () => consultasApi.list({}),
     enabled: isCreateOpen,
+  });
+
+  // Appointments for the selected patient (detail view)
+  const { data: patientApts = [], isLoading: aptsLoading } = useQuery<Consulta[]>({
+    queryKey: ["patient-appointments", selectedEntity?.id],
+    queryFn: () => consultasApi.list({}),
+    enabled: !!selectedEntity && selectedEntity.type === "patient",
+  });
+
+  const [editAptDialog, setEditAptDialog] = useState(false);
+  const [editingApt, setEditingApt] = useState<Partial<Consulta> | null>(null);
+
+  const updateAptMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Consulta> }) => consultasApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      toast.success("Consulta atualizada");
+      setEditAptDialog(false);
+      setEditingApt(null);
+    },
+    onError: () => toast.error("Erro ao atualizar consulta"),
+  });
+
+  const cancelAptMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      toast.success("Consulta cancelada");
+    },
+    onError: () => toast.error("Erro ao cancelar consulta"),
+  });
+
+  const attendAptMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.attend(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      toast.success("Comparecimento registrado");
+    },
+    onError: () => toast.error("Erro ao registrar comparecimento"),
   });
 
   // Build card list: patients + couples with record counts
