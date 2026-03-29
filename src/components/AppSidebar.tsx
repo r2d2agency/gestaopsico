@@ -54,11 +54,13 @@ export default function AppSidebar() {
   const isPatient = user?.role === "patient";
   const role = user?.role || "professional";
 
+  const userRoles = role === "secretary_financial" ? ["secretary_financial", "secretary", "financial"] : [role];
+
   const navItems = isPatient
     ? patientNav
     : allNav.filter((item) => {
         if (!item.roles) return true;
-        return item.roles.includes(role);
+        return userRoles.some(r => item.roles!.includes(r));
       });
 
   const handleLogout = () => {
@@ -72,6 +74,7 @@ export default function AppSidebar() {
     psychologist: "Psicólogo(a)",
     secretary: "Secretária",
     financial: "Financeiro",
+    secretary_financial: "Secretária + Financeiro",
     superadmin: "Superadmin",
     patient: "Portal do Paciente",
   };
