@@ -20,10 +20,6 @@ export default function PatientAppLayout() {
     { to: `${basePath}/configuracoes`, icon: Settings, label: "Config" },
   ];
 
-export default function PatientAppLayout() {
-  const { user } = useAuth();
-  const location = useLocation();
-
   const { data: dashboard } = useQuery({
     queryKey: ["patient-dashboard"],
     queryFn: () => patientPortalApi.dashboard(),
@@ -53,7 +49,6 @@ export default function PatientAppLayout() {
       }
       link.href = clinicLogo;
 
-      // Apple touch icon
       let appleLink = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
       if (!appleLink) {
         appleLink = document.createElement("link");
@@ -63,16 +58,15 @@ export default function PatientAppLayout() {
       appleLink.href = clinicLogo;
     }
 
-    // Update page title and theme-color
     if (clinicName) {
       document.title = `${clinicName} - Portal do Paciente`;
     }
     if (primaryColor) {
-      let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
+      const meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
       if (meta) meta.content = primaryColor;
     }
     if (clinicName) {
-      let metaApple = document.querySelector("meta[name='apple-mobile-web-app-title']") as HTMLMetaElement;
+      const metaApple = document.querySelector("meta[name='apple-mobile-web-app-title']") as HTMLMetaElement;
       if (metaApple) metaApple.content = clinicName;
     }
 
@@ -85,7 +79,6 @@ export default function PatientAppLayout() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Top bar - clinic/psychologist branding */}
       <header
         className="sticky top-0 z-30 text-primary-foreground px-4 py-3 flex items-center justify-between safe-top"
         style={{
@@ -114,12 +107,10 @@ export default function PatientAppLayout() {
         </div>
       </header>
 
-      {/* Main content area */}
       <main className="flex-1 overflow-y-auto pb-20">
         <Outlet />
       </main>
 
-      {/* Bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border safe-bottom">
         <div className="flex items-center justify-around h-16 max-w-md mx-auto">
           {tabs.map(tab => {
