@@ -2,13 +2,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
-  UserCheck, Heart, Ban, Filter, Users
+  UserCheck, Heart, Ban, Filter, Users, CalendarIcon, Repeat, Briefcase,
+  Plane, Stethoscope, GraduationCap, Home, Coffee
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAppointments } from "@/hooks/useAppointments";
-import { format } from "date-fns";
+import { format, addDays, eachDayOfInterval, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { consultasApi, casaisApi, apiRequest, type Consulta, type Casal } from "@/lib/api";
@@ -21,6 +22,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
