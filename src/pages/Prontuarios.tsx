@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { prontuariosApi, pacientesApi, consultasApi, type Prontuario } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ import { motion } from "framer-motion";
 
 export default function Prontuarios() {
   const queryClient = useQueryClient();
-  const [filterPatientId, setFilterPatientId] = useState<string>("");
+  const [searchParams] = useSearchParams();
+  const [filterPatientId, setFilterPatientId] = useState<string>(searchParams.get("patientId") || "");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<Prontuario | null>(null);
