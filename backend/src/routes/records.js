@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
-// GET /api/prontuarios (por paciente via query)
+// GET /api/prontuarios (por paciente via query ou todos)
 router.get('/', async (req, res) => {
   try {
     const { patientId, coupleId } = req.query;
@@ -19,7 +19,8 @@ router.get('/', async (req, res) => {
       where,
       include: {
         patient: { select: { id: true, name: true } },
-        couple: { select: { id: true, name: true } }
+        couple: { select: { id: true, name: true } },
+        appointment: { select: { id: true, date: true, time: true, type: true } }
       },
       orderBy: { date: 'desc' }
     });

@@ -110,7 +110,14 @@ export const casaisApi = {
 
 // Prontuários
 export const prontuariosApi = {
-  list: (pacienteId: string) => apiRequest<Prontuario[]>(`/pacientes/${pacienteId}/prontuarios`),
+  listAll: (params?: { patientId?: string; coupleId?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.patientId) searchParams.set("patientId", params.patientId);
+    if (params?.coupleId) searchParams.set("coupleId", params.coupleId);
+    const qs = searchParams.toString();
+    return apiRequest<Prontuario[]>(`/prontuarios${qs ? `?${qs}` : ""}`);
+  },
+  list: (pacienteId: string) => apiRequest<Prontuario[]>(`/prontuarios?patientId=${pacienteId}`),
   get: (id: string) => apiRequest<Prontuario>(`/prontuarios/${id}`),
   create: (data: Partial<Prontuario>) => apiRequest<Prontuario>("/prontuarios", { method: "POST", body: data }),
   update: (id: string, data: Partial<Prontuario>) => apiRequest<Prontuario>(`/prontuarios/${id}`, { method: "PUT", body: data }),
@@ -204,12 +211,16 @@ export interface Prontuario {
   id: string;
   patient_id?: string;
   couple_id?: string;
+  appointment_id?: string;
   type: "individual" | "couple";
   date: string;
   content: string;
   ai_content?: string;
   professional_id: string;
   created_at: string;
+  patient?: { id: string; name: string };
+  couple?: { id: string; name: string };
+  appointment?: { id: string; date: string; time: string; type: string };
 }
 
 export interface Pagamento {
