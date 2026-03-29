@@ -23,7 +23,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer,
 } from "recharts";
 
 const weeklyData = [
