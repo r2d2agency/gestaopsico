@@ -48,6 +48,7 @@ function getQuickActions(basePath: string) {
 export default function PatientHome() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { basePath } = usePortalSlug();
   const [quickMood, setQuickMood] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
