@@ -122,6 +122,16 @@ export const financeiroApi = {
     apiRequest<Pagamento>(`/financeiro/${id}`, { method: "PUT", body: data }),
 };
 
+// Invoices / Faturas
+export const invoicesApi = {
+  patientSessions: (patientId: string, params?: Record<string, string>) =>
+    apiRequest<any[]>(`/invoices/patient-sessions/${patientId}${params ? `?${new URLSearchParams(params)}` : ""}`),
+  generate: (data: { patientId: string; sessionIds: string[]; description?: string; dueDate?: string; paymentMethod?: string }) =>
+    apiRequest<any>("/invoices/generate", { method: "POST", body: data }),
+  monthlyReport: (month?: string) =>
+    apiRequest<any>(`/invoices/monthly-report${month ? `?month=${month}` : ""}`),
+};
+
 // Dashboard
 export const dashboardApi = {
   summary: () => apiRequest<DashboardSummary>("/dashboard/summary"),
