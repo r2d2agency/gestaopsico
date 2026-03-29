@@ -147,8 +147,14 @@ router.get('/', async (req, res) => {
 // GET /api/pacientes/:id
 router.get('/:id', async (req, res) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    // Only restrict to own patients for professionals
+    if (!['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      whereClause.professionalId = req.userId;
+    }
     const patient = await prisma.patient.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: whereClause,
       include: { appointments: { orderBy: { date: 'desc' }, take: 10 } }
     });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
@@ -195,7 +201,13 @@ router.get('/validate-cpf/:cpf', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const data = mapInput(req.body);
-    data.professionalId = req.userId;
+    // Admin can assign to a specific professional; otherwise defaults to self
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } });
+    if (req.body.professional_id && ['superadmin', 'admin', 'secretary', 'secretary_financial'].includes(user?.role)) {
+      data.professionalId = req.body.professional_id;
+    } else {
+      data.professionalId = req.userId;
+    }
     if (!data.name) return res.status(400).json({ error: 'Nome é obrigatório' });
     if (data.cpf && !isValidCPF(data.cpf)) return res.status(400).json({ error: 'CPF inválido' });
     const patient = await prisma.patient.create({ data });
