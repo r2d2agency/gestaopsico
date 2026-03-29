@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, ClipboardList, Plus, Send, Trash2, Loader2, FileText, Download, Upload, BookOpen, BarChart3, Eye, CheckCircle2, Clock3, Sparkles } from "lucide-react";
+import { Heart, ClipboardList, Plus, Send, Trash2, Loader2, FileText, Download, Upload, BookOpen, BarChart3, Eye, CheckCircle2, Clock3, Sparkles, RefreshCw, ExternalLink, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import { usePatients } from "@/hooks/usePatients";
 import { casaisApi, type Casal } from "@/lib/api";
 
 export default function TestManager() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState("meus");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -118,6 +120,24 @@ export default function TestManager() {
       setAssignOpen(false);
       setSelectedPatient("");
       setSelectedCouple("");
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: (id: string) => testsApi.deleteAssignment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-assignments"] });
+      toast({ title: "Envio removido" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: (id: string) => testsApi.resendAssignment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-assignments"] });
+      toast({ title: "Teste reenviado!" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -281,17 +301,29 @@ export default function TestManager() {
                 <CardTitle className="flex items-center gap-2 text-base"><Clock3 className="w-4 h-4 text-warning" />Pendentes ({pendingAssignments.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {pendingAssignments.length === 0 ? (
+              {pendingAssignments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum teste pendente.</p>
                 ) : pendingAssignments.map((assignment) => (
                   <div key={assignment.id} className="p-3 rounded-xl border border-border bg-card flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{assignment.template?.title}</p>
-                      <p className="text-xs text-muted-foreground">{assignment.patient?.name || "Paciente"} · enviado em {formatDate(assignment.assignedAt)}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                        <User className="w-4 h-4 text-warning" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{assignment.template?.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{assignment.patient?.name || "Paciente"}</span> · enviado em {formatDate(assignment.assignedAt)}
+                        </p>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => openResults(assignment.id)}>
-                      <Eye className="w-4 h-4 mr-1" />Ver
-                    </Button>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => resendMutation.mutate(assignment.id)} disabled={resendMutation.isPending}>
+                        <RefreshCw className="w-3 h-3" />Reenviar
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={() => deleteAssignmentMutation.mutate(assignment.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -306,16 +338,28 @@ export default function TestManager() {
                   <p className="text-sm text-muted-foreground">Nenhum teste respondido ainda.</p>
                 ) : completedAssignments.map((assignment) => (
                   <div key={assignment.id} className="p-3 rounded-xl border border-border bg-card flex items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-foreground">{assignment.template?.title}</p>
-                        {assignment.classification && <Badge variant="outline">{assignment.classification}</Badge>}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-4 h-4 text-success" />
                       </div>
-                      <p className="text-xs text-muted-foreground">{assignment.patient?.name || "Paciente"} · respondido em {formatDate(assignment.completedAt)}</p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-foreground">{assignment.template?.title}</p>
+                          {assignment.classification && <Badge variant="outline" className="text-[10px]">{assignment.classification}</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{assignment.patient?.name || "Paciente"}</span> · respondido em {formatDate(assignment.completedAt)}
+                        </p>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => openResults(assignment.id)}>
-                      <Eye className="w-4 h-4 mr-1" />Resultado
-                    </Button>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openResults(assignment.id)}>
+                        <Eye className="w-3 h-3" />Resultado
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => navigate(`/prontuario?patientId=${assignment.patient?.id}`)}>
+                        <ExternalLink className="w-3 h-3" />Prontuário
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </CardContent>

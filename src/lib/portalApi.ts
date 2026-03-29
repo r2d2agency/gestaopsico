@@ -148,6 +148,10 @@ export const testsApi = {
     apiRequest("/tests/assign", { method: "POST", body: { templateId, patientId, coupleId } }),
   listAssignments: () =>
     apiRequest<TestAssignment[]>("/tests/assignments"),
+  deleteAssignment: (id: string) =>
+    apiRequest(`/tests/assignments/${id}`, { method: "DELETE" }),
+  resendAssignment: (id: string) =>
+    apiRequest(`/tests/assignments/${id}/resend`, { method: "POST" }),
   getResults: (assignmentId: string) =>
     apiRequest<TestAssignment>(`/tests/assignments/${assignmentId}/results`),
   updateClinicalNote: (assignmentId: string, data: { professionalAssessment?: string; professionalConclusion?: string }) =>
