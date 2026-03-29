@@ -236,6 +236,136 @@ export default function Configuracoes() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Team Management */}
+      {isAdmin && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Equipe</CardTitle>
+                  <CardDescription>Gerencie psicólogos, secretárias e financeiros da sua organização</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setTeamDialogOpen(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />Novo Membro
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!teamData?.data?.length ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhum membro na equipe ainda</p>
+              ) : (
+                <div className="space-y-2">
+                  {teamData.data.map((member: any) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">
+                            {member.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground">{member.name}</p>
+                            <Badge variant="outline" className="text-xs">{roleLabels[member.role] || member.role}</Badge>
+                            <Badge variant={member.status === "active" ? "default" : "secondary"} className="text-xs">
+                              {member.status === "active" ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {member.email}
+                            {member.crp && <> · <span className="text-primary">{member.crp}</span></>}
+                            {member.specialty && <> · {member.specialty}</>}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleTeamStatus.mutate({ id: member.id, status: member.status === "active" ? "inactive" : "active" })}
+                      >
+                        {member.status === "active" ? <PowerOff className="w-4 h-4 text-destructive" /> : <Power className="w-4 h-4 text-green-600" />}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Create Team Member Dialog */}
+          <Dialog open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
+            <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
+              <DialogHeader>
+                <DialogTitle>Novo Membro da Equipe</DialogTitle>
+                <DialogDescription>Adicione um psicólogo, secretária ou financeiro à sua organização</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nome *</Label>
+                    <Input value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} placeholder="Nome completo" />
+                  </div>
+                  <div>
+                    <Label>Email *</Label>
+                    <Input type="email" value={teamForm.email} onChange={(e) => setTeamForm({ ...teamForm, email: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Senha *</Label>
+                    <Input type="password" value={teamForm.password} onChange={(e) => setTeamForm({ ...teamForm, password: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Perfil *</Label>
+                    <Select value={teamForm.role} onValueChange={(v) => setTeamForm({ ...teamForm, role: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Psicólogo(a)</SelectItem>
+                        <SelectItem value="secretary">Secretária</SelectItem>
+                        <SelectItem value="financial">Financeiro</SelectItem>
+                        <SelectItem value="secretary_financial">Secretária + Financeiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {teamForm.role === "professional" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>CRP</Label>
+                      <Input value={teamForm.crp} onChange={(e) => setTeamForm({ ...teamForm, crp: e.target.value })} placeholder="CRP 06/123456" />
+                    </div>
+                    <div>
+                      <Label>Especialidade</Label>
+                      <Input value={teamForm.specialty} onChange={(e) => setTeamForm({ ...teamForm, specialty: e.target.value })} placeholder="TCC, Psicanálise..." />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <Label>Telefone</Label>
+                  <Input value={teamForm.phone} onChange={(e) => setTeamForm({ ...teamForm, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setTeamDialogOpen(false)}>Cancelar</Button>
+                <Button
+                  onClick={() => createTeamMember.mutate({
+                    ...teamForm,
+                    crp: teamForm.crp || undefined,
+                    phone: teamForm.phone || undefined,
+                    specialty: teamForm.specialty || undefined,
+                  })}
+                  disabled={createTeamMember.isPending || !teamForm.name || !teamForm.email || !teamForm.password}
+                >
+                  {createTeamMember.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Criar Membro
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </motion.div>
+      )}
     </div>
   );
 }
