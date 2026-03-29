@@ -36,6 +36,9 @@ export interface AdminUser {
   status: string;
   organizationId?: string;
   organization?: { name: string; slug: string };
+  crp?: string;
+  phone?: string;
+  specialty?: string;
   createdAt: string;
   _count?: { patients: number; appointments: number };
 }
