@@ -59,14 +59,24 @@ router.get('/:id', async (req, res) => {
 // POST /api/consultas
 router.post('/', async (req, res) => {
   try {
-    const data = { ...req.body, professionalId: req.userId };
+    // Sanitize: convert empty strings to null
+    const raw = Object.fromEntries(
+      Object.entries(req.body).map(([k, v]) => [k, v === '' ? null : v])
+    );
+    const data = { ...raw, professionalId: raw.professionalId || req.userId };
+    // Remove fields that shouldn't be passed directly
+    delete data.patient;
+    delete data.couple;
     if (data.date) data.date = new Date(String(data.date) + (String(data.date).includes('T') ? '' : 'T00:00:00.000Z'));
+    if (data.value) data.value = Number(data.value) || 0;
+    if (data.duration) data.duration = Number(data.duration) || 50;
     const appointment = await prisma.appointment.create({
       data,
       include: { patient: { select: { id: true, name: true } } }
     });
     res.status(201).json(appointment);
   } catch (err) {
+    console.error('Erro ao criar consulta:', err);
     res.status(500).json({ error: 'Erro ao criar consulta', details: err.message });
   }
 });
