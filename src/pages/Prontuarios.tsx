@@ -590,7 +590,7 @@ export default function Prontuarios() {
                     </div>
                     <div>
                       <Label>Status</Label>
-                      <Select value={editingApt.status || "scheduled"} onValueChange={v => setEditingApt({ ...editingApt, status: v })}>
+                      <Select value={editingApt.status || "scheduled"} onValueChange={v => setEditingApt({ ...editingApt, status: v as any })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="scheduled">Agendada</SelectItem>
@@ -601,7 +601,7 @@ export default function Prontuarios() {
                     </div>
                     <div>
                       <Label>Modalidade</Label>
-                      <Select value={editingApt.mode || "in_person"} onValueChange={v => setEditingApt({ ...editingApt, mode: v })}>
+                      <Select value={editingApt.mode || "in_person"} onValueChange={v => setEditingApt({ ...editingApt, mode: v as any })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="in_person">Presencial</SelectItem>
