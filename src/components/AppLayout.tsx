@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import { Bell, Search, Link2 } from "lucide-react";
@@ -28,6 +29,20 @@ export default function AppLayout() {
   const portalUrl = portalSlug
     ? `${window.location.origin}/p/${portalSlug}`
     : null;
+
+  // Apply org colors to the system
+  useEffect(() => {
+    if (orgSettings?.primaryColor) {
+      document.documentElement.style.setProperty("--primary", orgSettings.primaryColor);
+    }
+    if (orgSettings?.accentColor) {
+      document.documentElement.style.setProperty("--accent", orgSettings.accentColor);
+    }
+    return () => {
+      document.documentElement.style.removeProperty("--primary");
+      document.documentElement.style.removeProperty("--accent");
+    };
+  }, [orgSettings?.primaryColor, orgSettings?.accentColor]);
 
   const copyPortalLink = () => {
     if (portalUrl) {
