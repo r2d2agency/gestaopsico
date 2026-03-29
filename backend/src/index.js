@@ -12,6 +12,7 @@ const financialRoutes = require('./routes/financial');
 const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/aiAgents');
+const setupRoutes = require('./routes/setup');
 
 const prisma = new PrismaClient();
 const app = express();
