@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Smile, Frown, Meh, Send, Loader2,
   ClipboardList, Calendar, CreditCard, Heart,
-  Sparkles
+  Sparkles, Download, X
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,7 +46,49 @@ export default function PatientHome() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [quickMood, setQuickMood] = useState<number | null>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const firstName = user?.name?.split(" ")[0] || "Paciente";
+
+  // PWA install prompt
+  useEffect(() => {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+    const dismissed = sessionStorage.getItem("install_dismissed");
+    if (isStandalone || dismissed) return;
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // Show banner anyway for iOS (no beforeinstallprompt)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && !isStandalone) {
+      setShowInstallBanner(true);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      if (result.outcome === "accepted") {
+        toast({ title: "App instalado! 🎉" });
+      }
+      setDeferredPrompt(null);
+    }
+    setShowInstallBanner(false);
+    sessionStorage.setItem("install_dismissed", "1");
+  };
+
+  const dismissBanner = () => {
+    setShowInstallBanner(false);
+    sessionStorage.setItem("install_dismissed", "1");
+  };
 
   const { data } = useQuery({
     queryKey: ["patient-dashboard"],
@@ -67,6 +109,36 @@ export default function PatientHome() {
 
   return (
     <div className="px-4 py-5 space-y-5 max-w-md mx-auto">
+      {/* Install Banner */}
+      <AnimatePresence>
+        {showInstallBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
+              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                <Download className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground">Instale o app no seu celular</p>
+                <p className="text-[10px] text-muted-foreground">Acesse mais rápido, sem abrir o navegador</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button size="sm" variant="default" className="h-7 text-xs px-3" onClick={handleInstallClick}>
+                  {deferredPrompt ? "Instalar" : "Como instalar"}
+                </Button>
+                <button onClick={dismissBanner} className="p-1 rounded-full hover:bg-muted">
+                  <X className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Welcome */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-xl font-display font-bold text-foreground">

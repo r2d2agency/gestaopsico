@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -6,6 +6,7 @@ import { Eye, EyeOff, LogIn, Loader2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
@@ -24,9 +25,15 @@ export default function PortalLogin() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  // Load saved credentials
+  const savedCreds = localStorage.getItem(`portal_remember_${slug}`);
+  const parsed = savedCreds ? JSON.parse(savedCreds) : null;
+
+  const [email, setEmail] = useState(parsed?.email || "");
+  const [password, setPassword] = useState(parsed?.password || "");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!!parsed);
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: branding, isLoading: brandingLoading, error } = useQuery<PortalBranding>({
@@ -36,11 +43,27 @@ export default function PortalLogin() {
     retry: false,
   });
 
+  // Auto-login if remember-me
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user && user.role === "patient") {
+      navigate("/portal", { replace: true });
+    }
+  }, [user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const loggedUser = await login(email, password);
+
+      // Save or clear remember-me
+      if (rememberMe) {
+        localStorage.setItem(`portal_remember_${slug}`, JSON.stringify({ email, password }));
+      } else {
+        localStorage.removeItem(`portal_remember_${slug}`);
+      }
+
       if (loggedUser.role === "patient") {
         navigate("/portal");
       } else {
@@ -161,6 +184,19 @@ export default function PortalLogin() {
                 </button>
               </div>
             </div>
+
+            {/* Remember me */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(!!checked)}
+              />
+              <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                Lembrar-me neste dispositivo
+              </Label>
+            </div>
+
             <Button
               type="submit"
               className="w-full"
