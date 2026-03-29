@@ -66,17 +66,12 @@ export default function PatientMood() {
   };
 
   const MoodIcon = MOODS[mood - 1]?.icon || Meh;
-  const todayEntry = history.find(e => {
-    const d = new Date(e.date);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
-  });
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="text-center">
-        <h1 className="text-2xl font-display font-bold text-foreground">Como você está hoje?</h1>
-        <p className="text-muted-foreground mt-1">Registre seu humor e emoções diariamente</p>
+        <h1 className="text-2xl font-display font-bold text-foreground">Como você está agora?</h1>
+        <p className="text-muted-foreground mt-1">Registre seu humor a qualquer momento do dia</p>
       </div>
 
       {/* Mood Selection */}
@@ -182,7 +177,7 @@ export default function PatientMood() {
         size="lg"
       >
         {submitMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-        {todayEntry ? "Atualizar Registro" : "Registrar Humor"}
+        Registrar Humor
       </Button>
 
       {/* History */}
@@ -190,16 +185,17 @@ export default function PatientMood() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
           <h2 className="font-display font-bold text-foreground mb-3">Últimos registros</h2>
           <div className="space-y-2">
-            {history.slice(0, 7).map(entry => {
+            {history.slice(0, 10).map(entry => {
               const m = MOODS[entry.mood - 1];
               const Icon = m?.icon || Meh;
+              const entryDate = new Date(entry.date);
               return (
                 <div key={entry.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
                   <Icon className={`w-6 h-6 ${m?.color}`} />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">{m?.label}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(entry.date).toLocaleDateString("pt-BR")}
+                      {entryDate.toLocaleDateString("pt-BR")} às {entryDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       {entry.emotions?.length ? ` · ${entry.emotions.join(", ")}` : ""}
                     </p>
                   </div>
