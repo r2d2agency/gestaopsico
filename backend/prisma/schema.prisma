@@ -70,6 +70,7 @@ model OrganizationSetting {
   businessPhone  String?      @map("business_phone") @db.VarChar(20)
   businessEmail  String?      @map("business_email") @db.VarChar(255)
   businessAddress String?     @map("business_address")
+  allowPatientBooking Boolean @default(true) @map("allow_patient_booking")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
