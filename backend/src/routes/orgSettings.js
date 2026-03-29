@@ -28,6 +28,7 @@ router.get('/portal/:slug', async (req, res) => {
       primaryColor: settings?.primaryColor,
       secondaryColor: settings?.secondaryColor,
       accentColor: settings?.accentColor,
+      timezone: settings?.timezone || 'America/Sao_Paulo',
       portalSlug: org.portalSlug,
     });
   } catch (err) {
