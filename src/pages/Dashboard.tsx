@@ -174,16 +174,18 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="flex items-center justify-center">
               <div className="h-[200px] w-full flex items-center">
-                <ResponsiveContainer width="60%" height="100%">
-                  <PieChart>
-                    <Pie data={typeData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
-                      {typeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="w-[60%] h-full">
+                  <ChartContainer config={chartConfig} className="h-full w-full">
+                    <PieChart>
+                      <Pie data={typeData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
+                        {typeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </div>
                 <div className="space-y-2">
                   {typeData.map((t) => (
                     <div key={t.name} className="flex items-center gap-2 text-xs">
