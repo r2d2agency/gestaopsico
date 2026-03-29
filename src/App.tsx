@@ -40,6 +40,7 @@ import NotFound from "./pages/NotFound";
 import HelpPage from "./pages/HelpPage";
 import PortalLogin from "./pages/PortalLogin";
 import Mensagens from "./pages/Mensagens";
+import Prontuarios from "./pages/Prontuarios";
 
 const queryClient = new QueryClient();
 
@@ -89,7 +90,7 @@ const App = () => (
               <Route path="/testes" element={<TestManager />} />
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/consultas" element={<Dashboard />} />
-              <Route path="/prontuarios" element={<Dashboard />} />
+              <Route path="/prontuarios" element={<Prontuarios />} />
               <Route path="/relatorios" element={<Dashboard />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/ajuda" element={<HelpPage />} />
