@@ -194,17 +194,17 @@ export default function Configuracoes() {
         </Card>
       </motion.div>
 
-      {/* Org Settings - only for admin+ */}
-      {isAdmin && (
+      {/* Org Settings - visible to professionals+ */}
+      {isProfessional && (
         <div className="flex items-end justify-end">
           <Button className="gap-2" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Configurações da Clínica
+            Salvar Configurações
           </Button>
         </div>
       )}
 
-      {isAdmin && (
+      {isProfessional && (
       <div className="grid gap-6 md:grid-cols-2">
         {/* Identidade Visual */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
