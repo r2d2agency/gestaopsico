@@ -22,6 +22,7 @@ const testsRoutes = require('./routes/tests');
 const orgSettingsRoutes = require('./routes/orgSettings');
 const patientPortalRoutes = require('./routes/patientPortal');
 const invoicesRoutes = require('./routes/invoices');
+const teamRoutes = require('./routes/team');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -64,6 +65,7 @@ app.use('/api/tests', testsRoutes);
 app.use('/api/org-settings', orgSettingsRoutes);
 app.use('/api/patient-portal', patientPortalRoutes);
 app.use('/api/invoices', invoicesRoutes);
+app.use('/api/team', teamRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 PsicoGest API rodando na porta ${PORT}`);
