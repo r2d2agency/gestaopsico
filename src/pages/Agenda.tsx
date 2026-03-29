@@ -232,6 +232,8 @@ export default function Agenda() {
     setBlockStartDate(undefined);
     setBlockEndDate(undefined);
   };
+
+  const confirmed = appointments.filter((a: any) => a.status === "scheduled" || a.status === "completed").length;
   const pending = appointments.filter((a: any) => a.status === "pending").length;
   const cancelled = appointments.filter((a: any) => a.status === "cancelled").length;
   const blocked = appointments.filter((a: any) => a.status === "blocked" || a.type === "blocked").length;
