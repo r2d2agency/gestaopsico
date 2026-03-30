@@ -5,7 +5,7 @@ import {
   BarChart3, PieChart, Activity, Target, Clock,
   UserCheck, UserX, ArrowUpRight, ArrowDownRight,
   Download, Filter, CalendarDays, Wallet, AlertCircle,
-  CheckCircle, XCircle, FileText,
+  CheckCircle, XCircle, FileText, Heart,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -606,6 +606,3 @@ function generateInsights(m: any) {
 
   return insights;
 }
-
-// Missing import for Heart
-import { Heart } from "lucide-react";
