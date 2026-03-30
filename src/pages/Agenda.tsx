@@ -139,6 +139,9 @@ export default function Agenda() {
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("today");
   const [pipelineCustomStart, setPipelineCustomStart] = useState<Date | undefined>(undefined);
   const [pipelineCustomEnd, setPipelineCustomEnd] = useState<Date | undefined>(undefined);
+  const [viewApt, setViewApt] = useState<any>(null);
+  const [editApt, setEditApt] = useState<Partial<Consulta> | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
@@ -241,6 +244,56 @@ export default function Agenda() {
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Consulta> }) => consultasApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta atualizada!" });
+      setViewApt(null);
+      setEditMode(false);
+      setEditApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.cancel(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta cancelada!" });
+      setViewApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const openViewDialog = (apt: any) => {
+    setViewApt(apt);
+    setEditMode(false);
+    setEditApt(null);
+  };
+
+  const startEditing = () => {
+    if (!viewApt) return;
+    const dateVal = viewApt.date ? getDateKey(viewApt.date) : "";
+    setEditApt({
+      patient_id: viewApt.patientId || viewApt.patient_id || "",
+      type: viewApt.type || "individual",
+      date: dateVal,
+      time: viewApt.time || "",
+      duration: viewApt.duration || 50,
+      value: viewApt.value || 0,
+      mode: viewApt.mode || "in_person",
+      notes: viewApt.notes || "",
+      status: viewApt.status || "scheduled",
+    });
+    setEditMode(true);
+  };
+
+  const handleEditSave = () => {
+    if (!viewApt || !editApt) return;
+    updateMutation.mutate({ id: viewApt.id, data: editApt });
+  };
 
   const navigate = (dir: number) => {
     if (viewMode === "day") setSelectedDate(prev => addDays(prev, dir));
@@ -484,6 +537,7 @@ export default function Agenda() {
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
           onCreateAtSlot={openScheduleDialog}
+          onSelectApt={openViewDialog}
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
@@ -502,6 +556,7 @@ export default function Agenda() {
           customEnd={pipelineCustomEnd}
           onCustomStartChange={setPipelineCustomStart}
           onCustomEndChange={setPipelineCustomEnd}
+          onSelectApt={openViewDialog}
         />
       ) : (
         <DayView
@@ -509,6 +564,7 @@ export default function Agenda() {
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
           onCreateAtSlot={(time) => openScheduleDialog(selectedDate, time)}
+          onSelectApt={openViewDialog}
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
@@ -747,11 +803,143 @@ export default function Agenda() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View/Edit Appointment Dialog */}
+      <Dialog open={!!viewApt} onOpenChange={(open) => { if (!open) { setViewApt(null); setEditMode(false); setEditApt(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editMode ? "Editar Consulta" : "Detalhes da Consulta"}</DialogTitle>
+            <DialogDescription>
+              {editMode ? "Altere os dados e salve" : "Visualize, edite ou cancele esta consulta"}
+            </DialogDescription>
+          </DialogHeader>
+          {viewApt && !editMode && (
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Paciente / Casal</p>
+                  <p className="text-sm font-medium text-foreground">{getAppointmentDisplayName(viewApt)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Tipo</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.type === "couple" ? "Casal" : viewApt.type === "blocked" ? "Bloqueio" : "Individual"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Data</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {(() => { try { const dk = getDateKey(viewApt.date); const [y,m,d] = dk.split("-").map(Number); return format(new Date(y,m-1,d), "dd/MM/yyyy"); } catch { return "—"; } })()}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Horário</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.time || "—"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Duração</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.duration || 50}min</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Modalidade</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.mode === "video" ? "Online" : "Presencial"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant="outline" className="text-xs">{statusLabels[viewApt.status] || viewApt.status}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Valor</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.value ? `R$ ${Number(viewApt.value).toFixed(2)}` : "—"}</p>
+                </div>
+              </div>
+              {viewApt.notes && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Observações</p>
+                  <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{viewApt.notes}</p>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                {viewApt.status !== "cancelled" && viewApt.type !== "blocked" && (
+                  <Button variant="destructive" size="sm" onClick={() => cancelMutation.mutate(viewApt.id)} disabled={cancelMutation.isPending}>
+                    {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    <Ban className="w-4 h-4 mr-1" />Cancelar Consulta
+                  </Button>
+                )}
+                {viewApt.type !== "blocked" && (
+                  <Button size="sm" onClick={startEditing}>
+                    Editar / Reagendar
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          )}
+          {viewApt && editMode && editApt && (
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data *</Label>
+                  <Input type="date" value={editApt.date || ""} onChange={e => setEditApt(prev => prev ? { ...prev, date: e.target.value } : prev)} />
+                </div>
+                <div>
+                  <Label>Horário *</Label>
+                  <Input type="time" value={editApt.time || ""} onChange={e => setEditApt(prev => prev ? { ...prev, time: e.target.value } : prev)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Duração (min)</Label>
+                  <Input type="number" value={editApt.duration || 50} onChange={e => setEditApt(prev => prev ? { ...prev, duration: Number(e.target.value) } : prev)} />
+                </div>
+                <div>
+                  <Label>Valor (R$)</Label>
+                  <Input type="number" value={editApt.value || 0} onChange={e => setEditApt(prev => prev ? { ...prev, value: Number(e.target.value) } : prev)} />
+                </div>
+                <div>
+                  <Label>Modalidade</Label>
+                  <Select value={editApt.mode || "in_person"} onValueChange={v => setEditApt(prev => prev ? { ...prev, mode: v as "in_person" | "video" } : prev)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_person">Presencial</SelectItem>
+                      <SelectItem value="video">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={editApt.status || "scheduled"} onValueChange={v => setEditApt(prev => prev ? { ...prev, status: v as Consulta["status"] } : prev)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled">Agendada</SelectItem>
+                    <SelectItem value="confirmed">Confirmada</SelectItem>
+                    <SelectItem value="completed">Concluída</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Textarea value={editApt.notes || ""} onChange={e => setEditApt(prev => prev ? { ...prev, notes: e.target.value } : prev)} placeholder="Notas..." />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setEditMode(false); setEditApt(null); }}>Voltar</Button>
+                <Button onClick={handleEditSave} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors, pipelineFilter, onFilterChange, customStart, customEnd, onCustomStartChange, onCustomEndChange }: {
+function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors, pipelineFilter, onFilterChange, customStart, customEnd, onCustomStartChange, onCustomEndChange, onSelectApt }: {
   selectedDate: Date;
   appointments: any[];
   professionalsById: Map<string, any>;
@@ -763,6 +951,7 @@ function PipelineView({ selectedDate, appointments, professionalsById, professio
   customEnd?: Date;
   onCustomStartChange: (d: Date | undefined) => void;
   onCustomEndChange: (d: Date | undefined) => void;
+  onSelectApt: (apt: any) => void;
 }) {
   const groupedByDate = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -859,7 +1048,7 @@ function PipelineView({ selectedDate, appointments, professionalsById, professio
                     : null;
 
                   return (
-                    <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                    <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => onSelectApt(apt)}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-16 shrink-0">
                           <p className="text-sm font-semibold text-foreground">{apt.time}</p>
@@ -979,12 +1168,13 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate, professionalColorMa
   );
 }
 
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAtSlot, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAtSlot, onSelectApt, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
   onCreateAtSlot: (date: Date, time: string) => void;
+  onSelectApt: (apt: any) => void;
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
@@ -1088,7 +1278,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAt
                       return (
                         <div
                           key={j}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => { e.stopPropagation(); onSelectApt(apt); }}
                           className={cn(
                             "text-[10px] px-1.5 py-1 rounded border-l-2 mb-0.5 truncate cursor-pointer hover:opacity-80",
                             proColor
@@ -1113,11 +1303,12 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAt
   );
 }
 
-function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, businessHours, professionalColorMap, showProfessionalColors }: {
+function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, onSelectApt, businessHours, professionalColorMap, showProfessionalColors }: {
   selectedDate: Date;
   appointments: any[];
   onAttend: (id: string) => void;
   onCreateAtSlot: (time: string) => void;
+  onSelectApt: (apt: any) => void;
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
@@ -1176,7 +1367,7 @@ function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, busines
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); onSelectApt(apt); }}
                       className={cn(
                         "flex items-center justify-between p-2.5 rounded-lg border-l-3 transition-shadow hover:shadow-md",
                         proColor
