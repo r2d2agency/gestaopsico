@@ -863,29 +863,51 @@ export default function Agenda() {
                   <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{viewApt.notes}</p>
                 </div>
               )}
-              <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
-                {viewApt.status !== "cancelled" && viewApt.type !== "blocked" && (
-                  <Button variant="destructive" size="sm" onClick={() => cancelMutation.mutate(viewApt.id)} disabled={cancelMutation.isPending}>
-                    {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    <Ban className="w-4 h-4 mr-1" />Cancelar Consulta
+              {viewApt.type !== "blocked" && viewApt.status !== "cancelled" && (
+                <div className="flex flex-col gap-2 mt-4">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => {
+                      const patientId = viewApt.patientId || viewApt.patient_id || "";
+                      const appointmentId = viewApt.id || "";
+                      routerNavigate(`/teleatendimento?patientId=${patientId}&appointmentId=${appointmentId}`);
+                      setViewApt(null);
+                    }}
+                  >
+                    <Video className="w-4 h-4" />
+                    Iniciar Teleconsulta
                   </Button>
-                )}
-                {viewApt.type !== "blocked" && viewApt.status !== "cancelled" && (
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => {
-                    const patientId = viewApt.patientId || viewApt.patient_id || "";
-                    const appointmentId = viewApt.id || "";
-                    routerNavigate(`/teleatendimento?patientId=${patientId}&appointmentId=${appointmentId}`);
-                    setViewApt(null);
-                  }}>
-                    <Video className="w-4 h-4" />Iniciar Teleconsulta
-                  </Button>
-                )}
-                {viewApt.type !== "blocked" && (
-                  <Button size="sm" onClick={startEditing}>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button size="sm" variant="outline" onClick={startEditing}>
+                      Editar / Reagendar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => cancelMutation.mutate(viewApt.id)}
+                      disabled={cancelMutation.isPending}
+                    >
+                      {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                      <Ban className="w-4 h-4 mr-1" />
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {viewApt.type !== "blocked" && viewApt.status === "cancelled" && (
+                <DialogFooter className="mt-4">
+                  <Button size="sm" variant="outline" onClick={startEditing}>
                     Editar / Reagendar
                   </Button>
-                )}
-              </DialogFooter>
+                </DialogFooter>
+              )}
+              {viewApt.type === "blocked" && (
+                <DialogFooter className="mt-4">
+                  <Button size="sm" onClick={startEditing}>
+                    Editar
+                  </Button>
+                </DialogFooter>
+              )}
             </div>
           )}
           {viewApt && editMode && editApt && (

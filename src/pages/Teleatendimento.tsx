@@ -52,15 +52,30 @@ export default function Teleatendimento() {
   const micStreamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
 
-  // Auto-open new session dialog from URL params (e.g. from Agenda)
+  // Auto-create session from URL params (e.g. from Agenda) — skip dialogs, go straight to consent
+  const [autoCreating, setAutoCreating] = useState(false);
   useEffect(() => {
     const patientId = searchParams.get("patientId");
-    if (patientId) {
-      setNewSessionData(prev => ({ ...prev, patientId }));
-      setShowNewDialog(true);
+    const appointmentId = searchParams.get("appointmentId");
+    if (patientId && !autoCreating) {
+      setAutoCreating(true);
+      setNewSessionData({ patientId, meetingLink: "" });
       setSearchParams({}, { replace: true });
+      // Auto-create session directly (consent is shown inline on the session screen)
+      telehealthApi.create({
+        patientId,
+        appointmentId: appointmentId || undefined,
+      }).then((session) => {
+        setActiveSession(session);
+        queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+        toast.success("Sessão criada! Inicie a captura de áudio quando estiver pronto.");
+        setAutoCreating(false);
+      }).catch((err) => {
+        toast.error("Erro ao criar sessão: " + (err?.message || "Erro desconhecido"));
+        setAutoCreating(false);
+      });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams]);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["telehealth-sessions"],
