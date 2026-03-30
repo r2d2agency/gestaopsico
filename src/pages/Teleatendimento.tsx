@@ -244,6 +244,34 @@ export default function Teleatendimento() {
     onError: (e: Error) => toast.error(e.message)
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => telehealthApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      toast.success("Sessão excluída!");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { patientId?: string; meetingLink?: string } }) => telehealthApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      setEditSession(null);
+      toast.success("Sessão atualizada!");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const processMutation = useMutation({
+    mutationFn: (id: string) => telehealthApi.process(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      toast.info("Processamento com IA iniciado...");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
   const formatDuration = (s: number) => {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
