@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
-import { Bell, Search, Link2 } from "lucide-react";
+import { Bell, Search, Link2, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { orgSettingsApi } from "@/lib/portalApi";
@@ -14,6 +15,7 @@ import {
 
 export default function AppLayout() {
   const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const initials = user?.name
     ?.split(" ")
     .map((n) => n[0])
@@ -31,7 +33,7 @@ export default function AppLayout() {
     ? `${window.location.origin}/p/${portalSlug}`
     : null;
 
-  // Apply org colors to the entire system (primary, accent, sidebar, rings, etc.)
+  // Apply org colors to the entire system
   useEffect(() => {
     const root = document.documentElement;
     if (orgSettings?.primaryColor) {
@@ -42,18 +44,12 @@ export default function AppLayout() {
         const h = parseFloat(parts[1]);
         const s = parseFloat(parts[2]);
         const l = parseFloat(parts[3]);
-
-        // Primary
         root.style.setProperty("--primary", `${h} ${s}% ${l}%`);
         root.style.setProperty("--ring", `${h} ${s}% ${l}%`);
-
-        // Secondary / accent derived from primary
         root.style.setProperty("--secondary", `${h} ${Math.round(s * 0.45)}% 94%`);
         root.style.setProperty("--secondary-foreground", `${h} ${Math.round(s * 0.8)}% 35%`);
         root.style.setProperty("--accent", `${h} ${Math.round(s * 0.55)}% 91%`);
         root.style.setProperty("--accent-foreground", `${h} ${Math.round(s * 0.8)}% 35%`);
-
-        // Sidebar colors derived from primary hue
         root.style.setProperty("--sidebar-background", `${h} ${Math.round(s * 0.5)}% 12%`);
         root.style.setProperty("--sidebar-foreground", `${h} 10% 85%`);
         root.style.setProperty("--sidebar-primary", `${h} ${s}% ${Math.min(l + 10, 75)}%`);
@@ -91,18 +87,25 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar />
-      <div className="ml-64">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-80">
-            <Search className="w-4 h-4 text-muted-foreground" />
+      <AppSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="md:ml-64">
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border px-3 md:px-6 py-3 flex items-center justify-between gap-2">
+          {/* Mobile hamburger */}
+          <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
+            <Menu className="w-5 h-5" />
+          </Button>
+
+          {/* Search - hidden on small mobile, visible on sm+ */}
+          <div className="hidden sm:flex items-center gap-3 bg-muted rounded-lg px-3 py-2 flex-1 max-w-sm">
+            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <input
               type="text"
               placeholder="Buscar pacientes, consultas..."
               className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
             />
           </div>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-2 md:gap-4 ml-auto">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative" onClick={copyPortalLink}>
@@ -120,18 +123,18 @@ export default function AppLayout() {
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground text-xs font-bold">{initials}</span>
               </div>
-              <div className="hidden sm:block">
+              <div className="hidden lg:block">
                 <p className="text-sm font-medium text-foreground">{user?.name || "Usuário"}</p>
                 <p className="text-xs text-muted-foreground capitalize">{user?.role || "profissional"}</p>
               </div>
             </div>
           </div>
         </header>
-        <main className="p-6">
+        <main className="p-3 md:p-6">
           <Outlet />
         </main>
       </div>
