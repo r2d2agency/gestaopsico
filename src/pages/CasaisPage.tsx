@@ -24,15 +24,12 @@ import { casaisApi, prontuariosApi, type Casal } from "@/lib/api";
 import { usePatients } from "@/hooks/usePatients";
 
 export default function CasaisPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [recordOpen, setRecordOpen] = useState(false);
-  const [selectedCouple, setSelectedCouple] = useState<Casal | null>(null);
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
   const [coupleName, setCoupleName] = useState("");
-  const [recordContent, setRecordContent] = useState("");
-  const [recordType, setRecordType] = useState("couple_session");
 
   const { data: couples = [], isLoading } = useQuery<Casal[]>({
     queryKey: ["couples"],
