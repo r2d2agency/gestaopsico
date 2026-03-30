@@ -115,6 +115,7 @@ function getAppointmentDisplayName(apt: any) {
 type PipelineFilter = "today" | "week" | "month" | "custom";
 
 export default function Agenda() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const role = user?.role || "professional";
   const isSecretary = role === "secretary";
