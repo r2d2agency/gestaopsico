@@ -31,17 +31,52 @@ export default function AppLayout() {
     ? `${window.location.origin}/p/${portalSlug}`
     : null;
 
-  // Apply org colors to the system
+  // Apply org colors to the entire system (primary, accent, sidebar, rings, etc.)
   useEffect(() => {
+    const root = document.documentElement;
     if (orgSettings?.primaryColor) {
-      document.documentElement.style.setProperty("--primary", hexToHsl(orgSettings.primaryColor));
+      const hsl = hexToHsl(orgSettings.primaryColor);
+      if (!hsl) return;
+      const parts = hsl.match(/([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/);
+      if (parts) {
+        const h = parseFloat(parts[1]);
+        const s = parseFloat(parts[2]);
+        const l = parseFloat(parts[3]);
+
+        // Primary
+        root.style.setProperty("--primary", `${h} ${s}% ${l}%`);
+        root.style.setProperty("--ring", `${h} ${s}% ${l}%`);
+
+        // Secondary / accent derived from primary
+        root.style.setProperty("--secondary", `${h} ${Math.round(s * 0.45)}% 94%`);
+        root.style.setProperty("--secondary-foreground", `${h} ${Math.round(s * 0.8)}% 35%`);
+        root.style.setProperty("--accent", `${h} ${Math.round(s * 0.55)}% 91%`);
+        root.style.setProperty("--accent-foreground", `${h} ${Math.round(s * 0.8)}% 35%`);
+
+        // Sidebar colors derived from primary hue
+        root.style.setProperty("--sidebar-background", `${h} ${Math.round(s * 0.5)}% 12%`);
+        root.style.setProperty("--sidebar-foreground", `${h} 10% 85%`);
+        root.style.setProperty("--sidebar-primary", `${h} ${s}% ${Math.min(l + 10, 75)}%`);
+        root.style.setProperty("--sidebar-accent", `${h} ${Math.round(s * 0.4)}% 18%`);
+        root.style.setProperty("--sidebar-accent-foreground", `${h} 10% 85%`);
+        root.style.setProperty("--sidebar-border", `${h} ${Math.round(s * 0.4)}% 20%`);
+        root.style.setProperty("--sidebar-ring", `${h} ${s}% ${Math.min(l + 10, 75)}%`);
+      }
     }
     if (orgSettings?.accentColor) {
-      document.documentElement.style.setProperty("--accent", hexToHsl(orgSettings.accentColor));
+      const hslAccent = hexToHsl(orgSettings.accentColor);
+      if (hslAccent && hslAccent.includes("%")) {
+        root.style.setProperty("--accent", hslAccent);
+      }
     }
     return () => {
-      document.documentElement.style.removeProperty("--primary");
-      document.documentElement.style.removeProperty("--accent");
+      const props = [
+        "--primary", "--ring", "--secondary", "--secondary-foreground",
+        "--accent", "--accent-foreground",
+        "--sidebar-background", "--sidebar-foreground", "--sidebar-primary",
+        "--sidebar-accent", "--sidebar-accent-foreground", "--sidebar-border", "--sidebar-ring",
+      ];
+      props.forEach((p) => root.style.removeProperty(p));
     };
   }, [orgSettings?.primaryColor, orgSettings?.accentColor]);
 
