@@ -34,6 +34,9 @@ import {
   Sparkles,
   Brain,
   Zap,
+  Mic,
+  ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -127,6 +130,7 @@ export default function LandingPage() {
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <a href="#como-funciona" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Como funciona</a>
+            <a href="#teleatendimento" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Teleatendimento</a>
             <a href="#secretaria" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Secretária IA</a>
             <a href="#funcionalidades" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Funcionalidades</a>
             <a href="#planos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Planos</a>
@@ -465,7 +469,103 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════════════════════════
-          FUNCIONALIDADES
+          TELEATENDIMENTO COM TRANSCRIÇÃO
+      ═══════════════════════════════════════════ */}
+      <section id="teleatendimento" className="py-24 px-6 bg-muted/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Mockup da sessão */}
+            <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="order-2 lg:order-1">
+              <div className="bg-card rounded-3xl border border-border shadow-xl p-6 max-w-sm mx-auto">
+                <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border">
+                  <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                    <Mic className="w-5 h-5 text-destructive animate-pulse" />
+                  </div>
+                  <div>
+                    <p className="font-display font-semibold text-foreground text-sm">Sessão em andamento</p>
+                    <p className="text-xs text-muted-foreground">Ana Silva • 00:42:15</p>
+                  </div>
+                  <Badge variant="outline" className="ml-auto text-xs border-destructive/30 text-destructive">
+                    <span className="w-2 h-2 rounded-full bg-destructive animate-pulse mr-1.5 inline-block" />
+                    Capturando
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Video className="w-3.5 h-3.5" /> Google Meet conectado
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-destructive/60 rounded-full animate-pulse" style={{ width: "70%" }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Microfone + áudio da reunião</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Aguardando", icon: "⏳", active: false },
+                      { label: "Capturando", icon: "🎙️", active: true },
+                      { label: "Transcrito", icon: "✅", active: false },
+                    ].map((s, i) => (
+                      <div key={i} className={`rounded-lg p-2 text-center text-[10px] border ${s.active ? "bg-destructive/5 border-destructive/20 text-destructive font-medium" : "bg-muted/30 border-border text-muted-foreground"}`}>
+                        <span className="block text-sm mb-0.5">{s.icon}</span>
+                        {s.label}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+                    <p className="text-[10px] font-medium text-primary mb-1">Após encerrar:</p>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Transcrição automática → Prontuário estruturado → Áudio excluído
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div {...fadeUp} className="order-1 lg:order-2">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-destructive/10 text-destructive text-sm font-medium border border-destructive/20 mb-4">
+                <Mic className="w-4 h-4" /> Teleatendimento seguro
+              </span>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground leading-tight">
+                Sessões online com{" "}
+                <span className="text-primary">transcrição automática</span>
+              </h2>
+              <p className="text-muted-foreground mt-4 text-lg">
+                Realize suas sessões no Google Meet ou Zoom enquanto o sistema captura o áudio, 
+                transcreve e organiza tudo direto no prontuário do paciente.
+              </p>
+              <div className="mt-8 space-y-3">
+                {[
+                  { icon: Mic, text: "Captura áudio do microfone e da reunião" },
+                  { icon: Brain, text: "Transcrição automática com IA" },
+                  { icon: FileText, text: "Prontuário estruturado automaticamente" },
+                  { icon: ShieldCheck, text: "Áudio excluído após a transcrição" },
+                  { icon: Trash2, text: "Nenhum acesso humano ao arquivo bruto" },
+                ].map((item, i) => (
+                  <motion.div key={i} {...fadeUp} transition={{ delay: i * 0.06 }} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                      <item.icon className="w-3.5 h-3.5 text-destructive" />
+                    </div>
+                    <span className="text-foreground text-sm">{item.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="mt-8 bg-muted/50 rounded-xl p-5 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lock className="w-5 h-5 text-primary" />
+                  <p className="text-sm font-medium text-foreground">Privacidade total</p>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  O áudio é armazenado temporariamente em ambiente privado e excluído automaticamente 
+                  após a transcrição. Apenas o texto organizado permanece no sistema.
+                </p>
+              </div>
+              <Button className="mt-8 gradient-primary border-0 shadow-glow" size="lg" asChild>
+                <Link to="/login">Experimentar Teleatendimento <ArrowRight className="w-4 h-4 ml-2" /></Link>
+              </Button>
+            </motion.div>
+          </div>
+        </div>
       ═══════════════════════════════════════════ */}
       <section id="funcionalidades" className="py-24 px-6 bg-muted/30">
         <div className="max-w-6xl mx-auto">
@@ -483,7 +583,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { icon: Calendar, title: "Agenda inteligente", desc: "Organize sessões com confirmação automática e lembretes.", color: "bg-primary/10 text-primary" },
-              { icon: Video, title: "Atendimento online", desc: "Link de vídeo integrado para teleconsultas.", color: "bg-info/10 text-info" },
+              { icon: Video, title: "Teleatendimento", desc: "Sessões online com captura de áudio, transcrição e prontuário automático.", color: "bg-destructive/10 text-destructive" },
               { icon: Bot, title: "Secretária com IA", desc: "Atendimento 24h no WhatsApp para seus pacientes.", color: "bg-success/10 text-success" },
               { icon: Smartphone, title: "App do paciente", desc: "App instalável com a marca do seu consultório.", color: "bg-lavender/10 text-lavender" },
               { icon: FileText, title: "Prontuário organizado", desc: "Registro estruturado com apoio de IA.", color: "bg-warm/10 text-warm" },
@@ -749,6 +849,10 @@ export default function LandingPage() {
               {
                 q: "Posso usar em clínica com vários profissionais?",
                 a: "Sim! O plano Clínica suporta múltiplos profissionais, cada um com acesso apenas aos seus pacientes e financeiro.",
+              },
+              {
+                q: "Como funciona o teleatendimento com transcrição?",
+                a: "Você realiza a sessão pelo Google Meet ou Zoom normalmente. O sistema captura o áudio (microfone + reunião), transcreve automaticamente com IA e organiza o conteúdo no prontuário. O áudio é excluído imediatamente após o processamento — ninguém tem acesso ao arquivo bruto.",
               },
               {
                 q: "Posso experimentar antes de pagar?",
