@@ -10,6 +10,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,10 +38,13 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 
 export default function Relatorios() {
   const [period, setPeriod] = useState("month");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const { data: appointments = [], isLoading: loadingAppts } = useAppointments();
-  const { data: payments = [], isLoading: loadingPayments } = useFinancialList();
+  const { data: payments = [], isLoading: loadingPayments } = useFinancialList({ startDate: dateStart || undefined, endDate: dateEnd || undefined });
   const { data: summary, isLoading: loadingSummary } = useFinancialSummary();
   const { data: dashSummary, isLoading: loadingDash } = useDashboardSummary();
 
@@ -188,12 +193,15 @@ export default function Relatorios() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Relatórios Gerenciais</h1>
           <p className="text-muted-foreground text-sm mt-1">Dashboards e indicadores para gestão clínica</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+            <Filter className="w-4 h-4 mr-2" />Filtros
+          </Button>
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -203,10 +211,40 @@ export default function Relatorios() {
               <SelectItem value="month">Este Mês</SelectItem>
               <SelectItem value="quarter">Trimestre</SelectItem>
               <SelectItem value="year">Este Ano</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
+
+      {/* Date Range Filter */}
+      {(showFilters || period === "custom") && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
+          <Card className="border-primary/20">
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-end gap-4 flex-wrap">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Inicial</Label>
+                  <Input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-44" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Final</Label>
+                  <Input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="w-44" />
+                </div>
+                <Button size="sm" variant="outline" onClick={() => { setDateStart(""); setDateEnd(""); setPeriod("month"); }}>
+                  Limpar Filtros
+                </Button>
+                {dateStart && dateEnd && (
+                  <Badge variant="outline" className="text-xs">
+                    <CalendarDays className="w-3 h-3 mr-1" />
+                    {new Date(dateStart + "T12:00:00").toLocaleDateString("pt-BR")} — {new Date(dateEnd + "T12:00:00").toLocaleDateString("pt-BR")}
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="bg-muted/50">

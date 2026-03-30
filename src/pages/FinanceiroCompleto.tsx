@@ -1,11 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Plus, CheckCircle, AlertCircle, Clock, Wallet, Download,
   MoreHorizontal, Edit, Trash2, PiggyBank, FileText,
-  Users, Calendar, ChevronLeft, ChevronRight, Loader2, Receipt
+  Users, Calendar, ChevronLeft, ChevronRight, Loader2, Receipt,
+  Upload, Search, Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import StatCard from "@/components/StatCard";
 import { accountsApi, type Account, type AccountsSummary } from "@/lib/portalApi";
-import { invoicesApi, pacientesApi, type Patient } from "@/lib/api";
+import { invoicesApi, pacientesApi, importApi, type Patient } from "@/lib/api";
 import { usePatients } from "@/hooks/usePatients";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,6 +62,12 @@ export default function FinanceiroCompleto() {
     type: "receivable", description: "", value: 0, dueDate: "",
     category: "", paymentMethod: "", notes: "", status: "pending"
   });
+  const [importOpen, setImportOpen] = useState(false);
+  const [importBankName, setImportBankName] = useState("");
+  const [dateFilterStart, setDateFilterStart] = useState("");
+  const [dateFilterEnd, setDateFilterEnd] = useState("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: patients = [] } = usePatients();
   const patientList: Patient[] = Array.isArray(patients) ? patients : (patients as any)?.data || [];
@@ -136,6 +143,56 @@ export default function FinanceiroCompleto() {
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
+
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const text = await file.text();
+      const ext = file.name.split('.').pop()?.toLowerCase();
+
+      if (ext === 'ofx' || ext === 'ofc') {
+        return importApi.ofx({ content: text, bankName: importBankName });
+      }
+
+      // CSV parsing
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) throw new Error('Arquivo CSV vazio ou inválido');
+      
+      const header = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/"/g, ''));
+      const dateCol = header.findIndex(h => ['data', 'date', 'dt', 'data_lancamento'].includes(h));
+      const descCol = header.findIndex(h => ['descricao', 'descrição', 'description', 'desc', 'historico', 'histórico', 'memo'].includes(h));
+      const valueCol = header.findIndex(h => ['valor', 'value', 'amount', 'vlr', 'quantia'].includes(h));
+
+      if (valueCol === -1) throw new Error('Coluna de valor não encontrada. Use: valor, value ou amount');
+
+      const rows = lines.slice(1).map(line => {
+        const cols = line.split(/[,;]/).map(c => c.trim().replace(/"/g, ''));
+        return {
+          date: dateCol >= 0 ? cols[dateCol] : new Date().toISOString().slice(0, 10),
+          description: descCol >= 0 ? cols[descCol] : 'Transação importada',
+          value: cols[valueCol]?.replace(/[R$\s.]/g, '').replace(',', '.') || '0',
+        };
+      }).filter(r => parseFloat(r.value) !== 0);
+
+      return importApi.csv({ rows, bankName: importBankName });
+    },
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["monthly-report"] });
+      toast({ 
+        title: "Importação concluída!",
+        description: `${data.imported} transações importadas${data.balance != null ? `. Saldo: R$ ${data.balance.toFixed(2)}` : ''}`,
+      });
+      setImportOpen(false);
+      setImportBankName("");
+    },
+    onError: (err: Error) => toast({ title: "Erro na importação", description: err.message, variant: "destructive" }),
+  });
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) importMutation.mutate(file);
+    e.target.value = '';
+  };
 
   const closeDialog = () => {
     setDialogOpen(false);
@@ -311,7 +368,13 @@ export default function FinanceiroCompleto() {
           <h1 className="text-2xl font-display font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground mt-1">Receitas, despesas, faturas e fluxo de caixa</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowDateFilter(!showDateFilter)}>
+            <Filter className="w-4 h-4 mr-2" />Filtros
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />Importar
+          </Button>
           <Button variant="outline" size="sm" onClick={exportMonthlyReport} disabled={reportLoading}>
             {reportLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             {reportError ? "Tentar Novamente" : "Relatório"}
@@ -319,11 +382,37 @@ export default function FinanceiroCompleto() {
           <Button variant="outline" size="sm" onClick={() => setInvoiceOpen(true)}>
             <Receipt className="w-4 h-4 mr-2" />Gerar Fatura
           </Button>
-          <Button onClick={() => openNew("receivable")} size="sm">
-            <Plus className="w-4 h-4 mr-2" />Nova Conta
+          <Button onClick={() => openNew("receivable")} size="sm" className="gap-2">
+            <Plus className="w-4 h-4" />Nova Entrada
+          </Button>
+          <Button onClick={() => openNew("payable")} size="sm" variant="outline" className="gap-2">
+            <Plus className="w-4 h-4" />Nova Saída
           </Button>
         </div>
       </div>
+
+      {/* Date Range Filter */}
+      {showDateFilter && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
+          <Card className="border-primary/20">
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-end gap-4 flex-wrap">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Inicial</Label>
+                  <Input type="date" value={dateFilterStart} onChange={e => setDateFilterStart(e.target.value)} className="w-40" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Final</Label>
+                  <Input type="date" value={dateFilterEnd} onChange={e => setDateFilterEnd(e.target.value)} className="w-40" />
+                </div>
+                <Button size="sm" variant="outline" onClick={() => { setDateFilterStart(""); setDateFilterEnd(""); }}>
+                  Limpar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Month Navigator */}
       <div className="flex items-center justify-center gap-4">
@@ -771,6 +860,49 @@ export default function FinanceiroCompleto() {
               Gerar Fatura e Relatório
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-primary" />
+              Importar Extrato Bancário
+            </DialogTitle>
+            <DialogDescription>
+              Importe arquivos CSV ou OFX do seu banco. Valores positivos serão lançados como entradas e negativos como saídas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Nome do Banco (opcional)</Label>
+              <Input value={importBankName} onChange={e => setImportBankName(e.target.value)} placeholder="Ex: Itaú, Bradesco, Nubank..." />
+            </div>
+            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+              <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">Arraste ou clique para selecionar</p>
+              <p className="text-xs text-muted-foreground mb-4">Formatos aceitos: CSV, OFX</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.ofx,.ofc"
+                onChange={handleFileImport}
+                className="hidden"
+              />
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importMutation.isPending}>
+                {importMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                {importMutation.isPending ? "Importando..." : "Selecionar Arquivo"}
+              </Button>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs font-medium text-foreground mb-1">Formato CSV esperado:</p>
+              <p className="text-[10px] text-muted-foreground font-mono">data;descricao;valor</p>
+              <p className="text-[10px] text-muted-foreground font-mono">2026-03-15;Pagamento consulta;150.00</p>
+              <p className="text-[10px] text-muted-foreground font-mono">2026-03-16;Aluguel sala;-800.00</p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

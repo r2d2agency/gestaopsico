@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { financeiroApi, type Pagamento, type FinanceiroSummary } from "@/lib/api";
 
-export function useFinancialList(params?: { month?: string; status?: string }) {
+export function useFinancialList(params?: { month?: string; status?: string; startDate?: string; endDate?: string }) {
   return useQuery<Pagamento[]>({
     queryKey: ["financial", "list", params],
     queryFn: () => financeiroApi.list(params),
