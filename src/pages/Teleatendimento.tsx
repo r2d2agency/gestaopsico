@@ -48,6 +48,8 @@ export default function Teleatendimento() {
   const [showDetail, setShowDetail] = useState<string | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
   const [preflight, setPreflight] = useState<{ mic: boolean; audio: boolean; loading: boolean; err: string; checked: boolean }>({ mic: false, audio: false, loading: false, err: "", checked: false });
+  const [editSession, setEditSession] = useState<TelehealthSession | null>(null);
+  const [editData, setEditData] = useState<{ patientId: string; meetingLink: string }>({ patientId: "", meetingLink: "" });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -239,6 +241,34 @@ export default function Teleatendimento() {
   const retryMutation = useMutation({
     mutationFn: (id: string) => telehealthApi.retry(id),
     onSuccess: () => toast.info("Reprocessamento iniciado..."),
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => telehealthApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      toast.success("Sessão excluída!");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { patientId?: string; meetingLink?: string } }) => telehealthApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      setEditSession(null);
+      toast.success("Sessão atualizada!");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const processMutation = useMutation({
+    mutationFn: (id: string) => telehealthApi.process(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      toast.info("Processamento com IA iniciado...");
+    },
     onError: (e: Error) => toast.error(e.message)
   });
 
@@ -519,14 +549,17 @@ export default function Teleatendimento() {
             {sessions.map((s) => {
               const stat = STATUS_MAP[s.status] || STATUS_MAP.waiting;
               const proc = PROCESSING_MAP[s.processingStatus] || PROCESSING_MAP.none;
+              const canEdit = s.status === "waiting";
+              const canDelete = s.status === "waiting" || s.status === "completed" || s.processingStatus === "error";
+              const canProcess = s.status === "uploaded" && (s.processingStatus === "uploaded" || s.processingStatus === "error");
               return (
                 <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <Card className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => {
-                    if (s.status === "waiting" || s.status === "capturing") setActiveSession(s);
-                    else setShowDetail(s.id);
-                  }}>
+                  <Card className="hover:border-primary/40 transition-colors">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between cursor-pointer" onClick={() => {
+                        if (s.status === "waiting" || s.status === "capturing") setActiveSession(s);
+                        else setShowDetail(s.id);
+                      }}>
                         <p className="font-semibold text-foreground">{s.patient?.name || s.couple?.name || "—"}</p>
                         <Badge className={stat.color}>{stat.icon}<span className="ml-1 text-xs">{stat.label}</span></Badge>
                       </div>
@@ -534,6 +567,50 @@ export default function Teleatendimento() {
                       {s.duration && <p className="text-xs text-muted-foreground">Duração: {formatDuration(s.duration)}</p>}
                       <div className="flex items-center gap-2 text-xs">
                         {proc.icon}<span className="text-muted-foreground">{proc.label}</span>
+                      </div>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50 flex-wrap">
+                        {canEdit && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
+                            e.stopPropagation();
+                            setEditSession(s);
+                            setEditData({ patientId: s.patientId || "", meetingLink: s.meetingLink || "" });
+                          }}>
+                            <FileText className="h-3 w-3" /> Editar
+                          </Button>
+                        )}
+                        {canProcess && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-primary" onClick={(e) => {
+                            e.stopPropagation();
+                            processMutation.mutate(s.id);
+                          }} disabled={processMutation.isPending}>
+                            <Brain className="h-3 w-3" /> Processar IA
+                          </Button>
+                        )}
+                        {s.processingStatus === "error" && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
+                            e.stopPropagation();
+                            retryMutation.mutate(s.id);
+                          }}>
+                            <RefreshCw className="h-3 w-3" /> Tentar novamente
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive" onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Deseja realmente excluir esta sessão?")) deleteMutation.mutate(s.id);
+                          }} disabled={deleteMutation.isPending}>
+                            <Trash2 className="h-3 w-3" /> Excluir
+                          </Button>
+                        )}
+                        {(s.status !== "waiting") && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs ml-auto" onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDetail(s.id);
+                          }}>
+                            <Eye className="h-3 w-3" /> Detalhes
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -672,6 +749,42 @@ export default function Teleatendimento() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Session Dialog */}
+      <Dialog open={!!editSession} onOpenChange={() => setEditSession(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Sessão</DialogTitle>
+            <DialogDescription>Altere os dados da sessão antes de iniciar</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Paciente</label>
+              <Select value={editData.patientId} onValueChange={v => setEditData(p => ({ ...p, patientId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <SelectContent>
+                  {patients.map((p: Patient) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Link da Reunião (opcional)</label>
+              <Input placeholder="https://meet.google.com/..."
+                value={editData.meetingLink}
+                onChange={e => setEditData(p => ({ ...p, meetingLink: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSession(null)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (editSession) updateMutation.mutate({ id: editSession.id, data: editData });
+            }} disabled={updateMutation.isPending} className="gap-2">
+              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              Salvar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
