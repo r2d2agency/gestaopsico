@@ -78,4 +78,38 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /api/casais/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, patient1_id, patient1Id, patient2_id, patient2Id } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (patient1_id || patient1Id) data.patient1Id = patient1Id || patient1_id;
+    if (patient2_id || patient2Id) data.patient2Id = patient2Id || patient2_id;
+    const couple = await prisma.couple.update({
+      where: { id: req.params.id, professionalId: req.userId },
+      data,
+      include: {
+        patient1: { select: { id: true, name: true } },
+        patient2: { select: { id: true, name: true } }
+      }
+    });
+    res.json(couple);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar casal', details: err.message });
+  }
+});
+
+// DELETE /api/casais/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    await prisma.couple.delete({
+      where: { id: req.params.id, professionalId: req.userId }
+    });
+    res.json({ message: 'Casal removido com sucesso' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao remover casal', details: err.message });
+  }
+});
+
 module.exports = router;

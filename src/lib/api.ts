@@ -105,6 +105,9 @@ export const casaisApi = {
   get: (id: string) => apiRequest<Casal>(`/casais/${id}`),
   create: (data: { patient1_id: string; patient2_id: string; name: string }) =>
     apiRequest<Casal>("/casais", { method: "POST", body: data }),
+  update: (id: string, data: { name?: string; patient1_id?: string; patient2_id?: string }) =>
+    apiRequest<Casal>(`/casais/${id}`, { method: "PUT", body: data }),
+  delete: (id: string) => apiRequest(`/casais/${id}`, { method: "DELETE" }),
   records: (id: string) => apiRequest<any[]>(`/casais/${id}/prontuarios`),
 };
 
