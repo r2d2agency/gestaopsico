@@ -87,11 +87,11 @@ export default function Dashboard() {
               ) : (
                 <div className="divide-y divide-border">
                   {todayAppointments.map((apt: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-mono text-muted-foreground w-12">{apt.time}</span>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{apt.patient}</p>
+                    <div key={i} className="flex items-center justify-between px-4 md:px-6 py-3 hover:bg-muted/50 transition-colors gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-sm font-mono text-muted-foreground w-12 shrink-0">{apt.time}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{apt.patient}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
                             apt.type === "Casal" ? "bg-info/10 text-info" : "bg-secondary text-secondary-foreground"
                           }`}>
@@ -99,9 +99,9 @@ export default function Dashboard() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className={`w-2 h-2 rounded-full ${apt.status === "confirmed" ? "bg-success" : "bg-warning"}`} />
-                        <Button variant="outline" size="sm">Iniciar</Button>
+                        <Button variant="outline" size="sm" className="hidden sm:inline-flex">Iniciar</Button>
                       </div>
                     </div>
                   ))}
