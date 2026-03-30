@@ -537,6 +537,7 @@ export default function Agenda() {
           onSelectDate={(d) => { setSelectedDate(d); setViewMode("day"); }}
           onAttend={(id) => attendMutation.mutate(id)}
           onCreateAtSlot={openScheduleDialog}
+          onSelectApt={openViewDialog}
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
@@ -555,6 +556,7 @@ export default function Agenda() {
           customEnd={pipelineCustomEnd}
           onCustomStartChange={setPipelineCustomStart}
           onCustomEndChange={setPipelineCustomEnd}
+          onSelectApt={openViewDialog}
         />
       ) : (
         <DayView
@@ -562,6 +564,7 @@ export default function Agenda() {
           appointments={getAptsForDate(selectedDate)}
           onAttend={(id) => attendMutation.mutate(id)}
           onCreateAtSlot={(time) => openScheduleDialog(selectedDate, time)}
+          onSelectApt={openViewDialog}
           businessHours={businessHours}
           professionalColorMap={professionalColorMap}
           showProfessionalColors={canCreateForOthers}
