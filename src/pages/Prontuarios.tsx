@@ -567,7 +567,113 @@ export default function Prontuarios() {
 
               {/* Dashboard tab */}
               <TabsContent value="dashboard" className="mt-4">
-                <ClinicalDashboard />
+                {selectedEntity.type === "couple" ? (
+                  <div className="space-y-6">
+                    {/* Couple Info Card */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-1.5">
+                          <Heart className="w-4 h-4 text-primary" /> Informações do Casal
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {(() => {
+                          const couple = couples.find((c: any) => c.id === selectedEntity.id);
+                          return couple ? (
+                            <>
+                              <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400">
+                                  <Heart className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-foreground text-lg">{couple.name || `${couple.patient1?.name} & ${couple.patient2?.name}`}</h3>
+                                  <p className="text-sm text-muted-foreground">Terapia de Casal</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                <Card className="border-border/60">
+                                  <CardContent className="pt-4">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <User className="w-4 h-4 text-primary" />
+                                      <span className="font-medium text-sm">Paciente 1</span>
+                                    </div>
+                                    <p className="text-foreground font-semibold">{couple.patient1?.name}</p>
+                                    {couple.patient1?.email && <p className="text-xs text-muted-foreground">{couple.patient1.email}</p>}
+                                    {couple.patient1?.phone && <p className="text-xs text-muted-foreground">{couple.patient1.phone}</p>}
+                                  </CardContent>
+                                </Card>
+                                <Card className="border-border/60">
+                                  <CardContent className="pt-4">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <User className="w-4 h-4 text-primary" />
+                                      <span className="font-medium text-sm">Paciente 2</span>
+                                    </div>
+                                    <p className="text-foreground font-semibold">{couple.patient2?.name}</p>
+                                    {couple.patient2?.email && <p className="text-xs text-muted-foreground">{couple.patient2.email}</p>}
+                                    {couple.patient2?.phone && <p className="text-xs text-muted-foreground">{couple.patient2.phone}</p>}
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            </>
+                          ) : <p className="text-sm text-muted-foreground">Informações do casal não encontradas.</p>;
+                        })()}
+                      </CardContent>
+                    </Card>
+
+                    {/* Couple Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardContent className="pt-4 flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-foreground">{records.length}</p>
+                            <p className="text-xs text-muted-foreground">Prontuários</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-4 flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                            <CalendarDays className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-foreground">
+                              {records.length > 0 ? format(new Date(records[0]?.date), "dd/MM/yy", { locale: ptBR }) : "—"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Última Sessão</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-4 flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                            <Clock className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-foreground">
+                              {records.length > 0 ? format(new Date(records[records.length - 1]?.date), "dd/MM/yy", { locale: ptBR }) : "—"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Primeira Sessão</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Ethical reminder */}
+                    <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                      <CardContent className="py-3 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          A IA organiza e sugere — nunca gera diagnósticos. O psicólogo revisa e valida todas as informações.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <ClinicalDashboard />
+                )}
               </TabsContent>
             </Tabs>
 
