@@ -312,8 +312,9 @@ export default function FinanceiroCompleto() {
           <p className="text-muted-foreground mt-1">Receitas, despesas, faturas e fluxo de caixa</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportMonthlyReport} disabled={!report}>
-            <Download className="w-4 h-4 mr-2" />Relatório
+          <Button variant="outline" size="sm" onClick={exportMonthlyReport} disabled={reportLoading}>
+            {reportLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {reportError ? "Tentar Novamente" : "Relatório"}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setInvoiceOpen(true)}>
             <Receipt className="w-4 h-4 mr-2" />Gerar Fatura
