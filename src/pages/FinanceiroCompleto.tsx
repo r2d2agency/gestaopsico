@@ -368,7 +368,13 @@ export default function FinanceiroCompleto() {
           <h1 className="text-2xl font-display font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground mt-1">Receitas, despesas, faturas e fluxo de caixa</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowDateFilter(!showDateFilter)}>
+            <Filter className="w-4 h-4 mr-2" />Filtros
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />Importar
+          </Button>
           <Button variant="outline" size="sm" onClick={exportMonthlyReport} disabled={reportLoading}>
             {reportLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             {reportError ? "Tentar Novamente" : "Relatório"}
@@ -376,11 +382,37 @@ export default function FinanceiroCompleto() {
           <Button variant="outline" size="sm" onClick={() => setInvoiceOpen(true)}>
             <Receipt className="w-4 h-4 mr-2" />Gerar Fatura
           </Button>
-          <Button onClick={() => openNew("receivable")} size="sm">
-            <Plus className="w-4 h-4 mr-2" />Nova Conta
+          <Button onClick={() => openNew("receivable")} size="sm" className="gap-2">
+            <Plus className="w-4 h-4" />Nova Entrada
+          </Button>
+          <Button onClick={() => openNew("payable")} size="sm" variant="outline" className="gap-2">
+            <Plus className="w-4 h-4" />Nova Saída
           </Button>
         </div>
       </div>
+
+      {/* Date Range Filter */}
+      {showDateFilter && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
+          <Card className="border-primary/20">
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-end gap-4 flex-wrap">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Inicial</Label>
+                  <Input type="date" value={dateFilterStart} onChange={e => setDateFilterStart(e.target.value)} className="w-40" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Final</Label>
+                  <Input type="date" value={dateFilterEnd} onChange={e => setDateFilterEnd(e.target.value)} className="w-40" />
+                </div>
+                <Button size="sm" variant="outline" onClick={() => { setDateFilterStart(""); setDateFilterEnd(""); }}>
+                  Limpar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Month Navigator */}
       <div className="flex items-center justify-center gap-4">
