@@ -8,6 +8,22 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
+// Middleware para carregar dados do usuário após autenticação
+router.use(async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, role: true, status: true, organizationId: true }
+    });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (user.status !== 'active') return res.status(403).json({ error: 'Conta desativada' });
+    req.user = user;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao carregar usuário', details: err.message });
+  }
+});
+
 // ========== SUPERADMIN: CRUD Agentes ==========
 
 // GET /api/ai/agents - listar agentes (todos podem ver os ativos)
