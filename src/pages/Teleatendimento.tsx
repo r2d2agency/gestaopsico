@@ -16,8 +16,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, MicOff, Phone, PhoneOff, Clock, Shield, CheckCircle, AlertCircle,
   Upload, FileText, Brain, Trash2, Video, ExternalLink, Loader2, RefreshCw,
-  Eye, Plus, ArrowLeft
+  Eye, Plus, ArrowLeft, Headphones, Monitor, Volume2, Info
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   waiting: { label: "Aguardando", color: "bg-muted text-muted-foreground", icon: <Clock className="h-4 w-4" /> },
