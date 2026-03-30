@@ -37,10 +37,13 @@ export default function Prontuarios() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const initialPatientId = searchParams.get("patientId") || "";
+  const initialCoupleId = searchParams.get("coupleId") || "";
+  const initialCoupleName = searchParams.get("coupleName") || "";
 
   // Two-level: null = patient list, string = selected patient/couple detail
   const [selectedEntity, setSelectedEntity] = useState<{ type: "patient" | "couple"; id: string; name: string } | null>(
-    initialPatientId ? { type: "patient", id: initialPatientId, name: "" } : null
+    initialPatientId ? { type: "patient", id: initialPatientId, name: "" } :
+    initialCoupleId ? { type: "couple", id: initialCoupleId, name: initialCoupleName } : null
   );
   const [detailTab, setDetailTab] = useState("records");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
