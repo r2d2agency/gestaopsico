@@ -10,6 +10,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,10 +38,13 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 
 export default function Relatorios() {
   const [period, setPeriod] = useState("month");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const { data: appointments = [], isLoading: loadingAppts } = useAppointments();
-  const { data: payments = [], isLoading: loadingPayments } = useFinancialList();
+  const { data: payments = [], isLoading: loadingPayments } = useFinancialList({ startDate: dateStart || undefined, endDate: dateEnd || undefined });
   const { data: summary, isLoading: loadingSummary } = useFinancialSummary();
   const { data: dashSummary, isLoading: loadingDash } = useDashboardSummary();
 
