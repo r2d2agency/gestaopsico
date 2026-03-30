@@ -436,10 +436,16 @@ export default function Prontuarios() {
                                 <CardTitle className="text-base">{record.patient?.name || record.couple?.name || "—"}</CardTitle>
                               </div>
                               <div className="flex items-center gap-1 flex-wrap">
-                                <Badge variant={record.type === "couple" ? "secondary" : "default"} className="text-xs">
-                                  {record.type === "couple" ? "Casal" : "Individual"}
-                                </Badge>
-                                {record.modality && (
+                                {record.modality === "test" ? (
+                                  <Badge className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 border-0">
+                                    📋 Teste
+                                  </Badge>
+                                ) : (
+                                  <Badge variant={record.type === "couple" ? "secondary" : "default"} className="text-xs">
+                                    {record.type === "couple" ? "Casal" : "Individual"}
+                                  </Badge>
+                                )}
+                                {record.modality && record.modality !== "test" && (
                                   <Badge variant="outline" className="text-xs">
                                     {record.modality === "video" || record.modality === "online" ? "Online" : "Presencial"}
                                   </Badge>
