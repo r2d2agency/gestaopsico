@@ -139,6 +139,9 @@ export default function Agenda() {
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("today");
   const [pipelineCustomStart, setPipelineCustomStart] = useState<Date | undefined>(undefined);
   const [pipelineCustomEnd, setPipelineCustomEnd] = useState<Date | undefined>(undefined);
+  const [viewApt, setViewApt] = useState<any>(null);
+  const [editApt, setEditApt] = useState<Partial<Consulta> | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
