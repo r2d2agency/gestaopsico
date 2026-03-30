@@ -33,6 +33,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientSearchSelect from "@/components/PatientSearchSelect";
 import { orgSettingsApi } from "@/lib/portalApi";
+import { useNavigate } from "react-router-dom";
 
 type ViewMode = "day" | "week" | "month" | "pipeline";
 
@@ -861,11 +862,21 @@ export default function Agenda() {
                   <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{viewApt.notes}</p>
                 </div>
               )}
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
                 {viewApt.status !== "cancelled" && viewApt.type !== "blocked" && (
                   <Button variant="destructive" size="sm" onClick={() => cancelMutation.mutate(viewApt.id)} disabled={cancelMutation.isPending}>
                     {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     <Ban className="w-4 h-4 mr-1" />Cancelar Consulta
+                  </Button>
+                )}
+                {viewApt.type !== "blocked" && viewApt.status !== "cancelled" && (
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => {
+                    const patientId = viewApt.patientId || viewApt.patient_id || "";
+                    const appointmentId = viewApt.id || "";
+                    navigate(`/teleatendimento?patientId=${patientId}&appointmentId=${appointmentId}`);
+                    setViewApt(null);
+                  }}>
+                    <Video className="w-4 h-4" />Iniciar Teleconsulta
                   </Button>
                 )}
                 {viewApt.type !== "blocked" && (
