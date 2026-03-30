@@ -236,9 +236,13 @@ export default function FinanceiroCompleto() {
     URL.revokeObjectURL(url);
   };
 
-  // Export monthly report as PDF text
+  // Export monthly report as text
   const exportMonthlyReport = () => {
-    if (!report) return;
+    if (!report) {
+      toast({ title: "Erro", description: "Dados do relatório não disponíveis. Tente recarregar a página.", variant: "destructive" });
+      refetchReport();
+      return;
+    }
     const lines = [
       `RELATÓRIO FINANCEIRO MENSAL`,
       `Período: ${monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}`,
@@ -274,6 +278,21 @@ export default function FinanceiroCompleto() {
       });
     });
 
+    if ((report.accounts || []).length > 0) {
+      lines.push(``);
+      lines.push(`═══════════════════════════════════`);
+      lines.push(`LANÇAMENTOS DO MÊS`);
+      lines.push(`═══════════════════════════════════`);
+      (report.accounts || []).forEach((a: any) => {
+        const statusLabel = a.status === "paid" ? "✓ Pago" : a.status === "overdue" ? "⚠ Vencido" : "○ Pendente";
+        const typeLabel = a.type === "receivable" ? "Receita" : "Despesa";
+        lines.push(`  ${typeLabel} | ${a.description} | ${fmt(a.value)} | ${statusLabel} | ${a.dueDate ? new Date(a.dueDate).toLocaleDateString("pt-BR") : "-"}`);
+      });
+    }
+
+    lines.push(``);
+    lines.push(`Documento gerado automaticamente pelo Psico Gleego.`);
+
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -281,6 +300,7 @@ export default function FinanceiroCompleto() {
     a.download = `relatorio_financeiro_${currentMonth}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    toast({ title: "Relatório exportado!", description: `relatorio_financeiro_${currentMonth}.txt` });
   };
 
   return (
