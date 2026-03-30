@@ -549,14 +549,17 @@ export default function Teleatendimento() {
             {sessions.map((s) => {
               const stat = STATUS_MAP[s.status] || STATUS_MAP.waiting;
               const proc = PROCESSING_MAP[s.processingStatus] || PROCESSING_MAP.none;
+              const canEdit = s.status === "waiting";
+              const canDelete = s.status === "waiting" || s.status === "completed" || s.processingStatus === "error";
+              const canProcess = s.status === "uploaded" && (s.processingStatus === "uploaded" || s.processingStatus === "error");
               return (
                 <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <Card className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => {
-                    if (s.status === "waiting" || s.status === "capturing") setActiveSession(s);
-                    else setShowDetail(s.id);
-                  }}>
+                  <Card className="hover:border-primary/40 transition-colors">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between cursor-pointer" onClick={() => {
+                        if (s.status === "waiting" || s.status === "capturing") setActiveSession(s);
+                        else setShowDetail(s.id);
+                      }}>
                         <p className="font-semibold text-foreground">{s.patient?.name || s.couple?.name || "—"}</p>
                         <Badge className={stat.color}>{stat.icon}<span className="ml-1 text-xs">{stat.label}</span></Badge>
                       </div>
@@ -564,6 +567,50 @@ export default function Teleatendimento() {
                       {s.duration && <p className="text-xs text-muted-foreground">Duração: {formatDuration(s.duration)}</p>}
                       <div className="flex items-center gap-2 text-xs">
                         {proc.icon}<span className="text-muted-foreground">{proc.label}</span>
+                      </div>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50 flex-wrap">
+                        {canEdit && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
+                            e.stopPropagation();
+                            setEditSession(s);
+                            setEditData({ patientId: s.patientId || "", meetingLink: s.meetingLink || "" });
+                          }}>
+                            <FileText className="h-3 w-3" /> Editar
+                          </Button>
+                        )}
+                        {canProcess && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-primary" onClick={(e) => {
+                            e.stopPropagation();
+                            processMutation.mutate(s.id);
+                          }} disabled={processMutation.isPending}>
+                            <Brain className="h-3 w-3" /> Processar IA
+                          </Button>
+                        )}
+                        {s.processingStatus === "error" && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
+                            e.stopPropagation();
+                            retryMutation.mutate(s.id);
+                          }}>
+                            <RefreshCw className="h-3 w-3" /> Tentar novamente
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive" onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Deseja realmente excluir esta sessão?")) deleteMutation.mutate(s.id);
+                          }} disabled={deleteMutation.isPending}>
+                            <Trash2 className="h-3 w-3" /> Excluir
+                          </Button>
+                        )}
+                        {(s.status !== "waiting") && (
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs ml-auto" onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDetail(s.id);
+                          }}>
+                            <Eye className="h-3 w-3" /> Detalhes
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
