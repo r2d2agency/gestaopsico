@@ -483,17 +483,17 @@ export default function Teleatendimento() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map(i => <Card key={i} className="h-40 animate-pulse bg-muted" />)}
         </div>
       ) : sessions.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Nenhuma sessão de teleatendimento ainda.</p>
-          <Button className="mt-4" onClick={handleNewSession}><Plus className="h-4 w-4 mr-2" /> Criar Primeira Sessão</Button>
+        <Card className="p-8 md:p-12 text-center">
+          <Video className="h-10 w-10 md:h-12 md:w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground text-sm">Nenhuma sessão de teleatendimento ainda.</p>
+          <Button className="mt-4 w-full sm:w-auto" onClick={handleNewSession}><Plus className="h-4 w-4 mr-2" /> Criar Primeira Sessão</Button>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence>
             {sessions.map((s) => {
               const stat = STATUS_MAP[s.status] || STATUS_MAP.waiting;
