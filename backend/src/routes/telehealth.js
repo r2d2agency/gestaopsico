@@ -162,6 +162,74 @@ router.post('/', async (req, res) => {
   }
 });
 
+// UPDATE session (only if not yet uploaded/processed)
+router.patch('/:id', async (req, res) => {
+  try {
+    const session = await prisma.telehealthSession.findFirst({
+      where: { id: req.params.id, professionalId: req.userId }
+    });
+    if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
+    if (session.status !== 'waiting') return res.status(400).json({ error: 'Sessão já iniciada, não pode ser editada' });
+
+    const { patientId, meetingLink } = req.body;
+    const updated = await prisma.telehealthSession.update({
+      where: { id: req.params.id },
+      data: {
+        ...(patientId !== undefined && { patientId: patientId || null }),
+        ...(meetingLink !== undefined && { meetingLink: meetingLink || null }),
+        updatedAt: new Date()
+      },
+      include: { patient: { select: { id: true, name: true } }, couple: { select: { id: true, name: true } } }
+    });
+    await auditLog(session.id, 'session_updated', { patientId, meetingLink });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar sessão', details: err.message });
+  }
+});
+
+// DELETE session (only if not yet uploaded/processed)
+router.delete('/:id', async (req, res) => {
+  try {
+    const session = await prisma.telehealthSession.findFirst({
+      where: { id: req.params.id, professionalId: req.userId }
+    });
+    if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
+    if (!['waiting', 'completed', 'error'].includes(session.status) && session.processingStatus === 'transcribing') {
+      return res.status(400).json({ error: 'Sessão em processamento, não pode ser excluída' });
+    }
+
+    // Clean up audio file if exists
+    if (session.audioFileName) {
+      const filePath = path.join(AUDIO_DIR, session.audioFileName);
+      try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
+    }
+
+    await prisma.telehealthAuditLog.deleteMany({ where: { sessionId: session.id } });
+    await prisma.telehealthSession.delete({ where: { id: session.id } });
+    res.json({ message: 'Sessão excluída' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir sessão', details: err.message });
+  }
+});
+
+// PROCESS session with AI (for uploaded sessions not yet processed)
+router.post('/:id/process', async (req, res) => {
+  try {
+    const session = await prisma.telehealthSession.findFirst({
+      where: { id: req.params.id, professionalId: req.userId }
+    });
+    if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
+    if (session.processingStatus === 'completed') return res.status(400).json({ error: 'Sessão já processada' });
+    if (!session.audioFileName) return res.status(400).json({ error: 'Nenhum áudio disponível para processar' });
+
+    processTranscription(req.params.id, req.userId).catch(console.error);
+    res.json({ message: 'Processamento iniciado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao processar', details: err.message });
+  }
+});
+
 // START capture
 router.post('/:id/start', async (req, res) => {
   try {

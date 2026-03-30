@@ -32,6 +32,10 @@ export const telehealthApi = {
   start: (id: string) => apiRequest<TelehealthSession>(`/telehealth/${id}/start`, { method: "POST" }),
   getStatus: (id: string) => apiRequest<Pick<TelehealthSession, "id" | "status" | "processingStatus" | "processingError" | "recordId" | "transcription" | "structuredContent">>(`/telehealth/${id}/status`),
   retry: (id: string) => apiRequest<{ message: string }>(`/telehealth/${id}/retry`, { method: "POST" }),
+  update: (id: string, data: { patientId?: string; meetingLink?: string }) =>
+    apiRequest<TelehealthSession>(`/telehealth/${id}`, { method: "PATCH", body: data }),
+  delete: (id: string) => apiRequest<{ message: string }>(`/telehealth/${id}`, { method: "DELETE" }),
+  process: (id: string) => apiRequest<{ message: string }>(`/telehealth/${id}/process`, { method: "POST" }),
 
   uploadAudio: async (id: string, audioBlob: Blob) => {
     const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
