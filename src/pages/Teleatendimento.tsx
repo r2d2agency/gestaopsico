@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { telehealthApi, TelehealthSession } from "@/lib/telehealthApi";
 import { pacientesApi, Patient, consultasApi } from "@/lib/api";
@@ -36,6 +37,7 @@ const PROCESSING_MAP: Record<string, { label: string; icon: React.ReactNode }> =
 
 export default function Teleatendimento() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeSession, setActiveSession] = useState<TelehealthSession | null>(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showConsentDialog, setShowConsentDialog] = useState(false);
@@ -49,6 +51,16 @@ export default function Teleatendimento() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
+
+  // Auto-open new session dialog from URL params (e.g. from Agenda)
+  useEffect(() => {
+    const patientId = searchParams.get("patientId");
+    if (patientId) {
+      setNewSessionData(prev => ({ ...prev, patientId }));
+      setShowNewDialog(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["telehealth-sessions"],
