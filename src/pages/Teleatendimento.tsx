@@ -63,13 +63,15 @@ export default function Teleatendimento() {
     setPreflight(v => ({ ...v, loading: true, err: "" }));
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const hasMic = stream.getAudioTracks().length > 0;
       const devs = await navigator.mediaDevices.enumerateDevices();
       stream.getTracks().forEach(t => t.stop());
-      const hasMic = stream.getAudioTracks().length > 0;
-      const hasAudio = devs.some(d => d.kind === "audiooutput") || /Mobi|Android/i.test(navigator.userAgent);
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasAudio = isMobile || devs.some(d => d.kind === "audiooutput");
       setPreflight({ mic: hasMic, audio: hasAudio, loading: false, err: "", checked: true });
     } catch (e: any) {
-      setPreflight({ mic: false, audio: false, loading: false, err: e.message || "Permissão do microfone negada", checked: true });
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      setPreflight({ mic: false, audio: isMobile, loading: false, err: e.message || "Permissão do microfone negada", checked: true });
     }
   };
 
