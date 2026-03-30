@@ -52,7 +52,17 @@ export default function Teleatendimento() {
   const micStreamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
 
-  const { data: sessions = [], isLoading } = useQuery({
+  // Auto-open new session dialog from URL params (e.g. from Agenda)
+  useEffect(() => {
+    const patientId = searchParams.get("patientId");
+    if (patientId) {
+      setNewSessionData(prev => ({ ...prev, patientId }));
+      setShowNewDialog(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+
     queryKey: ["telehealth-sessions"],
     queryFn: () => telehealthApi.list()
   });
