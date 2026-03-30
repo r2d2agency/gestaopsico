@@ -169,7 +169,9 @@ export default function Teleatendimento() {
           displaySource.connect(dest);
         }
 
-        const micSource = audioCtx.createMediaStreamSource(micStream);
+        // Clone mic track so original stays active for the call
+        const clonedMicTrack = micStream.getAudioTracks()[0].clone();
+        const micSource = audioCtx.createMediaStreamSource(new MediaStream([clonedMicTrack]));
         micSource.connect(dest);
 
         recordingStream = dest.stream;
@@ -179,7 +181,9 @@ export default function Teleatendimento() {
           displayVideoTrack.onended = () => stopCapture();
         }
       } else {
-        recordingStream = micStream;
+        // Mobile: clone the mic track so the original stays active for the call
+        const clonedTrack = micStream.getAudioTracks()[0].clone();
+        recordingStream = new MediaStream([clonedTrack]);
         displayStreamRef.current = null;
         toast.info("No celular, a captura será feita pelo microfone do aparelho.");
       }
