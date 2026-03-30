@@ -24,6 +24,7 @@ const patientPortalRoutes = require('./routes/patientPortal');
 const invoicesRoutes = require('./routes/invoices');
 const teamRoutes = require('./routes/team');
 const messagesRoutes = require('./routes/messages');
+const importRoutes = require('./routes/import');
 
 const prisma = new PrismaClient();
 const app = express();
