@@ -862,6 +862,49 @@ export default function FinanceiroCompleto() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-primary" />
+              Importar Extrato Bancário
+            </DialogTitle>
+            <DialogDescription>
+              Importe arquivos CSV ou OFX do seu banco. Valores positivos serão lançados como entradas e negativos como saídas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Nome do Banco (opcional)</Label>
+              <Input value={importBankName} onChange={e => setImportBankName(e.target.value)} placeholder="Ex: Itaú, Bradesco, Nubank..." />
+            </div>
+            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+              <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">Arraste ou clique para selecionar</p>
+              <p className="text-xs text-muted-foreground mb-4">Formatos aceitos: CSV, OFX</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.ofx,.ofc"
+                onChange={handleFileImport}
+                className="hidden"
+              />
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importMutation.isPending}>
+                {importMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                {importMutation.isPending ? "Importando..." : "Selecionar Arquivo"}
+              </Button>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs font-medium text-foreground mb-1">Formato CSV esperado:</p>
+              <p className="text-[10px] text-muted-foreground font-mono">data;descricao;valor</p>
+              <p className="text-[10px] text-muted-foreground font-mono">2026-03-15;Pagamento consulta;150.00</p>
+              <p className="text-[10px] text-muted-foreground font-mono">2026-03-16;Aluguel sala;-800.00</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
