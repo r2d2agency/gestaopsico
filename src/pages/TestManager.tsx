@@ -362,7 +362,7 @@ export default function TestManager() {
                       <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openResults(assignment.id)}>
                         <Eye className="w-3 h-3" />Resultado
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => navigate(`/prontuario?patientId=${assignment.patient?.id}`)}>
+                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => navigate(`/prontuarios?patientId=${assignment.patient?.id}`)}>
                         <ExternalLink className="w-3 h-3" />Prontuário
                       </Button>
                     </div>
