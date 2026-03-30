@@ -939,7 +939,7 @@ export default function Agenda() {
   );
 }
 
-function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors, pipelineFilter, onFilterChange, customStart, customEnd, onCustomStartChange, onCustomEndChange }: {
+function PipelineView({ selectedDate, appointments, professionalsById, professionalColorMap, showProfessionalColors, pipelineFilter, onFilterChange, customStart, customEnd, onCustomStartChange, onCustomEndChange, onSelectApt }: {
   selectedDate: Date;
   appointments: any[];
   professionalsById: Map<string, any>;
@@ -951,6 +951,7 @@ function PipelineView({ selectedDate, appointments, professionalsById, professio
   customEnd?: Date;
   onCustomStartChange: (d: Date | undefined) => void;
   onCustomEndChange: (d: Date | undefined) => void;
+  onSelectApt: (apt: any) => void;
 }) {
   const groupedByDate = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -1047,7 +1048,7 @@ function PipelineView({ selectedDate, appointments, professionalsById, professio
                     : null;
 
                   return (
-                    <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                    <div key={apt.id} className="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => onSelectApt(apt)}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-16 shrink-0">
                           <p className="text-sm font-semibold text-foreground">{apt.time}</p>
@@ -1167,12 +1168,13 @@ function MonthView({ selectedDate, aptsByDate, onSelectDate, professionalColorMa
   );
 }
 
-function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAtSlot, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
+function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAtSlot, onSelectApt, businessHours, professionalColorMap, showProfessionalColors, professionals = [] }: {
   selectedDate: Date;
   aptsByDate: Record<string, any[]>;
   onSelectDate: (d: Date) => void;
   onAttend: (id: string) => void;
   onCreateAtSlot: (date: Date, time: string) => void;
+  onSelectApt: (apt: any) => void;
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
@@ -1301,11 +1303,12 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAt
   );
 }
 
-function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, businessHours, professionalColorMap, showProfessionalColors }: {
+function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, onSelectApt, businessHours, professionalColorMap, showProfessionalColors }: {
   selectedDate: Date;
   appointments: any[];
   onAttend: (id: string) => void;
   onCreateAtSlot: (time: string) => void;
+  onSelectApt: (apt: any) => void;
   businessHours: number[];
   professionalColorMap: Map<string, number>;
   showProfessionalColors: boolean;
