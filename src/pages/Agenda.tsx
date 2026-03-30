@@ -896,7 +896,7 @@ export default function Agenda() {
                 </div>
                 <div>
                   <Label>Modalidade</Label>
-                  <Select value={editApt.mode || "in_person"} onValueChange={v => setEditApt(prev => prev ? { ...prev, mode: v } : prev)}>
+                  <Select value={editApt.mode || "in_person"} onValueChange={v => setEditApt(prev => prev ? { ...prev, mode: v as "in_person" | "video" } : prev)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="in_person">Presencial</SelectItem>
@@ -907,7 +907,7 @@ export default function Agenda() {
               </div>
               <div>
                 <Label>Status</Label>
-                <Select value={editApt.status || "scheduled"} onValueChange={v => setEditApt(prev => prev ? { ...prev, status: v } : prev)}>
+                <Select value={editApt.status || "scheduled"} onValueChange={v => setEditApt(prev => prev ? { ...prev, status: v as Consulta["status"] } : prev)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="scheduled">Agendada</SelectItem>
