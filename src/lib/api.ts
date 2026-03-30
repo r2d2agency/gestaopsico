@@ -128,8 +128,11 @@ export const prontuariosApi = {
 
 // Financeiro
 export const financeiroApi = {
-  list: (params?: { month?: string; status?: string }) =>
-    apiRequest<Pagamento[]>(`/financeiro?${new URLSearchParams(params as Record<string, string>)}`),
+  list: (params?: { month?: string; status?: string; startDate?: string; endDate?: string }) => {
+    const clean: Record<string, string> = {};
+    if (params) Object.entries(params).forEach(([k, v]) => { if (v) clean[k] = v; });
+    return apiRequest<Pagamento[]>(`/financeiro?${new URLSearchParams(clean)}`);
+  },
   summary: (month?: string) =>
     apiRequest<FinanceiroSummary>(`/financeiro/summary${month ? `?month=${month}` : ""}`),
   update: (id: string, data: Partial<Pagamento>) =>
@@ -144,6 +147,14 @@ export const invoicesApi = {
     apiRequest<any>("/invoices/generate", { method: "POST", body: data }),
   monthlyReport: (month?: string) =>
     apiRequest<any>(`/invoices/monthly-report${month ? `?month=${month}` : ""}`),
+};
+
+// Import
+export const importApi = {
+  csv: (data: { rows: { date: string; description: string; value: string; category?: string }[]; bankName?: string; accountName?: string }) =>
+    apiRequest<{ imported: number; total: number; message: string }>("/import/csv", { method: "POST", body: data }),
+  ofx: (data: { content: string; bankName?: string }) =>
+    apiRequest<{ imported: number; total: number; balance: number | null; message: string }>("/import/ofx", { method: "POST", body: data }),
 };
 
 // Dashboard
