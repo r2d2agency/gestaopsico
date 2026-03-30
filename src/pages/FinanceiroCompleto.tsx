@@ -62,6 +62,12 @@ export default function FinanceiroCompleto() {
     type: "receivable", description: "", value: 0, dueDate: "",
     category: "", paymentMethod: "", notes: "", status: "pending"
   });
+  const [importOpen, setImportOpen] = useState(false);
+  const [importBankName, setImportBankName] = useState("");
+  const [dateFilterStart, setDateFilterStart] = useState("");
+  const [dateFilterEnd, setDateFilterEnd] = useState("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: patients = [] } = usePatients();
   const patientList: Patient[] = Array.isArray(patients) ? patients : (patients as any)?.data || [];
