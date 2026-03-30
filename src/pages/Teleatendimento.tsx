@@ -62,7 +62,7 @@ export default function Teleatendimento() {
     }
   }, [searchParams, setSearchParams]);
 
-
+  const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["telehealth-sessions"],
     queryFn: () => telehealthApi.list()
   });
