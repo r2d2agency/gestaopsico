@@ -1278,7 +1278,7 @@ function WeekView({ selectedDate, aptsByDate, onSelectDate, onAttend, onCreateAt
                       return (
                         <div
                           key={j}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => { e.stopPropagation(); onSelectApt(apt); }}
                           className={cn(
                             "text-[10px] px-1.5 py-1 rounded border-l-2 mb-0.5 truncate cursor-pointer hover:opacity-80",
                             proColor
@@ -1367,7 +1367,7 @@ function DayView({ selectedDate, appointments, onAttend, onCreateAtSlot, onSelec
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); onSelectApt(apt); }}
                       className={cn(
                         "flex items-center justify-between p-2.5 rounded-lg border-l-3 transition-shadow hover:shadow-md",
                         proColor
