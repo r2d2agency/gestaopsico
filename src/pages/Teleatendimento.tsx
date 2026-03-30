@@ -37,6 +37,7 @@ const PROCESSING_MAP: Record<string, { label: string; icon: React.ReactNode }> =
 
 export default function Teleatendimento() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeSession, setActiveSession] = useState<TelehealthSession | null>(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showConsentDialog, setShowConsentDialog] = useState(false);
