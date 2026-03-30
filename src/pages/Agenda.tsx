@@ -874,7 +874,7 @@ export default function Agenda() {
                   <Button size="sm" variant="outline" className="gap-1" onClick={() => {
                     const patientId = viewApt.patientId || viewApt.patient_id || "";
                     const appointmentId = viewApt.id || "";
-                    navigate(`/teleatendimento?patientId=${patientId}&appointmentId=${appointmentId}`);
+                    routerNavigate(`/teleatendimento?patientId=${patientId}&appointmentId=${appointmentId}`);
                     setViewApt(null);
                   }}>
                     <Video className="w-4 h-4" />Iniciar Teleconsulta
