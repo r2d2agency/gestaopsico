@@ -144,6 +144,56 @@ export default function FinanceiroCompleto() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const text = await file.text();
+      const ext = file.name.split('.').pop()?.toLowerCase();
+
+      if (ext === 'ofx' || ext === 'ofc') {
+        return importApi.ofx({ content: text, bankName: importBankName });
+      }
+
+      // CSV parsing
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) throw new Error('Arquivo CSV vazio ou inválido');
+      
+      const header = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/"/g, ''));
+      const dateCol = header.findIndex(h => ['data', 'date', 'dt', 'data_lancamento'].includes(h));
+      const descCol = header.findIndex(h => ['descricao', 'descrição', 'description', 'desc', 'historico', 'histórico', 'memo'].includes(h));
+      const valueCol = header.findIndex(h => ['valor', 'value', 'amount', 'vlr', 'quantia'].includes(h));
+
+      if (valueCol === -1) throw new Error('Coluna de valor não encontrada. Use: valor, value ou amount');
+
+      const rows = lines.slice(1).map(line => {
+        const cols = line.split(/[,;]/).map(c => c.trim().replace(/"/g, ''));
+        return {
+          date: dateCol >= 0 ? cols[dateCol] : new Date().toISOString().slice(0, 10),
+          description: descCol >= 0 ? cols[descCol] : 'Transação importada',
+          value: cols[valueCol]?.replace(/[R$\s.]/g, '').replace(',', '.') || '0',
+        };
+      }).filter(r => parseFloat(r.value) !== 0);
+
+      return importApi.csv({ rows, bankName: importBankName });
+    },
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["monthly-report"] });
+      toast({ 
+        title: "Importação concluída!",
+        description: `${data.imported} transações importadas${data.balance != null ? `. Saldo: R$ ${data.balance.toFixed(2)}` : ''}`,
+      });
+      setImportOpen(false);
+      setImportBankName("");
+    },
+    onError: (err: Error) => toast({ title: "Erro na importação", description: err.message, variant: "destructive" }),
+  });
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) importMutation.mutate(file);
+    e.target.value = '';
+  };
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditId(null);
