@@ -1,11 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Plus, CheckCircle, AlertCircle, Clock, Wallet, Download,
   MoreHorizontal, Edit, Trash2, PiggyBank, FileText,
-  Users, Calendar, ChevronLeft, ChevronRight, Loader2, Receipt
+  Users, Calendar, ChevronLeft, ChevronRight, Loader2, Receipt,
+  Upload, Search, Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import StatCard from "@/components/StatCard";
 import { accountsApi, type Account, type AccountsSummary } from "@/lib/portalApi";
-import { invoicesApi, pacientesApi, type Patient } from "@/lib/api";
+import { invoicesApi, pacientesApi, importApi, type Patient } from "@/lib/api";
 import { usePatients } from "@/hooks/usePatients";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
