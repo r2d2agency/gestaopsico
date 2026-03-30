@@ -800,6 +800,138 @@ export default function Agenda() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View/Edit Appointment Dialog */}
+      <Dialog open={!!viewApt} onOpenChange={(open) => { if (!open) { setViewApt(null); setEditMode(false); setEditApt(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editMode ? "Editar Consulta" : "Detalhes da Consulta"}</DialogTitle>
+            <DialogDescription>
+              {editMode ? "Altere os dados e salve" : "Visualize, edite ou cancele esta consulta"}
+            </DialogDescription>
+          </DialogHeader>
+          {viewApt && !editMode && (
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Paciente / Casal</p>
+                  <p className="text-sm font-medium text-foreground">{getAppointmentDisplayName(viewApt)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Tipo</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.type === "couple" ? "Casal" : viewApt.type === "blocked" ? "Bloqueio" : "Individual"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Data</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {(() => { try { const dk = getDateKey(viewApt.date); const [y,m,d] = dk.split("-").map(Number); return format(new Date(y,m-1,d), "dd/MM/yyyy"); } catch { return "—"; } })()}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Horário</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.time || "—"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Duração</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.duration || 50}min</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Modalidade</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.mode === "video" ? "Online" : "Presencial"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant="outline" className="text-xs">{statusLabels[viewApt.status] || viewApt.status}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Valor</p>
+                  <p className="text-sm font-medium text-foreground">{viewApt.value ? `R$ ${Number(viewApt.value).toFixed(2)}` : "—"}</p>
+                </div>
+              </div>
+              {viewApt.notes && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Observações</p>
+                  <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{viewApt.notes}</p>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                {viewApt.status !== "cancelled" && viewApt.type !== "blocked" && (
+                  <Button variant="destructive" size="sm" onClick={() => cancelMutation.mutate(viewApt.id)} disabled={cancelMutation.isPending}>
+                    {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    <Ban className="w-4 h-4 mr-1" />Cancelar Consulta
+                  </Button>
+                )}
+                {viewApt.type !== "blocked" && (
+                  <Button size="sm" onClick={startEditing}>
+                    Editar / Reagendar
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          )}
+          {viewApt && editMode && editApt && (
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data *</Label>
+                  <Input type="date" value={editApt.date || ""} onChange={e => setEditApt(prev => prev ? { ...prev, date: e.target.value } : prev)} />
+                </div>
+                <div>
+                  <Label>Horário *</Label>
+                  <Input type="time" value={editApt.time || ""} onChange={e => setEditApt(prev => prev ? { ...prev, time: e.target.value } : prev)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Duração (min)</Label>
+                  <Input type="number" value={editApt.duration || 50} onChange={e => setEditApt(prev => prev ? { ...prev, duration: Number(e.target.value) } : prev)} />
+                </div>
+                <div>
+                  <Label>Valor (R$)</Label>
+                  <Input type="number" value={editApt.value || 0} onChange={e => setEditApt(prev => prev ? { ...prev, value: Number(e.target.value) } : prev)} />
+                </div>
+                <div>
+                  <Label>Modalidade</Label>
+                  <Select value={editApt.mode || "in_person"} onValueChange={v => setEditApt(prev => prev ? { ...prev, mode: v } : prev)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_person">Presencial</SelectItem>
+                      <SelectItem value="video">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={editApt.status || "scheduled"} onValueChange={v => setEditApt(prev => prev ? { ...prev, status: v } : prev)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled">Agendada</SelectItem>
+                    <SelectItem value="confirmed">Confirmada</SelectItem>
+                    <SelectItem value="completed">Concluída</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Textarea value={editApt.notes || ""} onChange={e => setEditApt(prev => prev ? { ...prev, notes: e.target.value } : prev)} placeholder="Notas..." />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setEditMode(false); setEditApt(null); }}>Voltar</Button>
+                <Button onClick={handleEditSave} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
