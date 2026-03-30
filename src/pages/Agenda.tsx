@@ -245,6 +245,56 @@ export default function Agenda() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Consulta> }) => consultasApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta atualizada!" });
+      setViewApt(null);
+      setEditMode(false);
+      setEditApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.cancel(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta cancelada!" });
+      setViewApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const openViewDialog = (apt: any) => {
+    setViewApt(apt);
+    setEditMode(false);
+    setEditApt(null);
+  };
+
+  const startEditing = () => {
+    if (!viewApt) return;
+    const dateVal = viewApt.date ? getDateKey(viewApt.date) : "";
+    setEditApt({
+      patient_id: viewApt.patientId || viewApt.patient_id || "",
+      type: viewApt.type || "individual",
+      date: dateVal,
+      time: viewApt.time || "",
+      duration: viewApt.duration || 50,
+      value: viewApt.value || 0,
+      mode: viewApt.mode || "in_person",
+      notes: viewApt.notes || "",
+      status: viewApt.status || "scheduled",
+    });
+    setEditMode(true);
+  };
+
+  const handleEditSave = () => {
+    if (!viewApt || !editApt) return;
+    updateMutation.mutate({ id: viewApt.id, data: editApt });
+  };
+
   const navigate = (dir: number) => {
     if (viewMode === "day") setSelectedDate(prev => addDays(prev, dir));
     else if (viewMode === "week") setSelectedDate(prev => addWeeks(prev, dir));
