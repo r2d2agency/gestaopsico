@@ -23,22 +23,22 @@ export default function Dashboard() {
   const pendingPayments = summary?.pending_payments ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Bom dia 👋</h1>
-          <p className="text-muted-foreground mt-1">Aqui está o resumo do seu dia.</p>
+          <h1 className="text-xl md:text-2xl font-display font-bold text-foreground">Bom dia 👋</h1>
+          <p className="text-muted-foreground text-sm mt-1">Aqui está o resumo do seu dia.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link to="/pacientes"><Plus className="w-4 h-4 mr-2" />Novo Paciente</Link>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/pacientes"><Plus className="w-4 h-4 mr-1" />Paciente</Link>
           </Button>
-          <Button asChild>
-            <Link to="/agenda"><Plus className="w-4 h-4 mr-2" />Nova Consulta</Link>
+          <Button size="sm" asChild>
+            <Link to="/agenda"><Plus className="w-4 h-4 mr-1" />Consulta</Link>
           </Button>
-          <Button variant="secondary" asChild>
-            <Link to="/assistente-ia"><Brain className="w-4 h-4 mr-2" />Assistente IA</Link>
+          <Button variant="secondary" size="sm" asChild className="hidden sm:inline-flex">
+            <Link to="/assistente-ia"><Brain className="w-4 h-4 mr-1" />IA</Link>
           </Button>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function Dashboard() {
       </div>
 
       {/* Schedule + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -87,11 +87,11 @@ export default function Dashboard() {
               ) : (
                 <div className="divide-y divide-border">
                   {todayAppointments.map((apt: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-mono text-muted-foreground w-12">{apt.time}</span>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{apt.patient}</p>
+                    <div key={i} className="flex items-center justify-between px-4 md:px-6 py-3 hover:bg-muted/50 transition-colors gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-sm font-mono text-muted-foreground w-12 shrink-0">{apt.time}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{apt.patient}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
                             apt.type === "Casal" ? "bg-info/10 text-info" : "bg-secondary text-secondary-foreground"
                           }`}>
@@ -99,9 +99,9 @@ export default function Dashboard() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className={`w-2 h-2 rounded-full ${apt.status === "confirmed" ? "bg-success" : "bg-warning"}`} />
-                        <Button variant="outline" size="sm">Iniciar</Button>
+                        <Button variant="outline" size="sm" className="hidden sm:inline-flex">Iniciar</Button>
                       </div>
                     </div>
                   ))}
