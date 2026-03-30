@@ -59,8 +59,14 @@ router.get('/:id/prontuarios', async (req, res) => {
 // POST /api/casais
 router.post('/', async (req, res) => {
   try {
+    const { patient1_id, patient2_id, patient1Id, patient2Id, name } = req.body;
+    const p1 = patient1Id || patient1_id;
+    const p2 = patient2Id || patient2_id;
+    if (!p1 || !p2) {
+      return res.status(400).json({ error: 'patient1_id e patient2_id são obrigatórios' });
+    }
     const couple = await prisma.couple.create({
-      data: { ...req.body, professionalId: req.userId },
+      data: { patient1Id: p1, patient2Id: p2, name: name || null, professionalId: req.userId },
       include: {
         patient1: { select: { id: true, name: true } },
         patient2: { select: { id: true, name: true } }
