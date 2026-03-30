@@ -672,7 +672,7 @@ export default function Agenda() {
       </Dialog>
 
       <Dialog open={blockOpen} onOpenChange={(open) => { if (!open) resetBlock(); else setBlockOpen(true); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      {/* ... keep existing block dialog content ... */}
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Ban className="w-5 h-5 text-muted-foreground" />Bloquear Horário</DialogTitle>
             <DialogDescription>Bloqueie horários — pontual, período ou recorrente</DialogDescription>
