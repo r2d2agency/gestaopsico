@@ -54,6 +54,7 @@ export default function Teleatendimento() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Preflight device check
   const runPreflight = async () => {
@@ -146,36 +147,52 @@ export default function Teleatendimento() {
   const startCapture = async () => {
     if (!activeSession) return;
     try {
-      // Request display media with audio
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      displayStreamRef.current = displayStream;
-
-      // Request microphone
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       micStreamRef.current = micStream;
 
-      // Combine audio streams
-      const audioCtx = new AudioContext();
-      const dest = audioCtx.createMediaStreamDestination();
+      const supportsDisplayCapture = typeof navigator.mediaDevices?.getDisplayMedia === "function";
+      let recordingStream: MediaStream;
 
-      const displayAudioTracks = displayStream.getAudioTracks();
-      if (displayAudioTracks.length > 0) {
-        const displaySource = audioCtx.createMediaStreamSource(new MediaStream(displayAudioTracks));
-        displaySource.connect(dest);
+      if (supportsDisplayCapture) {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        displayStreamRef.current = displayStream;
+
+        const audioCtx = new AudioContext();
+        const dest = audioCtx.createMediaStreamDestination();
+        audioContextRef.current = audioCtx;
+
+        const displayAudioTracks = displayStream.getAudioTracks();
+        if (displayAudioTracks.length > 0) {
+          const displaySource = audioCtx.createMediaStreamSource(new MediaStream(displayAudioTracks));
+          displaySource.connect(dest);
+        }
+
+        const micSource = audioCtx.createMediaStreamSource(micStream);
+        micSource.connect(dest);
+
+        recordingStream = dest.stream;
+
+        const displayVideoTrack = displayStream.getVideoTracks()[0];
+        if (displayVideoTrack) {
+          displayVideoTrack.onended = () => stopCapture();
+        }
+      } else {
+        recordingStream = micStream;
+        displayStreamRef.current = null;
+        toast.info("No celular, a captura será feita pelo microfone do aparelho.");
       }
 
-      const micSource = audioCtx.createMediaStreamSource(micStream);
-      micSource.connect(dest);
+      const preferredMimeType = typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : undefined;
 
-      // Record combined audio only
-      const recorder = new MediaRecorder(dest.stream, { mimeType: "audio/webm;codecs=opus" });
+      const recorder = preferredMimeType
+        ? new MediaRecorder(recordingStream, { mimeType: preferredMimeType })
+        : new MediaRecorder(recordingStream);
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
-
-      // Stop when display stream ends
-      displayStream.getVideoTracks()[0].onended = () => stopCapture();
 
       // Start timer
       setDuration(0);
@@ -196,6 +213,10 @@ export default function Teleatendimento() {
     }
     micStreamRef.current?.getTracks().forEach(t => t.stop());
     displayStreamRef.current?.getTracks().forEach(t => t.stop());
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => undefined);
+    }
+    audioContextRef.current = null;
     if (timerRef.current) clearInterval(timerRef.current);
     setIsCapturing(false);
 
