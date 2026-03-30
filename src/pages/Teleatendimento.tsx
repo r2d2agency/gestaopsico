@@ -84,7 +84,7 @@ export default function Teleatendimento() {
 
   const { data: patients = [] } = useQuery({
     queryKey: ["patients-list"],
-    queryFn: async () => { const r = await pacientesApi.list(); return r.data || []; }
+    queryFn: async () => { const r = await pacientesApi.list(); return Array.isArray(r) ? r : (r as any).data || []; }
   });
 
   const { data: detailSession } = useQuery({
