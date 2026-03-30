@@ -66,9 +66,10 @@ export default function FinanceiroCompleto() {
   const patientList: Patient[] = Array.isArray(patients) ? patients : (patients as any)?.data || [];
 
   // Monthly report
-  const { data: report, isLoading: reportLoading } = useQuery({
+  const { data: report, isLoading: reportLoading, isError: reportError, refetch: refetchReport } = useQuery({
     queryKey: ["monthly-report", currentMonth],
     queryFn: () => invoicesApi.monthlyReport(currentMonth),
+    retry: 1,
   });
 
   // Accounts list per tab
