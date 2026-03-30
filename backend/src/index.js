@@ -69,6 +69,7 @@ app.use('/api/patient-portal', patientPortalRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/messages', messagesRoutes);
+app.use('/api/import', importRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Psico Gleego API rodando na porta ${PORT}`);
