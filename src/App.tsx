@@ -41,6 +41,7 @@ import HelpPage from "./pages/HelpPage";
 import PortalLogin from "./pages/PortalLogin";
 import Mensagens from "./pages/Mensagens";
 import Prontuarios from "./pages/Prontuarios";
+import Relatorios from "./pages/Relatorios";
 
 const queryClient = new QueryClient();
 
@@ -91,7 +92,7 @@ const App = () => (
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/consultas" element={<Dashboard />} />
               <Route path="/prontuarios" element={<Prontuarios />} />
-              <Route path="/relatorios" element={<Dashboard />} />
+              <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/ajuda" element={<HelpPage />} />
             </Route>
