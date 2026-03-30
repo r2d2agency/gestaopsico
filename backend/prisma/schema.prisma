@@ -125,6 +125,7 @@ model User {
   aiChats        AiChat[]               @relation("aiChats")
   secretaryConfigs SecretaryConfig[]
   patientPortalMessages PatientPortalMessage[] @relation("portalMessageProfessional")
+  telehealthSessions    TelehealthSession[]    @relation("telehealthProfessional")
 
   @@map("users")
 }
@@ -229,6 +230,7 @@ model Patient {
   accounts         Account[]
   userAccounts     User[]        @relation("patientUser")
   portalMessages   PatientPortalMessage[]
+  telehealthSessions TelehealthSession[] @relation("telehealthPatient")
 
   @@unique([cpf, professionalId])
   @@map("patients")
@@ -246,6 +248,7 @@ model Couple {
   createdAt      DateTime      @default(now()) @map("created_at")
   appointments   Appointment[]
   records        Record[]
+  telehealthSessions TelehealthSession[] @relation("telehealthCouple")
 
   @@map("couples")
 }
@@ -272,6 +275,7 @@ model Appointment {
   records        Record[]
   transcriptions Transcription[]
   payments       Payment[]
+  telehealthSessions TelehealthSession[]
 
   @@map("appointments")
 }
@@ -303,6 +307,7 @@ model Record {
   createdAt            DateTime     @default(now()) @map("created_at")
   updatedAt            DateTime?    @default(now()) @map("updated_at")
   testAssignments      TestAssignment[]
+  telehealthSessions   TelehealthSession[]
 
   @@map("records")
 }
