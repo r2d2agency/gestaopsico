@@ -751,6 +751,42 @@ export default function Teleatendimento() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Session Dialog */}
+      <Dialog open={!!editSession} onOpenChange={() => setEditSession(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Sessão</DialogTitle>
+            <DialogDescription>Altere os dados da sessão antes de iniciar</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Paciente</label>
+              <Select value={editData.patientId} onValueChange={v => setEditData(p => ({ ...p, patientId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <SelectContent>
+                  {patients.map((p: Patient) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Link da Reunião (opcional)</label>
+              <Input placeholder="https://meet.google.com/..."
+                value={editData.meetingLink}
+                onChange={e => setEditData(p => ({ ...p, meetingLink: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSession(null)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (editSession) updateMutation.mutate({ id: editSession.id, data: editData });
+            }} disabled={updateMutation.isPending} className="gap-2">
+              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
