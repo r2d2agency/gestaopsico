@@ -23,22 +23,22 @@ export default function Dashboard() {
   const pendingPayments = summary?.pending_payments ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Bom dia 👋</h1>
-          <p className="text-muted-foreground mt-1">Aqui está o resumo do seu dia.</p>
+          <h1 className="text-xl md:text-2xl font-display font-bold text-foreground">Bom dia 👋</h1>
+          <p className="text-muted-foreground text-sm mt-1">Aqui está o resumo do seu dia.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link to="/pacientes"><Plus className="w-4 h-4 mr-2" />Novo Paciente</Link>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/pacientes"><Plus className="w-4 h-4 mr-1" />Paciente</Link>
           </Button>
-          <Button asChild>
-            <Link to="/agenda"><Plus className="w-4 h-4 mr-2" />Nova Consulta</Link>
+          <Button size="sm" asChild>
+            <Link to="/agenda"><Plus className="w-4 h-4 mr-1" />Consulta</Link>
           </Button>
-          <Button variant="secondary" asChild>
-            <Link to="/assistente-ia"><Brain className="w-4 h-4 mr-2" />Assistente IA</Link>
+          <Button variant="secondary" size="sm" asChild className="hidden sm:inline-flex">
+            <Link to="/assistente-ia"><Brain className="w-4 h-4 mr-1" />IA</Link>
           </Button>
         </div>
       </div>
