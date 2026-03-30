@@ -315,7 +315,19 @@ async function processTranscription(sessionId, userId) {
     }
 
     // Create record
-    const record = await prisma.record.create({
+      // Normalize fields that may come as arrays from AI but are String in schema
+      const clinicalObs = structured?.observacoes_relevantes;
+      const clinicalObsStr = Array.isArray(clinicalObs) ? clinicalObs.join('; ') : (clinicalObs || null);
+      const keyPointsRaw = structured?.pontos_principais;
+      const keyPointsStr = Array.isArray(keyPointsRaw) ? keyPointsRaw.join('; ') : (keyPointsRaw || null);
+      const evolutionRaw = structured?.evolucao;
+      const evolutionStr = Array.isArray(evolutionRaw) ? evolutionRaw.join('; ') : (evolutionRaw || null);
+      const nextStepsRaw = structured?.encaminhamentos;
+      const nextStepsStr = Array.isArray(nextStepsRaw) ? nextStepsRaw.join('; ') : (nextStepsRaw || null);
+      const complaintRaw = structured?.motivo_sessao;
+      const complaintStr = Array.isArray(complaintRaw) ? complaintRaw.join('; ') : (complaintRaw || null);
+
+      const record = await prisma.record.create({
       data: {
         professionalId: userId,
         patientId: session.patientId,
@@ -325,13 +337,13 @@ async function processTranscription(sessionId, userId) {
         date: session.startedAt || new Date(),
         content: transcription,
         aiContent: structured ? JSON.stringify(structured) : null,
-        complaint: structured?.motivo_sessao || null,
-        keyPoints: structured?.pontos_principais ? structured.pontos_principais.join('; ') : null,
-        clinicalObservations: structured?.observacoes_relevantes || null,
-        evolution: structured?.evolucao || null,
-        nextSteps: structured?.encaminhamentos || null,
+        complaint: complaintStr,
+        keyPoints: keyPointsStr,
+        clinicalObservations: clinicalObsStr,
+        evolution: evolutionStr,
+        nextSteps: nextStepsStr,
         modality: 'telehealth',
-        themes: structured?.temas_abordados || []
+        themes: Array.isArray(structured?.temas_abordados) ? structured.temas_abordados : []
       }
     });
 
