@@ -42,6 +42,7 @@ import PortalLogin from "./pages/PortalLogin";
 import Mensagens from "./pages/Mensagens";
 import Prontuarios from "./pages/Prontuarios";
 import Relatorios from "./pages/Relatorios";
+import Teleatendimento from "./pages/Teleatendimento";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
               <Route path="/consultas" element={<Dashboard />} />
               <Route path="/prontuarios" element={<Prontuarios />} />
               <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/teleatendimento" element={<Teleatendimento />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/ajuda" element={<HelpPage />} />
             </Route>
