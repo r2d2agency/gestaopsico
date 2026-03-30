@@ -566,6 +566,10 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+          FUNCIONALIDADES
       ═══════════════════════════════════════════ */}
       <section id="funcionalidades" className="py-24 px-6 bg-muted/30">
         <div className="max-w-6xl mx-auto">
