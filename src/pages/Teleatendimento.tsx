@@ -46,12 +46,29 @@ export default function Teleatendimento() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [duration, setDuration] = useState(0);
   const [showDetail, setShowDetail] = useState<string | null>(null);
+  const [showPreflight, setShowPreflight] = useState(false);
+  const [preflight, setPreflight] = useState<{ mic: boolean; audio: boolean; loading: boolean; err: string; checked: boolean }>({ mic: false, audio: false, loading: false, err: "", checked: false });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
+
+  // Preflight device check
+  const runPreflight = async () => {
+    setPreflight(v => ({ ...v, loading: true, err: "" }));
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      stream.getTracks().forEach(t => t.stop());
+      const hasMic = stream.getAudioTracks().length > 0;
+      const hasAudio = devs.some(d => d.kind === "audiooutput") || /Mobi|Android/i.test(navigator.userAgent);
+      setPreflight({ mic: hasMic, audio: hasAudio, loading: false, err: "", checked: true });
+    } catch (e: any) {
+      setPreflight({ mic: false, audio: false, loading: false, err: e.message || "Permissão do microfone negada", checked: true });
+    }
+  };
 
   // Auto-create session from URL params (e.g. from Agenda) — skip dialogs, go straight to consent
   const [autoCreating, setAutoCreating] = useState(false);
