@@ -20,7 +20,8 @@ router.get('/', async (req, res) => {
       include: {
         patient: { select: { id: true, name: true } },
         couple: { select: { id: true, name: true } },
-        appointment: { select: { id: true, date: true, time: true, type: true, mode: true } }
+        appointment: { select: { id: true, date: true, time: true, type: true, mode: true } },
+        testAssignments: { select: { id: true, score: true, classification: true, template: { select: { title: true, category: true } } } }
       },
       orderBy: { date: 'desc' }
     });

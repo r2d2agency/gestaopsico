@@ -699,7 +699,13 @@ router.post('/my/:assignmentId/respond', async (req, res) => {
     if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
 
     const assignment = await prisma.testAssignment.findFirst({
-      where: { id: req.params.assignmentId, patientId: user.patientId, status: 'pending' }
+      where: { id: req.params.assignmentId, patientId: user.patientId, status: 'pending' },
+      include: {
+        template: {
+          include: { questions: { orderBy: { orderNum: 'asc' } } }
+        },
+        patient: { select: { id: true, name: true, professionalId: true } }
+      }
     });
     if (!assignment) return res.status(404).json({ error: 'Teste não encontrado ou já respondido' });
 
@@ -716,13 +722,69 @@ router.post('/my/:assignmentId/respond', async (req, res) => {
       }))
     });
 
+    // Calculate score
+    let score = null;
+    let classification = null;
+    const rules = assignment.template.scoringRules;
+    if (rules) {
+      let total = 0;
+      for (const q of assignment.template.questions) {
+        const resp = responses.find(r => r.questionId === q.id);
+        if (resp) {
+          let val = parseInt(resp.answer) || 0;
+          if (q.reverseScored && q.options.length > 0) {
+            val = q.options.length - 1 - val;
+          }
+          total += val * (q.weight || 1);
+        }
+      }
+      score = total;
+      if (rules.ranges) {
+        const range = rules.ranges.find(r => total >= r.min && total <= r.max);
+        classification = range?.label || 'Indefinido';
+      }
+    }
+
+    // Build test summary for the record
+    const answeredQuestions = assignment.template.questions.map(q => {
+      const resp = responses.find(r => r.questionId === q.id);
+      const answerIdx = resp ? parseInt(resp.answer) : null;
+      const answerText = (answerIdx !== null && q.options[answerIdx]) ? q.options[answerIdx] : (resp?.answer || '—');
+      return `• ${q.text}: ${answerText}`;
+    }).join('\n');
+
+    const scoreLine = score !== null ? `\n\nPontuação: ${score}${classification ? ` — ${classification}` : ''}` : '';
+    const recordContent = `Resultado do teste: ${assignment.template.title}\n\n${answeredQuestions}${scoreLine}`;
+
+    // Create a clinical record automatically
+    const record = await prisma.record.create({
+      data: {
+        professionalId: assignment.patient.professionalId,
+        patientId: assignment.patient.id,
+        type: 'individual',
+        date: new Date(),
+        modality: 'test',
+        content: recordContent,
+        complaint: `Teste psicológico: ${assignment.template.title}`,
+        keyPoints: classification ? `Classificação: ${classification}` : null,
+        themes: [assignment.template.category || 'teste'].filter(Boolean),
+      }
+    });
+
     const updated = await prisma.testAssignment.update({
       where: { id: req.params.assignmentId },
-      data: { status: 'completed', completedAt: new Date() }
+      data: {
+        status: 'completed',
+        completedAt: new Date(),
+        score,
+        classification,
+        clinicalRecordId: record.id
+      }
     });
 
     res.json(updated);
   } catch (err) {
+    console.error('Test respond error:', err);
     res.status(500).json({ error: 'Erro ao enviar respostas', details: err.message });
   }
 });
