@@ -577,6 +577,13 @@ export default function Prontuarios() {
                 )}
               </TabsContent>
 
+              {/* Mood tab - only for patients */}
+              {selectedEntity.type === "patient" && (
+                <TabsContent value="mood" className="mt-4">
+                  <MoodDashboard patientId={selectedEntity.id} patientName={selectedEntity.name} showAiAnalysis />
+                </TabsContent>
+              )}
+
               {/* Dashboard tab */}
               <TabsContent value="dashboard" className="mt-4">
                 {selectedEntity.type === "couple" ? (
