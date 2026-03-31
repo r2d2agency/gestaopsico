@@ -452,6 +452,19 @@ export default function Teleatendimento() {
                       <Phone className="h-5 w-5" /> Iniciar Captura de Áudio
                     </Button>
                   </>
+                ) : activeSession.status === "capturing" ? (
+                  <>
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <Mic className="h-8 w-8 md:h-10 md:w-10 text-destructive" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-destructive font-medium">● Captura ativa</p>
+                      <p className="text-xs text-muted-foreground mt-1">A gravação foi iniciada em outra aba ou sessão anterior</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setActiveSession(null)} className="gap-2 w-full sm:w-auto">
+                      <ArrowLeft className="h-4 w-4" /> Voltar
+                    </Button>
+                  </>
                 ) : null}
               </div>
 
@@ -694,20 +707,27 @@ export default function Teleatendimento() {
           <DialogHeader>
             <DialogTitle>Detalhes da Sessão</DialogTitle>
           </DialogHeader>
-          {detailSession && (
+          {detailSession && (() => {
+            const liveSession = sessions.find(s => s.id === detailSession.id) ?? detailSession;
+            const isActiveRecording = (isCapturing && activeSession?.id === liveSession.id) || liveSession.status === "capturing";
+            return (
             <div className="space-y-4">
               {/* Active recording controls */}
-              {isCapturing && activeSession?.id === detailSession.id && (
+              {isActiveRecording && (
                 <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
                   <div className="flex items-center gap-3">
                     <Mic className="h-5 w-5 text-destructive animate-pulse" />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-destructive">Gravação em andamento</p>
-                      <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>
+                      {isCapturing && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
                     </div>
-                    <Button variant="destructive" size="sm" onClick={() => { stopCapture(); setShowDetail(null); }} className="gap-2">
-                      <PhoneOff className="h-4 w-4" /> Parar Gravação
-                    </Button>
+                    {isCapturing ? (
+                      <Button variant="destructive" size="sm" onClick={() => { stopCapture(); setShowDetail(null); }} className="gap-2">
+                        <PhoneOff className="h-4 w-4" /> Parar Gravação
+                      </Button>
+                    ) : (
+                      <Badge className="bg-destructive/10 text-destructive">Captura ativa em outra aba</Badge>
+                    )}
                   </div>
                 </div>
               )}
@@ -770,7 +790,8 @@ export default function Teleatendimento() {
                 <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente após processamento
               </div>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
