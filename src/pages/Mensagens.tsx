@@ -29,6 +29,11 @@ interface Message {
   createdAt: string;
 }
 
+const normalizeAudioSrc = (v: string) =>
+  /^data:audio\/[\w.-]+;base64,/.test(v)
+    ? v
+    : `data:audio/webm;base64,${v.replace(/^data:[^,]*,?/, "").replace(/^audo\/bas64,?/, "").replace(/^audio\/bas64,?/, "")}`;
+
 export default function Mensagens() {
   const qc = useQueryClient();
   const [selectedPatient, setSelectedPatient] = useState<Conversation | null>(null);
