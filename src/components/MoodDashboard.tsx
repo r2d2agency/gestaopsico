@@ -256,6 +256,30 @@ export default function MoodDashboard({ patientId, patientName, showAiAnalysis }
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Analysis Result */}
+      {aiAnalysis && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" /> Análise de Humor com IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm text-foreground">
+                {aiAnalysis}
+              </div>
+              <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Esta análise é gerada por IA como apoio clínico. Não constitui diagnóstico. O psicólogo deve revisar e interpretar os dados.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }
