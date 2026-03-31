@@ -269,6 +269,18 @@ export default function Teleatendimento() {
     onError: (e: Error) => toast.error(e.message)
   });
 
+  const stopBackendCaptureMutation = useMutation({
+    mutationFn: (id: string) => telehealthApi.stop(id),
+    onSuccess: (session) => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["telehealth-detail", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["telehealth-status", session.id] });
+      setActiveSession(prev => prev?.id === session.id ? { ...prev, ...session } : prev);
+      toast.success("Captura encerrada. Você pode iniciar novamente.");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
   const processMutation = useMutation({
     mutationFn: (id: string) => telehealthApi.process(id),
     onSuccess: () => {
@@ -459,8 +471,17 @@ export default function Teleatendimento() {
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-destructive font-medium">● Captura ativa</p>
-                      <p className="text-xs text-muted-foreground mt-1">A gravação foi iniciada em outra aba ou sessão anterior</p>
+                      <p className="text-xs text-muted-foreground mt-1">Se você recarregou a página, encerre a captura para iniciar novamente.</p>
                     </div>
+                    <Button
+                      variant="destructive"
+                      onClick={() => stopBackendCaptureMutation.mutate(activeSession.id)}
+                      disabled={stopBackendCaptureMutation.isPending}
+                      className="gap-2 w-full sm:w-auto"
+                    >
+                      {stopBackendCaptureMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneOff className="h-4 w-4" />}
+                      Encerrar Captura
+                    </Button>
                     <Button variant="outline" onClick={() => setActiveSession(null)} className="gap-2 w-full sm:w-auto">
                       <ArrowLeft className="h-4 w-4" /> Voltar
                     </Button>
@@ -709,34 +730,47 @@ export default function Teleatendimento() {
           </DialogHeader>
           {detailSession && (() => {
             const liveSession = sessions.find(s => s.id === detailSession.id) ?? detailSession;
-            const isActiveRecording = (isCapturing && activeSession?.id === liveSession.id) || liveSession.status === "capturing";
+            const canStopRecording = liveSession.status === "capturing";
+            const isLocalCapture = isCapturing && activeSession?.id === liveSession.id;
             return (
             <div className="space-y-4">
               {/* Active recording controls */}
-              {isActiveRecording && (
+              {canStopRecording && (
                 <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
                   <div className="flex items-center gap-3">
                     <Mic className="h-5 w-5 text-destructive animate-pulse" />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-destructive">Gravação em andamento</p>
-                      {isCapturing && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
+                      {isLocalCapture && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
                     </div>
-                    {isCapturing ? (
-                      <Button variant="destructive" size="sm" onClick={() => { stopCapture(); setShowDetail(null); }} className="gap-2">
-                        <PhoneOff className="h-4 w-4" /> Parar Gravação
-                      </Button>
-                    ) : (
-                      <Badge className="bg-destructive/10 text-destructive">Captura ativa em outra aba</Badge>
-                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (isLocalCapture) {
+                          stopCapture();
+                        } else {
+                          stopBackendCaptureMutation.mutate(liveSession.id);
+                        }
+                        setShowDetail(null);
+                      }}
+                      disabled={!isLocalCapture && stopBackendCaptureMutation.isPending}
+                      className="gap-2"
+                    >
+                      {!isLocalCapture && stopBackendCaptureMutation.isPending
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <PhoneOff className="h-4 w-4" />}
+                      {isLocalCapture ? "Parar Gravação" : "Encerrar Captura"}
+                    </Button>
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div><p className="text-xs text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{detailSession.patient?.name || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Data</p><p className="text-foreground">{format(new Date(detailSession.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p></div>
-                <div><p className="text-xs text-muted-foreground">Duração</p><p className="text-foreground">{detailSession.duration ? formatDuration(detailSession.duration) : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Status</p><Badge className={STATUS_MAP[detailSession.status]?.color}>{STATUS_MAP[detailSession.status]?.label}</Badge></div>
+                <div><p className="text-xs text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{liveSession.patient?.name || detailSession.patient?.name || "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Data</p><p className="text-foreground">{format(new Date(liveSession.createdAt || detailSession.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p></div>
+                <div><p className="text-xs text-muted-foreground">Duração</p><p className="text-foreground">{(liveSession.duration ?? detailSession.duration) ? formatDuration((liveSession.duration ?? detailSession.duration) as number) : "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Status</p><Badge className={STATUS_MAP[liveSession.status]?.color}>{STATUS_MAP[liveSession.status]?.label}</Badge></div>
               </div>
 
               {detailSession.transcription && (

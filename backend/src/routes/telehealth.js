@@ -244,6 +244,35 @@ router.post('/:id/start', async (req, res) => {
   }
 });
 
+// STOP capture without upload (fallback after refresh/crash)
+router.post('/:id/stop', async (req, res) => {
+  try {
+    const session = await prisma.telehealthSession.findFirst({
+      where: { id: req.params.id, professionalId: req.userId }
+    });
+    if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
+    if (session.status !== 'capturing') return res.status(400).json({ error: 'Sessão não está em captura' });
+
+    const updated = await prisma.telehealthSession.update({
+      where: { id: session.id },
+      data: {
+        status: 'waiting',
+        processingStatus: 'none',
+        processingError: null,
+        startedAt: null,
+        endedAt: null,
+        duration: null,
+        updatedAt: new Date()
+      }
+    });
+
+    await auditLog(session.id, 'capture_stopped', { mode: 'manual_without_upload' });
+    res.json({ ...updated, audioFileName: undefined });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao encerrar captura', details: err.message });
+  }
+});
+
 // UPLOAD audio
 router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-stream'], limit: '200mb' }), async (req, res) => {
   try {
