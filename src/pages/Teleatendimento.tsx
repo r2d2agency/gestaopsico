@@ -452,6 +452,19 @@ export default function Teleatendimento() {
                       <Phone className="h-5 w-5" /> Iniciar Captura de Áudio
                     </Button>
                   </>
+                ) : activeSession.status === "capturing" ? (
+                  <>
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <Mic className="h-8 w-8 md:h-10 md:w-10 text-destructive" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-destructive font-medium">● Captura ativa</p>
+                      <p className="text-xs text-muted-foreground mt-1">A gravação foi iniciada em outra aba ou sessão anterior</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setActiveSession(null)} className="gap-2 w-full sm:w-auto">
+                      <ArrowLeft className="h-4 w-4" /> Voltar
+                    </Button>
+                  </>
                 ) : null}
               </div>
 
