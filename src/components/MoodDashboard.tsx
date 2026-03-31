@@ -60,12 +60,38 @@ export default function MoodDashboard({ patientId, patientName, showAiAnalysis }
     ? Object.entries(stats.emotionFrequency).sort(([, a], [, b]) => b - a).slice(0, 8)
     : [];
 
+  const handleAiAnalysis = async () => {
+    setAiLoading(true);
+    try {
+      const result = await moodApi.moodAiAnalysis(patientId);
+      setAiAnalysis(result.analysis);
+      toast.success("Análise de humor gerada com sucesso");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar análise");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {patientName && (
-        <h2 className="text-lg font-display font-bold text-foreground">
-          Humor de {patientName}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-display font-bold text-foreground">
+            Humor de {patientName}
+          </h2>
+          {showAiAnalysis && entries.length >= 3 && (
+            <Button
+              onClick={handleAiAnalysis}
+              disabled={aiLoading}
+              className="gradient-primary border-0 shadow-glow"
+              size="sm"
+            >
+              {aiLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Analisar com IA
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Stats */}
