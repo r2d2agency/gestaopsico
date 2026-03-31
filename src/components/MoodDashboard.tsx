@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Smile, Frown, Meh, TrendingUp, Calendar, Brain,
-  Zap, Moon, BarChart3, Heart
+  Zap, Moon, BarChart3, Heart, Sparkles, AlertTriangle, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { moodApi, type MoodEntry, type MoodStats } from "@/lib/portalApi";
+import { toast } from "sonner";
 
 const MOODS = [
   { label: "Muito mal", icon: Frown, color: "text-destructive", bg: "bg-destructive" },
@@ -20,9 +23,13 @@ const MOODS = [
 interface Props {
   patientId: string;
   patientName?: string;
+  showAiAnalysis?: boolean;
 }
 
-export default function MoodDashboard({ patientId, patientName }: Props) {
+export default function MoodDashboard({ patientId, patientName, showAiAnalysis }: Props) {
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["patient-mood", patientId],
     queryFn: () => moodApi.patientMood(patientId, 90),
@@ -53,12 +60,38 @@ export default function MoodDashboard({ patientId, patientName }: Props) {
     ? Object.entries(stats.emotionFrequency).sort(([, a], [, b]) => b - a).slice(0, 8)
     : [];
 
+  const handleAiAnalysis = async () => {
+    setAiLoading(true);
+    try {
+      const result = await moodApi.moodAiAnalysis(patientId);
+      setAiAnalysis(result.analysis);
+      toast.success("Análise de humor gerada com sucesso");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar análise");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {patientName && (
-        <h2 className="text-lg font-display font-bold text-foreground">
-          Humor de {patientName}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-display font-bold text-foreground">
+            Humor de {patientName}
+          </h2>
+          {showAiAnalysis && entries.length >= 3 && (
+            <Button
+              onClick={handleAiAnalysis}
+              disabled={aiLoading}
+              className="gradient-primary border-0 shadow-glow"
+              size="sm"
+            >
+              {aiLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Analisar com IA
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Stats */}
@@ -223,6 +256,30 @@ export default function MoodDashboard({ patientId, patientName }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Analysis Result */}
+      {aiAnalysis && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" /> Análise de Humor com IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm text-foreground">
+                {aiAnalysis}
+              </div>
+              <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Esta análise é gerada por IA como apoio clínico. Não constitui diagnóstico. O psicólogo deve revisar e interpretar os dados.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }
