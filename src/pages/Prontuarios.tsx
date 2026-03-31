@@ -18,11 +18,12 @@ import { ptBR } from "date-fns/locale";
 import {
   FileText, Plus, Search, Calendar, User, Edit, Eye, Sparkles, Brain,
   AlertTriangle, TrendingUp, Tag, BarChart3, Clock, ChevronRight, ArrowLeft,
-  Users, Heart, Filter, CalendarDays, Trash2, RefreshCw, CheckCircle2
+  Users, Heart, Filter, CalendarDays, Trash2, RefreshCw, CheckCircle2, Smile
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
+import MoodDashboard from "@/components/MoodDashboard";
 
 const EMPTY_FORM = {
   patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
