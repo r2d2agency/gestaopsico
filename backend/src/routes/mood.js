@@ -224,15 +224,3 @@ async function callAiProvider(provider, apiKey, messages, model) {
 }
 
 module.exports = router;
-  if (!entries.length) return 0;
-  let streak = 1;
-  const sorted = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
-  for (let i = 1; i < sorted.length; i++) {
-    const diff = (new Date(sorted[i - 1].date) - new Date(sorted[i].date)) / (1000 * 60 * 60 * 24);
-    if (diff <= 1.5) streak++;
-    else break;
-  }
-  return streak;
-}
-
-module.exports = router;
