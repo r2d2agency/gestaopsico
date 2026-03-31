@@ -790,7 +790,8 @@ export default function Teleatendimento() {
                 <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente após processamento
               </div>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
