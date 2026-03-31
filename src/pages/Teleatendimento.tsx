@@ -269,6 +269,18 @@ export default function Teleatendimento() {
     onError: (e: Error) => toast.error(e.message)
   });
 
+  const stopBackendCaptureMutation = useMutation({
+    mutationFn: (id: string) => telehealthApi.stop(id),
+    onSuccess: (session) => {
+      queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["telehealth-detail", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["telehealth-status", session.id] });
+      setActiveSession(prev => prev?.id === session.id ? { ...prev, ...session } : prev);
+      toast.success("Captura encerrada. Você pode iniciar novamente.");
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
   const processMutation = useMutation({
     mutationFn: (id: string) => telehealthApi.process(id),
     onSuccess: () => {
