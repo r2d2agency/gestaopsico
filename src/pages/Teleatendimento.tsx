@@ -767,10 +767,10 @@ export default function Teleatendimento() {
               )}
 
               <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div><p className="text-xs text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{detailSession.patient?.name || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Data</p><p className="text-foreground">{format(new Date(detailSession.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p></div>
-                <div><p className="text-xs text-muted-foreground">Duração</p><p className="text-foreground">{detailSession.duration ? formatDuration(detailSession.duration) : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Status</p><Badge className={STATUS_MAP[detailSession.status]?.color}>{STATUS_MAP[detailSession.status]?.label}</Badge></div>
+                <div><p className="text-xs text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{liveSession.patient?.name || detailSession.patient?.name || "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Data</p><p className="text-foreground">{format(new Date(liveSession.createdAt || detailSession.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p></div>
+                <div><p className="text-xs text-muted-foreground">Duração</p><p className="text-foreground">{(liveSession.duration ?? detailSession.duration) ? formatDuration((liveSession.duration ?? detailSession.duration) as number) : "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Status</p><Badge className={STATUS_MAP[liveSession.status]?.color}>{STATUS_MAP[liveSession.status]?.label}</Badge></div>
               </div>
 
               {detailSession.transcription && (

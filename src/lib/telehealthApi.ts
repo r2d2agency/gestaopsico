@@ -30,6 +30,7 @@ export const telehealthApi = {
   create: (data: { patientId?: string; coupleId?: string; appointmentId?: string; meetingLink?: string }) =>
     apiRequest<TelehealthSession>("/telehealth", { method: "POST", body: data }),
   start: (id: string) => apiRequest<TelehealthSession>(`/telehealth/${id}/start`, { method: "POST" }),
+  stop: (id: string) => apiRequest<TelehealthSession>(`/telehealth/${id}/stop`, { method: "POST" }),
   getStatus: (id: string) => apiRequest<Pick<TelehealthSession, "id" | "status" | "processingStatus" | "processingError" | "recordId" | "transcription" | "structuredContent">>(`/telehealth/${id}/status`),
   retry: (id: string) => apiRequest<{ message: string }>(`/telehealth/${id}/retry`, { method: "POST" }),
   update: (id: string, data: { patientId?: string; meetingLink?: string }) =>
