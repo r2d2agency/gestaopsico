@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Smile, Frown, Meh, TrendingUp, Calendar, Brain,
-  Zap, Moon, BarChart3, Heart
+  Zap, Moon, BarChart3, Heart, Sparkles, AlertTriangle, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { moodApi, type MoodEntry, type MoodStats } from "@/lib/portalApi";
+import { toast } from "sonner";
 
 const MOODS = [
   { label: "Muito mal", icon: Frown, color: "text-destructive", bg: "bg-destructive" },
@@ -20,9 +23,13 @@ const MOODS = [
 interface Props {
   patientId: string;
   patientName?: string;
+  showAiAnalysis?: boolean;
 }
 
-export default function MoodDashboard({ patientId, patientName }: Props) {
+export default function MoodDashboard({ patientId, patientName, showAiAnalysis }: Props) {
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["patient-mood", patientId],
     queryFn: () => moodApi.patientMood(patientId, 90),
