@@ -694,20 +694,27 @@ export default function Teleatendimento() {
           <DialogHeader>
             <DialogTitle>Detalhes da Sessão</DialogTitle>
           </DialogHeader>
-          {detailSession && (
+          {detailSession && (() => {
+            const liveSession = sessions.find(s => s.id === detailSession.id) ?? detailSession;
+            const isActiveRecording = (isCapturing && activeSession?.id === liveSession.id) || liveSession.status === "capturing";
+            return (
             <div className="space-y-4">
               {/* Active recording controls */}
-              {isCapturing && activeSession?.id === detailSession.id && (
+              {isActiveRecording && (
                 <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
                   <div className="flex items-center gap-3">
                     <Mic className="h-5 w-5 text-destructive animate-pulse" />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-destructive">Gravação em andamento</p>
-                      <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>
+                      {isCapturing && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
                     </div>
-                    <Button variant="destructive" size="sm" onClick={() => { stopCapture(); setShowDetail(null); }} className="gap-2">
-                      <PhoneOff className="h-4 w-4" /> Parar Gravação
-                    </Button>
+                    {isCapturing ? (
+                      <Button variant="destructive" size="sm" onClick={() => { stopCapture(); setShowDetail(null); }} className="gap-2">
+                        <PhoneOff className="h-4 w-4" /> Parar Gravação
+                      </Button>
+                    ) : (
+                      <Badge className="bg-destructive/10 text-destructive">Captura ativa em outra aba</Badge>
+                    )}
                   </div>
                 </div>
               )}
