@@ -471,8 +471,17 @@ export default function Teleatendimento() {
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-destructive font-medium">● Captura ativa</p>
-                      <p className="text-xs text-muted-foreground mt-1">A gravação foi iniciada em outra aba ou sessão anterior</p>
+                      <p className="text-xs text-muted-foreground mt-1">Se você recarregou a página, encerre a captura para iniciar novamente.</p>
                     </div>
+                    <Button
+                      variant="destructive"
+                      onClick={() => stopBackendCaptureMutation.mutate(activeSession.id)}
+                      disabled={stopBackendCaptureMutation.isPending}
+                      className="gap-2 w-full sm:w-auto"
+                    >
+                      {stopBackendCaptureMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneOff className="h-4 w-4" />}
+                      Encerrar Captura
+                    </Button>
                     <Button variant="outline" onClick={() => setActiveSession(null)} className="gap-2 w-full sm:w-auto">
                       <ArrowLeft className="h-4 w-4" /> Voltar
                     </Button>
