@@ -730,25 +730,38 @@ export default function Teleatendimento() {
           </DialogHeader>
           {detailSession && (() => {
             const liveSession = sessions.find(s => s.id === detailSession.id) ?? detailSession;
-            const isActiveRecording = (isCapturing && activeSession?.id === liveSession.id) || liveSession.status === "capturing";
+            const canStopRecording = liveSession.status === "capturing";
+            const isLocalCapture = isCapturing && activeSession?.id === liveSession.id;
             return (
             <div className="space-y-4">
               {/* Active recording controls */}
-              {isActiveRecording && (
+              {canStopRecording && (
                 <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
                   <div className="flex items-center gap-3">
                     <Mic className="h-5 w-5 text-destructive animate-pulse" />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-destructive">Gravação em andamento</p>
-                      {isCapturing && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
+                      {isLocalCapture && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
                     </div>
-                    {isCapturing ? (
-                      <Button variant="destructive" size="sm" onClick={() => { stopCapture(); setShowDetail(null); }} className="gap-2">
-                        <PhoneOff className="h-4 w-4" /> Parar Gravação
-                      </Button>
-                    ) : (
-                      <Badge className="bg-destructive/10 text-destructive">Captura ativa em outra aba</Badge>
-                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (isLocalCapture) {
+                          stopCapture();
+                        } else {
+                          stopBackendCaptureMutation.mutate(liveSession.id);
+                        }
+                        setShowDetail(null);
+                      }}
+                      disabled={!isLocalCapture && stopBackendCaptureMutation.isPending}
+                      className="gap-2"
+                    >
+                      {!isLocalCapture && stopBackendCaptureMutation.isPending
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <PhoneOff className="h-4 w-4" />}
+                      {isLocalCapture ? "Parar Gravação" : "Encerrar Captura"}
+                    </Button>
                   </div>
                 </div>
               )}
