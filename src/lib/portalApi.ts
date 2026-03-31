@@ -75,6 +75,10 @@ export const moodApi = {
     apiRequest<{ entries: MoodEntry[]; stats: MoodStats }>(
       `/mood/patient/${patientId}${days ? `?days=${days}` : ""}`
     ),
+  moodAiAnalysis: (patientId: string) =>
+    apiRequest<{ success: boolean; analysis: string; totalEntries: number; period: { from: string; to: string }; disclaimer: string }>(
+      `/mood/patient/${patientId}/ai-analysis`, { method: "POST" }
+    ),
 };
 
 // ===== Tests =====
