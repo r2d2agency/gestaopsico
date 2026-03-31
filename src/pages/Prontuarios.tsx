@@ -385,18 +385,23 @@ export default function Prontuarios() {
           /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
           <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <Tabs value={detailTab} onValueChange={setDetailTab}>
-              <TabsList className="grid grid-cols-4 w-full max-w-lg">
+              <TabsList className={`grid w-full max-w-2xl ${selectedEntity.type === "patient" ? "grid-cols-5" : "grid-cols-4"}`}>
                 <TabsTrigger value="records" className="flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" /> Registros
+                  <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Registros</span>
                 </TabsTrigger>
                 <TabsTrigger value="agenda" className="flex items-center gap-1.5">
-                  <CalendarDays className="w-4 h-4" /> Agenda
+                  <CalendarDays className="w-4 h-4" /> <span className="hidden sm:inline">Agenda</span>
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4" /> Evolução
+                  <TrendingUp className="w-4 h-4" /> <span className="hidden sm:inline">Evolução</span>
                 </TabsTrigger>
+                {selectedEntity.type === "patient" && (
+                  <TabsTrigger value="mood" className="flex items-center gap-1.5">
+                    <Smile className="w-4 h-4" /> <span className="hidden sm:inline">Humor</span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4" /> Dashboard
+                  <BarChart3 className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span>
                 </TabsTrigger>
               </TabsList>
 
