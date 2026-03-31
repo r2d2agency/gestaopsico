@@ -203,7 +203,14 @@ export default function Mensagens() {
                           ? "bg-primary text-primary-foreground rounded-br-md"
                           : "bg-muted text-foreground rounded-bl-md"
                       }`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        {msg.type === "audio" || msg.content?.startsWith("data:audio") || msg.content?.startsWith("data:audo") ? (
+                          <div className="flex items-center gap-2">
+                            <Mic className="w-4 h-4 shrink-0" />
+                            <audio controls className="max-w-[220px] h-8" src={normalizeAudioSrc(msg.content)} />
+                          </div>
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        )}
                         <div className={`flex items-center gap-1 mt-1 ${
                           msg.sender === "professional" ? "justify-end" : ""
                         }`}>
