@@ -38,14 +38,16 @@ export const telehealthApi = {
   delete: (id: string) => apiRequest<{ message: string }>(`/telehealth/${id}`, { method: "DELETE" }),
   process: (id: string) => apiRequest<{ message: string }>(`/telehealth/${id}/process`, { method: "POST" }),
 
-  uploadAudio: async (id: string, audioBlob: Blob) => {
+  uploadAudio: async (id: string, audioBlob: Blob, notes?: { motivo?: string; anotacoes?: string }) => {
     const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
     const { API_BASE_URL } = await import("./api");
     const resp = await fetch(`${API_BASE_URL}/telehealth/${id}/upload`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/octet-stream"
+        "Content-Type": "application/octet-stream",
+        ...(notes?.motivo ? { "X-Session-Motivo": encodeURIComponent(notes.motivo) } : {}),
+        ...(notes?.anotacoes ? { "X-Session-Anotacoes": encodeURIComponent(notes.anotacoes) } : {}),
       },
       body: audioBlob
     });

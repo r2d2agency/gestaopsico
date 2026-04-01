@@ -237,7 +237,10 @@ export default function Teleatendimento() {
       const blob = new Blob(chunksRef.current, { type: "audio/webm" });
       toast.info("Enviando áudio para processamento seguro...");
       try {
-        await telehealthApi.uploadAudio(activeSession.id, blob);
+        await telehealthApi.uploadAudio(activeSession.id, blob, {
+          motivo: sessionNotes.motivo,
+          anotacoes: sessionNotes.anotacoes,
+        });
         setActiveSession(prev => prev ? { ...prev, status: "uploaded", processingStatus: "uploaded" } : null);
         toast.success("Áudio enviado! Transcrição em andamento...");
       } catch (err: any) {
