@@ -436,7 +436,7 @@ router.post('/:id/retry', async (req, res) => {
       where: { id: req.params.id, professionalId: req.userId }
     });
     if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
-    if (session.processingStatus !== 'error') return res.status(400).json({ error: 'Sessão não está em estado de erro' });
+    if (!['error', 'uploaded', 'none'].includes(session.processingStatus)) return res.status(400).json({ error: 'Sessão não pode ser reprocessada neste estado' });
     if (!session.audioFileName) return res.status(400).json({ error: 'Áudio já foi excluído' });
 
     processTranscription(req.params.id, req.userId).catch(console.error);
