@@ -16,7 +16,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, MicOff, Phone, PhoneOff, Clock, Shield, CheckCircle, AlertCircle,
   Upload, FileText, Brain, Trash2, Video, ExternalLink, Loader2, RefreshCw,
-  Eye, Plus, ArrowLeft, Headphones, Monitor, Volume2, Info, Pause, Play
+  Eye, Plus, ArrowLeft, Headphones, Monitor, Volume2, Info, Pause, Play,
+  Paperclip, X, File, Image as ImageIcon
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +38,31 @@ const PROCESSING_MAP: Record<string, { label: string; icon: React.ReactNode }> =
   error: { label: "Erro no processamento", icon: <AlertCircle className="h-4 w-4" /> },
 };
 
+interface AttachedDoc {
+  name: string;
+  type: string;
+  content: string;
+  size: number;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function readFileContent(file: File): Promise<AttachedDoc> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1] || "";
+      resolve({ name: file.name, type: file.type || "application/octet-stream", content: base64, size: file.size });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Teleatendimento() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -45,6 +71,7 @@ export default function Teleatendimento() {
   const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [newSessionData, setNewSessionData] = useState<{ patientId: string; meetingLink: string }>({ patientId: "", meetingLink: "" });
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [showDetail, setShowDetail] = useState<string | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
@@ -52,6 +79,9 @@ export default function Teleatendimento() {
   const [editSession, setEditSession] = useState<TelehealthSession | null>(null);
   const [editData, setEditData] = useState<{ patientId: string; meetingLink: string }>({ patientId: "", meetingLink: "" });
   const [sessionNotes, setSessionNotes] = useState({ motivo: "", anotacoes: "" });
+  const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([]);
+  const [showRecordingModal, setShowRecordingModal] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -59,6 +89,7 @@ export default function Teleatendimento() {
   const micStreamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   // Preflight device check
   const runPreflight = async () => {
@@ -77,7 +108,7 @@ export default function Teleatendimento() {
     }
   };
 
-  // Auto-create session from URL params (e.g. from Agenda) — skip dialogs, go straight to consent
+  // Auto-create session from URL params
   const [autoCreating, setAutoCreating] = useState(false);
   useEffect(() => {
     const patientId = searchParams.get("patientId");
@@ -86,11 +117,7 @@ export default function Teleatendimento() {
       setAutoCreating(true);
       setNewSessionData({ patientId, meetingLink: "" });
       setSearchParams({}, { replace: true });
-      // Auto-create session directly (consent is shown inline on the session screen)
-      telehealthApi.create({
-        patientId,
-        appointmentId: appointmentId || undefined,
-      }).then((session) => {
+      telehealthApi.create({ patientId, appointmentId: appointmentId || undefined }).then((session) => {
         setActiveSession(session);
         queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
         toast.success("Sessão criada! Inicie a captura de áudio quando estiver pronto.");
@@ -118,7 +145,6 @@ export default function Teleatendimento() {
     enabled: !!showDetail
   });
 
-  // Poll processing status for active session
   const { data: statusData } = useQuery({
     queryKey: ["telehealth-status", activeSession?.id],
     queryFn: () => telehealthApi.getStatus(activeSession!.id),
@@ -133,6 +159,7 @@ export default function Teleatendimento() {
         queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
         if (statusData.processingStatus === "completed") {
           toast.success("Transcrição concluída e salva no prontuário!");
+          setShowRecordingModal(false);
         }
       }
     }
@@ -160,32 +187,38 @@ export default function Teleatendimento() {
       let recordingStream: MediaStream;
 
       if (supportsDisplayCapture) {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        displayStreamRef.current = displayStream;
+        try {
+          const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          displayStreamRef.current = displayStream;
 
-        const audioCtx = new AudioContext();
-        const dest = audioCtx.createMediaStreamDestination();
-        audioContextRef.current = audioCtx;
+          const audioCtx = new AudioContext();
+          const dest = audioCtx.createMediaStreamDestination();
+          audioContextRef.current = audioCtx;
 
-        const displayAudioTracks = displayStream.getAudioTracks();
-        if (displayAudioTracks.length > 0) {
-          const displaySource = audioCtx.createMediaStreamSource(new MediaStream(displayAudioTracks));
-          displaySource.connect(dest);
-        }
+          const displayAudioTracks = displayStream.getAudioTracks();
+          if (displayAudioTracks.length > 0) {
+            const displaySource = audioCtx.createMediaStreamSource(new MediaStream(displayAudioTracks));
+            displaySource.connect(dest);
+          }
 
-        // Clone mic track so original stays active for the call
-        const clonedMicTrack = micStream.getAudioTracks()[0].clone();
-        const micSource = audioCtx.createMediaStreamSource(new MediaStream([clonedMicTrack]));
-        micSource.connect(dest);
+          const clonedMicTrack = micStream.getAudioTracks()[0].clone();
+          const micSource = audioCtx.createMediaStreamSource(new MediaStream([clonedMicTrack]));
+          micSource.connect(dest);
 
-        recordingStream = dest.stream;
+          recordingStream = dest.stream;
 
-        const displayVideoTrack = displayStream.getVideoTracks()[0];
-        if (displayVideoTrack) {
-          displayVideoTrack.onended = () => stopCapture();
+          const displayVideoTrack = displayStream.getVideoTracks()[0];
+          if (displayVideoTrack) {
+            displayVideoTrack.onended = () => stopCapture();
+          }
+        } catch {
+          // User cancelled display capture, fallback to mic only
+          const clonedTrack = micStream.getAudioTracks()[0].clone();
+          recordingStream = new MediaStream([clonedTrack]);
+          displayStreamRef.current = null;
+          toast.info("Captura será feita apenas pelo microfone.");
         }
       } else {
-        // Mobile: clone the mic track so the original stays active for the call
         const clonedTrack = micStream.getAudioTracks()[0].clone();
         recordingStream = new MediaStream([clonedTrack]);
         displayStreamRef.current = null;
@@ -204,16 +237,34 @@ export default function Teleatendimento() {
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
 
-      // Start timer
       setDuration(0);
       timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
       setIsCapturing(true);
+      setIsPaused(false);
+      setShowRecordingModal(true);
 
-      // Notify backend
       await telehealthApi.start(activeSession.id);
       toast.success("Captura de áudio iniciada!");
     } catch (err: any) {
       toast.error("Erro ao iniciar captura: " + (err.message || "Permissão negada"));
+    }
+  };
+
+  const pauseCapture = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.pause();
+      if (timerRef.current) clearInterval(timerRef.current);
+      setIsPaused(true);
+      toast.info("Gravação pausada");
+    }
+  };
+
+  const resumeCapture = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "paused") {
+      mediaRecorderRef.current.resume();
+      timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+      setIsPaused(false);
+      toast.info("Gravação retomada");
     }
   };
 
@@ -229,8 +280,8 @@ export default function Teleatendimento() {
     audioContextRef.current = null;
     if (timerRef.current) clearInterval(timerRef.current);
     setIsCapturing(false);
+    setIsPaused(false);
 
-    // Wait for final data
     await new Promise(r => setTimeout(r, 500));
 
     if (chunksRef.current.length > 0 && activeSession) {
@@ -247,7 +298,7 @@ export default function Teleatendimento() {
         toast.error("Erro ao enviar áudio: " + err.message);
       }
     }
-  }, [activeSession]);
+  }, [activeSession, sessionNotes]);
 
   const retryMutation = useMutation({
     mutationFn: (id: string) => telehealthApi.retry(id),
@@ -278,10 +329,8 @@ export default function Teleatendimento() {
     mutationFn: (id: string) => telehealthApi.stop(id),
     onSuccess: (session) => {
       queryClient.invalidateQueries({ queryKey: ["telehealth-sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["telehealth-detail", session.id] });
-      queryClient.invalidateQueries({ queryKey: ["telehealth-status", session.id] });
       setActiveSession(prev => prev?.id === session.id ? { ...prev, ...session } : prev);
-      toast.success("Captura encerrada. Você pode iniciar novamente.");
+      toast.success("Captura encerrada.");
     },
     onError: (e: Error) => toast.error(e.message)
   });
@@ -302,40 +351,303 @@ export default function Teleatendimento() {
     return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   };
 
-  const handleNewSession = () => {
-    setShowConsentDialog(true);
-  };
-
-  const handleConsentAccepted = () => {
-    setShowConsentDialog(false);
-    setShowNewDialog(true);
-  };
-
+  const handleNewSession = () => setShowConsentDialog(true);
+  const handleConsentAccepted = () => { setShowConsentDialog(false); setShowNewDialog(true); };
   const handleCreateSession = () => {
     if (!newSessionData.patientId) return toast.error("Selecione um paciente");
     createMutation.mutate({ patientId: newSessionData.patientId, meetingLink: newSessionData.meetingLink || undefined });
   };
 
-  // Active session view
-  if (activeSession) {
+  // Document handling
+  const handleDocFiles = async (files: FileList | File[]) => {
+    const maxSize = 10 * 1024 * 1024;
+    const newDocs: AttachedDoc[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) {
+        toast.error(`${file.name} excede 10MB`);
+        continue;
+      }
+      try {
+        newDocs.push(await readFileContent(file));
+      } catch {
+        toast.error(`Erro ao ler ${file.name}`);
+      }
+    }
+    setAttachedDocs(prev => [...prev, ...newDocs].slice(0, 10));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) handleDocFiles(e.dataTransfer.files);
+  };
+
+  // ============================
+  // RECORDING MODAL (fullscreen overlay)
+  // ============================
+  const RecordingModal = () => {
+    if (!showRecordingModal || !activeSession) return null;
+
+    const proc = PROCESSING_MAP[activeSession.processingStatus] || PROCESSING_MAP.none;
+    const isProcessing = ["uploaded", "transcribing", "organizing"].includes(activeSession.processingStatus);
+    const isCompleted = activeSession.processingStatus === "completed";
+    const isError = activeSession.processingStatus === "error";
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto"
+      >
+        <div className="min-h-screen flex flex-col">
+          {/* Top bar */}
+          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-border px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {isCapturing && !isPaused && (
+                  <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 1 }}
+                    className="w-3 h-3 rounded-full bg-destructive" />
+                )}
+                {isPaused && <div className="w-3 h-3 rounded-full bg-warning" />}
+                <span className="font-semibold text-foreground">{activeSession.patient?.name || "Paciente"}</span>
+              </div>
+              {isCapturing && (
+                <span className="text-lg font-mono font-bold text-foreground tabular-nums">{formatDuration(duration)}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isCapturing && (
+                <>
+                  {isPaused ? (
+                    <Button size="sm" variant="outline" onClick={resumeCapture} className="gap-1.5">
+                      <Play className="h-4 w-4" /> Continuar
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={pauseCapture} className="gap-1.5">
+                      <Pause className="h-4 w-4" /> Pausar
+                    </Button>
+                  )}
+                  <Button size="sm" variant="destructive" onClick={stopCapture} className="gap-1.5">
+                    <CheckCircle className="h-4 w-4" /> Finalizar
+                  </Button>
+                </>
+              )}
+              {!isCapturing && !isProcessing && !isCompleted && (
+                <Button size="sm" variant="ghost" onClick={() => { setShowRecordingModal(false); }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              {(isCompleted || isError) && (
+                <Button size="sm" variant="outline" onClick={() => { setShowRecordingModal(false); setActiveSession(null); }}>
+                  Fechar
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Waveform bar when recording */}
+          {isCapturing && (
+            <div className="px-4 py-3 border-b border-border bg-destructive/5">
+              <div className="flex items-center justify-center gap-0.5 h-8">
+                {Array.from({ length: 40 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-1 bg-destructive/60 rounded-full"
+                    animate={isPaused ? { height: 4 } : { height: [4, Math.random() * 28 + 4, 4] }}
+                    transition={{ repeat: Infinity, duration: 0.4 + Math.random() * 0.6, delay: i * 0.03 }}
+                  />
+                ))}
+              </div>
+              <p className="text-center text-xs text-muted-foreground mt-1">
+                {isPaused ? "⏸ Gravação pausada" : "🔴 Gravando áudio da sessão"}
+              </p>
+            </div>
+          )}
+
+          {/* Content */}
+          <div className="flex-1 p-4 md:p-6 max-w-4xl mx-auto w-full space-y-4">
+            {/* Session notes */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card className="border-primary/20">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">1</Badge>
+                    <span className="text-sm font-semibold text-foreground">Motivo da Consulta</span>
+                  </div>
+                  <Textarea
+                    placeholder="Ex.: Ansiedade, acompanhamento mensal, queixa específica..."
+                    value={sessionNotes.motivo}
+                    onChange={(e) => setSessionNotes(v => ({ ...v, motivo: e.target.value }))}
+                    className="min-h-[100px] resize-none text-sm"
+                  />
+                </CardContent>
+              </Card>
+              <Card className="border-primary/20">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">2</Badge>
+                    <span className="text-sm font-semibold text-foreground">Anotações Livres</span>
+                  </div>
+                  <Textarea
+                    placeholder="Não se preocupe em organizar, a IA fará isso por você."
+                    value={sessionNotes.anotacoes}
+                    onChange={(e) => setSessionNotes(v => ({ ...v, anotacoes: e.target.value }))}
+                    className="min-h-[100px] resize-none text-sm"
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Document drop area */}
+            <Card className="border-primary/20">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Documentos para o Prontuário</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{attachedDocs.length}/10 arquivos</span>
+                </div>
+
+                <input
+                  ref={docInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.xls,.xlsx"
+                  className="hidden"
+                  onChange={e => { if (e.target.files) handleDocFiles(e.target.files); e.target.value = ""; }}
+                />
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => docInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                    dragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50 hover:bg-primary/5"
+                  }`}
+                >
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Clique ou arraste</span> documentos aqui
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, imagens, planilhas, textos (máx. 10MB cada)</p>
+                </div>
+
+                {attachedDocs.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {attachedDocs.map((doc, i) => (
+                      <div key={i} className="flex items-center gap-1.5 bg-muted rounded-lg px-2.5 py-1.5 text-xs">
+                        {doc.type.startsWith("image/") ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" /> : <File className="w-3.5 h-3.5 text-muted-foreground" />}
+                        <span className="truncate max-w-[140px]">{doc.name}</span>
+                        <span className="text-muted-foreground">({formatFileSize(doc.size)})</span>
+                        <button onClick={(e) => { e.stopPropagation(); setAttachedDocs(prev => prev.filter((_, idx) => idx !== i)); }}
+                          className="ml-1 hover:text-destructive">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Processing status */}
+            {activeSession.processingStatus !== "none" && (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <h3 className="font-semibold text-foreground text-sm">Status do Processamento</h3>
+                  <div className="space-y-2">
+                    {["uploaded", "transcribing", "organizing", "completed"].map((step) => {
+                      const s = PROCESSING_MAP[step];
+                      const currentIdx = ["none", "uploaded", "transcribing", "organizing", "completed"].indexOf(activeSession.processingStatus);
+                      const stepIdx = ["none", "uploaded", "transcribing", "organizing", "completed"].indexOf(step);
+                      const isDone = stepIdx < currentIdx || (stepIdx === currentIdx && activeSession.processingStatus === "completed");
+                      const isCurrent = step === activeSession.processingStatus;
+                      return (
+                        <div key={step} className={`flex items-center gap-3 p-2 rounded-lg ${isCurrent ? "bg-primary/5 border border-primary/20" : ""}`}>
+                          {isDone ? <CheckCircle className="h-4 w-4 text-success" /> : isCurrent ? s.icon : <div className="h-4 w-4 rounded-full border-2 border-muted" />}
+                          <span className={`text-sm ${isDone ? "text-success" : isCurrent ? "text-foreground font-medium" : "text-muted-foreground"}`}>{s.label}</span>
+                        </div>
+                      );
+                    })}
+                    {isError && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/5 border border-destructive/20">
+                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                        <span className="text-sm text-destructive flex-1">{activeSession.processingError || "Erro desconhecido"}</span>
+                        <Button size="sm" variant="outline" onClick={() => retryMutation.mutate(activeSession.id)}>
+                          <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Transcription result */}
+            {isCompleted && statusData?.transcription && (
+              <Card>
+                <CardContent className="p-4 space-y-4">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm"><FileText className="h-4 w-4" /> Transcrição</h3>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto bg-muted p-4 rounded-lg">{statusData.transcription}</p>
+                  {statusData.structuredContent && (() => {
+                    try {
+                      const sc = JSON.parse(statusData.structuredContent);
+                      return (
+                        <>
+                          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm"><Brain className="h-4 w-4" /> Conteúdo Organizado</h3>
+                          <div className="space-y-3 bg-muted p-4 rounded-lg">
+                            {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo da Sessão</p><p className="text-sm text-foreground">{sc.motivo_sessao}</p></div>}
+                            {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas Abordados</p><div className="flex flex-wrap gap-1 mt-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
+                            {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm text-foreground">{sc.observacoes_relevantes}</p></div>}
+                            {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm text-foreground">{sc.evolucao}</p></div>}
+                            {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm text-foreground">{sc.encaminhamentos}</p></div>}
+                            {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm text-foreground">{sc.resumo}</p></div>}
+                          </div>
+                        </>
+                      );
+                    } catch { return null; }
+                  })()}
+                  <div className="flex items-center gap-2 text-xs text-success">
+                    <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente do sistema
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Security notice */}
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
+              <Shield className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>O áudio é armazenado temporariamente por até 24h e excluído automaticamente após a transcrição ou expiração.</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // ============================
+  // Active session view (pre-recording)
+  // ============================
+  if (activeSession && !showRecordingModal) {
     const proc = PROCESSING_MAP[activeSession.processingStatus] || PROCESSING_MAP.none;
     const stat = STATUS_MAP[activeSession.status] || STATUS_MAP.waiting;
 
     return (
       <div className="p-3 md:p-6 space-y-4 md:space-y-6 max-w-4xl mx-auto">
         <div className="flex items-center gap-2 md:gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => { if (!isCapturing) { setActiveSession(null); setShowPreflight(false); } }}>
+          <Button variant="ghost" size="icon" onClick={() => setActiveSession(null)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-lg md:text-2xl font-bold text-foreground">Sessão de Teleatendimento</h1>
           <Badge className={stat.color}>{stat.icon}<span className="ml-1">{stat.label}</span></Badge>
         </div>
 
-        {/* Preflight Check */}
-        {!isCapturing && activeSession.status === "waiting" && !showPreflight && (
+        {activeSession.status === "waiting" && (
           <Card className="border-primary/20">
             <CardContent className="p-4 md:p-6 space-y-5">
-              {/* Patient info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <p className="text-sm text-muted-foreground">Paciente</p>
@@ -408,215 +720,49 @@ export default function Teleatendimento() {
                 size="lg"
                 className="w-full gap-2"
                 disabled={preflight.checked && !preflight.mic}
-                onClick={() => { if (!preflight.checked) { runPreflight().then(() => setShowPreflight(true)); } else { setShowPreflight(true); } }}
+                onClick={startCapture}
               >
-                <Phone className="h-5 w-5" /> Preparar Captura de Áudio
+                <Phone className="h-5 w-5" /> Iniciar Gravação
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Capture Screen */}
-        {(showPreflight || isCapturing || activeSession.status !== "waiting") && (
-          <Card className="border-primary/20">
-            <CardContent className="p-4 md:p-6 space-y-4 md:space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Paciente</p>
-                  <p className="text-lg md:text-xl font-semibold text-foreground">{activeSession.patient?.name || "—"}</p>
-                </div>
-                <div className="sm:text-right">
-                  <p className="text-sm text-muted-foreground">Data/Hora</p>
-                  <p className="text-foreground text-sm">{format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
-                </div>
+        {/* If status is capturing but not local (page was refreshed) */}
+        {activeSession.status === "capturing" && !isCapturing && (
+          <Card className="border-destructive/20">
+            <CardContent className="p-4 md:p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Mic className="h-5 w-5 text-destructive animate-pulse" />
+                <span className="font-medium text-foreground">Captura ativa (outra aba/sessão)</span>
               </div>
-
-              {activeSession.meetingLink && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
-                  <Video className="h-4 w-4 text-primary shrink-0" />
-                  <a href={activeSession.meetingLink} target="_blank" rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-1 text-sm truncate">
-                    {activeSession.meetingLink} <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
-                </div>
-              )}
-
-              {/* Capture controls */}
-              <div className="flex flex-col items-center gap-4 md:gap-6 py-4 md:py-8">
-                {isCapturing ? (
-                  <>
-                    {/* Recording bar — like reference */}
-                    <Card className="w-full border-destructive/30 bg-destructive/5">
-                      <CardContent className="p-3 md:p-4 flex flex-col sm:flex-row items-center gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}
-                            className="w-3 h-3 rounded-full bg-destructive shrink-0" />
-                          <span className="font-semibold text-foreground truncate">{activeSession.patient?.name || "Paciente"}</span>
-                        </div>
-                        {/* Waveform indicator */}
-                        <div className="flex items-center gap-0.5 h-6">
-                          {Array.from({ length: 20 }).map((_, i) => (
-                            <motion.div
-                              key={i}
-                              className="w-1 bg-destructive/60 rounded-full"
-                              animate={{ height: [4, Math.random() * 20 + 4, 4] }}
-                              transition={{ repeat: Infinity, duration: 0.5 + Math.random() * 0.5, delay: i * 0.05 }}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-lg font-mono font-bold text-foreground tabular-nums">{formatDuration(duration)}</span>
-                        <Button variant="destructive" size="sm" onClick={stopCapture} className="gap-1.5 shrink-0">
-                          <Pause className="h-4 w-4" /> Pausar registro
-                        </Button>
-                      </CardContent>
-                    </Card>
-
-                    <p className="text-sm text-muted-foreground text-center">
-                      Você pode preencher as informações abaixo durante a consulta para aprimorar o resultado do registro.
-                    </p>
-
-                    {/* Session notes fields */}
-                    <div className="grid gap-4 sm:grid-cols-2 w-full">
-                      <Card className="border-primary/20">
-                        <CardContent className="p-4 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">1</Badge>
-                            <span className="text-sm font-semibold text-foreground">Motivo da Consulta</span>
-                          </div>
-                          <Textarea
-                            placeholder="Ex.: Renovação de remédio da pressão"
-                            value={sessionNotes.motivo}
-                            onChange={(e) => setSessionNotes(v => ({ ...v, motivo: e.target.value }))}
-                            className="min-h-[120px] resize-none text-sm"
-                          />
-                        </CardContent>
-                      </Card>
-                      <Card className="border-primary/20">
-                        <CardContent className="p-4 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">2</Badge>
-                            <span className="text-sm font-semibold text-foreground">Anotações livres</span>
-                          </div>
-                          <Textarea
-                            placeholder="Não se preocupe em organizar os dados, faremos isso por você."
-                            value={sessionNotes.anotacoes}
-                            onChange={(e) => setSessionNotes(v => ({ ...v, anotacoes: e.target.value }))}
-                            className="min-h-[120px] resize-none text-sm"
-                          />
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <Button variant="destructive" size="lg" onClick={stopCapture} className="gap-2 w-full sm:w-auto">
-                      <CheckCircle className="h-5 w-5" /> Finalizar consulta
-                    </Button>
-                  </>
-                ) : activeSession.status === "waiting" ? (
-                  <>
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Mic className="h-8 w-8 md:h-10 md:w-10 text-primary" />
-                    </div>
-                    <p className="text-muted-foreground text-center max-w-md text-sm px-2">
-                      Ao iniciar, o sistema solicitará permissão para capturar o áudio do microfone e da aba compartilhada.
-                    </p>
-                    <Button size="lg" onClick={startCapture} className="gap-2 w-full sm:w-auto">
-                      <Phone className="h-5 w-5" /> Iniciar Captura de Áudio
-                    </Button>
-                  </>
-                ) : activeSession.status === "capturing" ? (
-                  <>
-                    <Card className="w-full border-destructive/30 bg-destructive/5">
-                      <CardContent className="p-3 md:p-4 flex flex-col sm:flex-row items-center gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}
-                            className="w-3 h-3 rounded-full bg-destructive shrink-0" />
-                          <span className="font-semibold text-foreground truncate">{activeSession.patient?.name || "Paciente"}</span>
-                        </div>
-                        <span className="text-sm text-destructive font-medium">● Captura ativa</span>
-                      </CardContent>
-                    </Card>
-                    <p className="text-xs text-muted-foreground text-center">Se você recarregou a página, encerre a captura para iniciar novamente.</p>
-                    <Button
-                      variant="destructive"
-                      onClick={() => stopBackendCaptureMutation.mutate(activeSession.id)}
-                      disabled={stopBackendCaptureMutation.isPending}
-                      className="gap-2 w-full sm:w-auto"
-                    >
-                      {stopBackendCaptureMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneOff className="h-4 w-4" />}
-                      Encerrar Captura
-                    </Button>
-                    <Button variant="outline" onClick={() => setActiveSession(null)} className="gap-2 w-full sm:w-auto">
-                      <ArrowLeft className="h-4 w-4" /> Voltar
-                    </Button>
-                  </>
-                ) : null}
+              <p className="text-xs text-muted-foreground">Se você recarregou a página, encerre a captura para iniciar novamente.</p>
+              <div className="flex gap-2">
+                <Button variant="destructive" onClick={() => stopBackendCaptureMutation.mutate(activeSession.id)}
+                  disabled={stopBackendCaptureMutation.isPending} className="gap-2">
+                  {stopBackendCaptureMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneOff className="h-4 w-4" />}
+                  Encerrar Captura
+                </Button>
+                <Button variant="outline" onClick={() => setActiveSession(null)} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" /> Voltar
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
 
-              {/* Processing status */}
-              {activeSession.processingStatus !== "none" && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-foreground">Status do Processamento</h3>
-                  <div className="space-y-2">
-                    {["uploaded", "transcribing", "organizing", "completed"].map((step) => {
-                      const s = PROCESSING_MAP[step];
-                      const currentIdx = ["none", "uploaded", "transcribing", "organizing", "completed"].indexOf(activeSession.processingStatus);
-                      const stepIdx = ["none", "uploaded", "transcribing", "organizing", "completed"].indexOf(step);
-                      const isDone = stepIdx < currentIdx || (stepIdx === currentIdx && activeSession.processingStatus === "completed");
-                      const isCurrent = step === activeSession.processingStatus;
-                      return (
-                        <div key={step} className={`flex items-center gap-3 p-2 rounded-lg ${isCurrent ? "bg-primary/5 border border-primary/20" : ""}`}>
-                          {isDone ? <CheckCircle className="h-4 w-4 text-success" /> : isCurrent ? s.icon : <div className="h-4 w-4 rounded-full border-2 border-muted" />}
-                          <span className={`text-sm ${isDone ? "text-success" : isCurrent ? "text-foreground font-medium" : "text-muted-foreground"}`}>{s.label}</span>
-                        </div>
-                      );
-                    })}
-                    {activeSession.processingStatus === "error" && (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 rounded-lg bg-destructive/5 border border-destructive/20">
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                          <span className="text-sm text-destructive">{activeSession.processingError || "Erro desconhecido"}</span>
-                        </div>
-                        <Button size="sm" variant="outline" className="sm:ml-auto shrink-0" onClick={() => retryMutation.mutate(activeSession.id)}>
-                          <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
-                    <Shield className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>O áudio é armazenado temporariamente por até 24h e excluído automaticamente após a transcrição ou expiração.</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Transcription result */}
-              {activeSession.processingStatus === "completed" && statusData?.transcription && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2"><FileText className="h-4 w-4" /> Transcrição</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 md:max-h-64 overflow-y-auto bg-muted p-3 md:p-4 rounded-lg">{statusData.transcription}</p>
-                  {statusData.structuredContent && (() => {
-                    try {
-                      const sc = JSON.parse(statusData.structuredContent);
-                      return (
-                        <>
-                          <h3 className="font-semibold text-foreground flex items-center gap-2"><Brain className="h-4 w-4" /> Conteúdo Organizado</h3>
-                          <div className="space-y-3 bg-muted p-3 md:p-4 rounded-lg">
-                            {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo da Sessão</p><p className="text-sm text-foreground">{sc.motivo_sessao}</p></div>}
-                            {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas Abordados</p><div className="flex flex-wrap gap-1 mt-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
-                            {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm text-foreground">{sc.observacoes_relevantes}</p></div>}
-                            {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm text-foreground">{sc.evolucao}</p></div>}
-                            {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm text-foreground">{sc.encaminhamentos}</p></div>}
-                            {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm text-foreground">{sc.resumo}</p></div>}
-                          </div>
-                        </>
-                      );
-                    } catch { return null; }
-                  })()}
-                  <div className="flex items-center gap-2 text-xs text-success">
-                    <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente do sistema
-                  </div>
-                </div>
+        {/* Processing/completed status if not in modal */}
+        {["uploaded", "completed"].includes(activeSession.status) && (
+          <Card>
+            <CardContent className="p-4 md:p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                {proc.icon}
+                <span className="text-sm font-medium text-foreground">{proc.label}</span>
+              </div>
+              {activeSession.processingStatus === "error" && (
+                <Button size="sm" variant="outline" onClick={() => retryMutation.mutate(activeSession.id)}>
+                  <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -625,308 +771,280 @@ export default function Teleatendimento() {
     );
   }
 
+  // ============================
   // Sessions list view
+  // ============================
   return (
-    <div className="p-3 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Teleatendimento</h1>
-          <p className="text-muted-foreground text-xs md:text-sm">Sessões com captura segura de áudio e transcrição automática</p>
-        </div>
-        <Button onClick={handleNewSession} className="gap-2 w-full sm:w-auto"><Plus className="h-4 w-4" /> Nova Sessão</Button>
-      </div>
+    <>
+      <AnimatePresence>
+        <RecordingModal />
+      </AnimatePresence>
 
-      {isLoading ? (
-        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => <Card key={i} className="h-40 animate-pulse bg-muted" />)}
-        </div>
-      ) : sessions.length === 0 ? (
-        <Card className="p-8 md:p-12 text-center">
-          <Video className="h-10 w-10 md:h-12 md:w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground text-sm">Nenhuma sessão de teleatendimento ainda.</p>
-          <Button className="mt-4 w-full sm:w-auto" onClick={handleNewSession}><Plus className="h-4 w-4 mr-2" /> Criar Primeira Sessão</Button>
-        </Card>
-      ) : (
-        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence>
-            {sessions.map((s) => {
-              const stat = STATUS_MAP[s.status] || STATUS_MAP.waiting;
-              const proc = PROCESSING_MAP[s.processingStatus] || PROCESSING_MAP.none;
-              const canEdit = s.status === "waiting";
-              const canDelete = s.status === "waiting" || s.status === "completed" || s.processingStatus === "error";
-              const canProcess = s.status === "uploaded" && (s.processingStatus === "uploaded" || s.processingStatus === "error");
-              return (
-                <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <Card className="hover:border-primary/40 transition-colors">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between cursor-pointer" onClick={() => {
-                        if (s.status === "waiting" || s.status === "capturing") setActiveSession(s);
-                        else setShowDetail(s.id);
-                      }}>
-                        <p className="font-semibold text-foreground">{s.patient?.name || s.couple?.name || "—"}</p>
-                        <Badge className={stat.color}>{stat.icon}<span className="ml-1 text-xs">{stat.label}</span></Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{format(new Date(s.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
-                      {s.duration && <p className="text-xs text-muted-foreground">Duração: {formatDuration(s.duration)}</p>}
-                      <div className="flex items-center gap-2 text-xs">
-                        {proc.icon}<span className="text-muted-foreground">{proc.label}</span>
-                      </div>
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-border/50 flex-wrap">
-                        {canEdit && (
-                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
-                            e.stopPropagation();
-                            setEditSession(s);
-                            setEditData({ patientId: s.patientId || "", meetingLink: s.meetingLink || "" });
-                          }}>
-                            <FileText className="h-3 w-3" /> Editar
-                          </Button>
-                        )}
-                        {canProcess && (
-                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-primary" onClick={(e) => {
-                            e.stopPropagation();
-                            processMutation.mutate(s.id);
-                          }} disabled={processMutation.isPending}>
-                            <Brain className="h-3 w-3" /> Processar IA
-                          </Button>
-                        )}
-                        {s.processingStatus === "error" && (
-                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
-                            e.stopPropagation();
-                            retryMutation.mutate(s.id);
-                          }}>
-                            <RefreshCw className="h-3 w-3" /> Tentar novamente
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive" onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm("Deseja realmente excluir esta sessão?")) deleteMutation.mutate(s.id);
-                          }} disabled={deleteMutation.isPending}>
-                            <Trash2 className="h-3 w-3" /> Excluir
-                          </Button>
-                        )}
-                        {(s.status !== "waiting") && (
-                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs ml-auto" onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDetail(s.id);
-                          }}>
-                            <Eye className="h-3 w-3" /> Detalhes
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* Consent Dialog */}
-      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Aviso de Privacidade</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 text-sm text-muted-foreground">
-            <p>Ao iniciar uma sessão de teleatendimento com captura de áudio:</p>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>O áudio da sessão será capturado <strong>apenas para gerar a transcrição</strong> e organizar o prontuário.</li>
-              <li>O arquivo de áudio será armazenado <strong>apenas temporariamente</strong> em área privada e segura.</li>
-              <li>Após a transcrição, o áudio será <strong>excluído automaticamente</strong> do sistema.</li>
-              <li>Apenas o texto organizado permanecerá no prontuário do paciente.</li>
-              <li><strong>Nenhum acesso humano</strong> ao arquivo de áudio bruto é permitido.</li>
-            </ul>
-            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-xs text-primary font-medium">🔒 Toda a comunicação é criptografada e o áudio é processado de forma automatizada e segura.</p>
-            </div>
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Teleatendimento</h1>
+            <p className="text-muted-foreground text-xs md:text-sm">Sessões com captura segura de áudio e transcrição automática</p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConsentDialog(false)}>Cancelar</Button>
-            <Button onClick={handleConsentAccepted} className="gap-2"><Shield className="h-4 w-4" /> Aceitar e Continuar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Button onClick={handleNewSession} className="gap-2 w-full sm:w-auto"><Plus className="h-4 w-4" /> Nova Sessão</Button>
+        </div>
 
-      {/* New Session Dialog */}
-      <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova Sessão de Teleatendimento</DialogTitle>
-            <DialogDescription>Configure a sessão com captura de áudio segura</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">Paciente *</label>
-              <Select value={newSessionData.patientId} onValueChange={v => setNewSessionData(p => ({ ...p, patientId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
-                <SelectContent>
-                  {patients.map((p: Patient) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Link da Reunião (opcional)</label>
-              <Input placeholder="https://meet.google.com/... ou zoom.us/..."
-                value={newSessionData.meetingLink}
-                onChange={e => setNewSessionData(p => ({ ...p, meetingLink: e.target.value }))} />
-              <p className="text-xs text-muted-foreground mt-1">Google Meet, Zoom ou outro link de videochamada</p>
-            </div>
+        {isLoading ? (
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map(i => <Card key={i} className="h-40 animate-pulse bg-muted" />)}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewDialog(false)}>Cancelar</Button>
-            <Button onClick={handleCreateSession} disabled={createMutation.isPending} className="gap-2">
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
-              Criar Sessão
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        ) : sessions.length === 0 ? (
+          <Card className="p-8 md:p-12 text-center">
+            <Video className="h-10 w-10 md:h-12 md:w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-sm">Nenhuma sessão de teleatendimento ainda.</p>
+            <Button className="mt-4 w-full sm:w-auto" onClick={handleNewSession}><Plus className="h-4 w-4 mr-2" /> Criar Primeira Sessão</Button>
+          </Card>
+        ) : (
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence>
+              {sessions.map((s) => {
+                const stat = STATUS_MAP[s.status] || STATUS_MAP.waiting;
+                const proc = PROCESSING_MAP[s.processingStatus] || PROCESSING_MAP.none;
+                const canEdit = s.status === "waiting";
+                const canDelete = s.status === "waiting" || s.status === "completed" || s.processingStatus === "error";
+                const canProcess = s.status === "uploaded" && (s.processingStatus === "uploaded" || s.processingStatus === "error");
+                return (
+                  <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                    <Card className="hover:border-primary/40 transition-colors">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between cursor-pointer" onClick={() => {
+                          if (s.status === "waiting" || s.status === "capturing") setActiveSession(s);
+                          else setShowDetail(s.id);
+                        }}>
+                          <p className="font-semibold text-foreground">{s.patient?.name || s.couple?.name || "—"}</p>
+                          <Badge className={stat.color}>{stat.icon}<span className="ml-1 text-xs">{stat.label}</span></Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{format(new Date(s.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                        {s.duration && <p className="text-xs text-muted-foreground">Duração: {formatDuration(s.duration)}</p>}
+                        <div className="flex items-center gap-2 text-xs">
+                          {proc.icon}<span className="text-muted-foreground">{proc.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 border-t border-border/50 flex-wrap">
+                          {canEdit && (
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
+                              e.stopPropagation();
+                              setEditSession(s);
+                              setEditData({ patientId: s.patientId || "", meetingLink: s.meetingLink || "" });
+                            }}>
+                              <FileText className="h-3 w-3" /> Editar
+                            </Button>
+                          )}
+                          {canProcess && (
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-primary" onClick={(e) => {
+                              e.stopPropagation();
+                              processMutation.mutate(s.id);
+                            }} disabled={processMutation.isPending}>
+                              <Brain className="h-3 w-3" /> Processar IA
+                            </Button>
+                          )}
+                          {s.processingStatus === "error" && (
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={(e) => {
+                              e.stopPropagation();
+                              retryMutation.mutate(s.id);
+                            }}>
+                              <RefreshCw className="h-3 w-3" /> Tentar novamente
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive" onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm("Deseja realmente excluir esta sessão?")) deleteMutation.mutate(s.id);
+                            }} disabled={deleteMutation.isPending}>
+                              <Trash2 className="h-3 w-3" /> Excluir
+                            </Button>
+                          )}
+                          {(s.status !== "waiting") && (
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs ml-auto" onClick={(e) => {
+                              e.stopPropagation();
+                              setShowDetail(s.id);
+                            }}>
+                              <Eye className="h-3 w-3" /> Detalhes
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
 
-      {/* Detail Dialog */}
-      <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] md:w-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Sessão</DialogTitle>
-          </DialogHeader>
-          {detailSession && (() => {
-            const liveSession = sessions.find(s => s.id === detailSession.id) ?? detailSession;
-            const canStopRecording = liveSession.status === "capturing";
-            const isLocalCapture = isCapturing && activeSession?.id === liveSession.id;
-            return (
+        {/* Consent Dialog */}
+        <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Aviso de Privacidade</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <p>Ao iniciar uma sessão de teleatendimento com captura de áudio:</p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>O áudio da sessão será capturado <strong>apenas para gerar a transcrição</strong> e organizar o prontuário.</li>
+                <li>O arquivo de áudio será armazenado <strong>apenas temporariamente</strong> em área privada e segura.</li>
+                <li>Após a transcrição, o áudio será <strong>excluído automaticamente</strong> do sistema.</li>
+                <li>Apenas o texto organizado permanecerá no prontuário do paciente.</li>
+                <li><strong>Nenhum acesso humano</strong> ao arquivo de áudio bruto é permitido.</li>
+              </ul>
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="text-xs text-primary font-medium">🔒 Toda a comunicação é criptografada e o áudio é processado de forma automatizada e segura.</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowConsentDialog(false)}>Cancelar</Button>
+              <Button onClick={handleConsentAccepted} className="gap-2"><Shield className="h-4 w-4" /> Aceitar e Continuar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* New Session Dialog */}
+        <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova Sessão de Teleatendimento</DialogTitle>
+              <DialogDescription>Configure a sessão com captura de áudio segura</DialogDescription>
+            </DialogHeader>
             <div className="space-y-4">
-              {/* Active recording controls */}
-              {canStopRecording && (
-                <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Mic className="h-5 w-5 text-destructive animate-pulse" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-destructive">Gravação em andamento</p>
-                      {isLocalCapture && <p className="text-xs text-muted-foreground">Duração: {formatDuration(duration)}</p>}
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        if (isLocalCapture) {
-                          stopCapture();
-                        } else {
-                          stopBackendCaptureMutation.mutate(liveSession.id);
-                        }
-                        setShowDetail(null);
-                      }}
-                      disabled={!isLocalCapture && stopBackendCaptureMutation.isPending}
-                      className="gap-2"
-                    >
-                      {!isLocalCapture && stopBackendCaptureMutation.isPending
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <PhoneOff className="h-4 w-4" />}
-                      {isLocalCapture ? "Parar Gravação" : "Encerrar Captura"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div><p className="text-xs text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{liveSession.patient?.name || detailSession.patient?.name || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Data</p><p className="text-foreground">{format(new Date(liveSession.createdAt || detailSession.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p></div>
-                <div><p className="text-xs text-muted-foreground">Duração</p><p className="text-foreground">{(liveSession.duration ?? detailSession.duration) ? formatDuration((liveSession.duration ?? detailSession.duration) as number) : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Status</p><Badge className={STATUS_MAP[liveSession.status]?.color}>{STATUS_MAP[liveSession.status]?.label}</Badge></div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Paciente *</label>
+                <Select value={newSessionData.patientId} onValueChange={v => setNewSessionData(p => ({ ...p, patientId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                  <SelectContent>
+                    {patients.map((p: Patient) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Link da Reunião (opcional)</label>
+                <Input placeholder="https://meet.google.com/... ou zoom.us/..."
+                  value={newSessionData.meetingLink}
+                  onChange={e => setNewSessionData(p => ({ ...p, meetingLink: e.target.value }))} />
+                <p className="text-xs text-muted-foreground mt-1">Google Meet, Zoom ou outro link de videochamada</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNewDialog(false)}>Cancelar</Button>
+              <Button onClick={handleCreateSession} disabled={createMutation.isPending} className="gap-2">
+                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                Criar Sessão
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-              {detailSession.transcription && (
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><FileText className="h-4 w-4" /> Transcrição</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-4 rounded-lg max-h-48 overflow-y-auto">{detailSession.transcription}</p>
-                </div>
-              )}
+        {/* Detail Dialog */}
+        <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] md:w-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Sessão</DialogTitle>
+            </DialogHeader>
+            {detailSession && (() => {
+              const liveSession = sessions.find(s => s.id === detailSession.id) ?? detailSession;
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div><p className="text-xs text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{liveSession.patient?.name || detailSession.patient?.name || "—"}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Data</p><p className="text-foreground">{format(new Date(liveSession.createdAt || detailSession.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Duração</p><p className="text-foreground">{(liveSession.duration ?? detailSession.duration) ? formatDuration((liveSession.duration ?? detailSession.duration) as number) : "—"}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Status</p><Badge className={STATUS_MAP[liveSession.status]?.color}>{STATUS_MAP[liveSession.status]?.label}</Badge></div>
+                  </div>
 
-              {detailSession.structuredContent && (() => {
-                try {
-                  const sc = JSON.parse(detailSession.structuredContent);
-                  return (
+                  {detailSession.transcription && (
                     <div>
-                      <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><Brain className="h-4 w-4" /> Conteúdo Organizado</p>
-                      <div className="space-y-3 bg-muted p-4 rounded-lg">
-                        {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo</p><p className="text-sm">{sc.motivo_sessao}</p></div>}
-                        {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas</p><div className="flex flex-wrap gap-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
-                        {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm">{sc.observacoes_relevantes}</p></div>}
-                        {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm">{sc.evolucao}</p></div>}
-                        {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm">{sc.encaminhamentos}</p></div>}
-                        {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm">{sc.resumo}</p></div>}
+                      <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><FileText className="h-4 w-4" /> Transcrição</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-4 rounded-lg max-h-48 overflow-y-auto">{detailSession.transcription}</p>
+                    </div>
+                  )}
+
+                  {detailSession.structuredContent && (() => {
+                    try {
+                      const sc = JSON.parse(detailSession.structuredContent);
+                      return (
+                        <div>
+                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><Brain className="h-4 w-4" /> Conteúdo Organizado</p>
+                          <div className="space-y-3 bg-muted p-4 rounded-lg">
+                            {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo</p><p className="text-sm">{sc.motivo_sessao}</p></div>}
+                            {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas</p><div className="flex flex-wrap gap-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
+                            {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm">{sc.observacoes_relevantes}</p></div>}
+                            {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm">{sc.evolucao}</p></div>}
+                            {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm">{sc.encaminhamentos}</p></div>}
+                            {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm">{sc.resumo}</p></div>}
+                          </div>
+                        </div>
+                      );
+                    } catch { return null; }
+                  })()}
+
+                  {detailSession.recordId && (
+                    <div className="flex items-center gap-2 text-sm text-success">
+                      <CheckCircle className="h-4 w-4" /> Vinculado ao prontuário
+                    </div>
+                  )}
+
+                  {detailSession.auditLogs && detailSession.auditLogs.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><Shield className="h-4 w-4" /> Log de Auditoria</p>
+                      <div className="space-y-1">
+                        {detailSession.auditLogs.map(log => (
+                          <div key={log.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{format(new Date(log.createdAt), "HH:mm:ss")}</span>
+                            <span className="font-mono bg-muted px-1 rounded">{log.action}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  );
-                } catch { return null; }
-              })()}
+                  )}
 
-              {detailSession.recordId && (
-                <div className="flex items-center gap-2 text-sm text-success">
-                  <CheckCircle className="h-4 w-4" /> Vinculado ao prontuário
-                </div>
-              )}
-
-              {/* Audit logs */}
-              {detailSession.auditLogs && detailSession.auditLogs.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><Shield className="h-4 w-4" /> Log de Auditoria</p>
-                  <div className="space-y-1">
-                    {detailSession.auditLogs.map(log => (
-                      <div key={log.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{format(new Date(log.createdAt), "HH:mm:ss")}</span>
-                        <span className="font-mono bg-muted px-1 rounded">{log.action}</span>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
+                    <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente após processamento
                   </div>
                 </div>
-              )}
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
-                <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente após processamento
+        {/* Edit Session Dialog */}
+        <Dialog open={!!editSession} onOpenChange={() => setEditSession(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Sessão</DialogTitle>
+              <DialogDescription>Altere os dados da sessão antes de iniciar</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground">Paciente</label>
+                <Select value={editData.patientId} onValueChange={v => setEditData(p => ({ ...p, patientId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                  <SelectContent>
+                    {patients.map((p: Patient) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Link da Reunião (opcional)</label>
+                <Input placeholder="https://meet.google.com/..."
+                  value={editData.meetingLink}
+                  onChange={e => setEditData(p => ({ ...p, meetingLink: e.target.value }))} />
               </div>
             </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Session Dialog */}
-      <Dialog open={!!editSession} onOpenChange={() => setEditSession(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Sessão</DialogTitle>
-            <DialogDescription>Altere os dados da sessão antes de iniciar</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">Paciente</label>
-              <Select value={editData.patientId} onValueChange={v => setEditData(p => ({ ...p, patientId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
-                <SelectContent>
-                  {patients.map((p: Patient) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Link da Reunião (opcional)</label>
-              <Input placeholder="https://meet.google.com/..."
-                value={editData.meetingLink}
-                onChange={e => setEditData(p => ({ ...p, meetingLink: e.target.value }))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSession(null)}>Cancelar</Button>
-            <Button onClick={() => {
-              if (editSession) updateMutation.mutate({ id: editSession.id, data: editData });
-            }} disabled={updateMutation.isPending} className="gap-2">
-              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditSession(null)}>Cancelar</Button>
+              <Button onClick={() => {
+                if (editSession) updateMutation.mutate({ id: editSession.id, data: editData });
+              }} disabled={updateMutation.isPending} className="gap-2">
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }
