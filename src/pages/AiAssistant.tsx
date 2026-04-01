@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, FileText, Sparkles, ChevronDown, Settings2, MessageSquare, Plus } from "lucide-react";
+import { Bot, Send, FileText, Sparkles, Settings2, MessageSquare, Plus, Paperclip, X, File, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,55 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 import { useAiAgents, useAiChats, useCreateChat, useChatMessages, useSendMessage, useAnalyzeText, useSaveCustomization } from "@/hooks/useAi";
+
+interface AttachedFile {
+  name: string;
+  type: string;
+  content: string; // base64 or text
+  size: number;
+}
+
+async function readFileAsContent(file: File): Promise<AttachedFile> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const isText = file.type.startsWith("text/") || 
+      [".txt", ".csv", ".json", ".md", ".xml", ".html", ".log"].some(ext => file.name.toLowerCase().endsWith(ext));
+    
+    if (isText) {
+      reader.onload = () => resolve({ name: file.name, type: file.type || "text/plain", content: reader.result as string, size: file.size });
+      reader.onerror = reject;
+      reader.readAsText(file);
+    } else {
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1] || "";
+        resolve({ name: file.name, type: file.type, content: base64, size: file.size });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileChip({ file, onRemove }: { file: AttachedFile; onRemove: () => void }) {
+  const isImage = file.type.startsWith("image/");
+  return (
+    <div className="flex items-center gap-1.5 bg-muted rounded-lg px-2 py-1 text-xs">
+      {isImage ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" /> : <File className="w-3.5 h-3.5 text-muted-foreground" />}
+      <span className="truncate max-w-[120px]">{file.name}</span>
+      <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+      <button onClick={onRemove} className="ml-1 hover:text-destructive"><X className="w-3 h-3" /></button>
+    </div>
+  );
+}
 
 export default function AiAssistant() {
   const { data: agents } = useAiAgents();
@@ -31,7 +77,11 @@ export default function AiAssistant() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [customModel, setCustomModel] = useState("");
   const [customAgentId, setCustomAgentId] = useState<string | null>(null);
+  const [chatFiles, setChatFiles] = useState<AttachedFile[]>([]);
+  const [analyzeFiles, setAnalyzeFiles] = useState<AttachedFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatFileRef = useRef<HTMLInputElement>(null);
+  const analyzeFileRef = useRef<HTMLInputElement>(null);
 
   const { data: messages } = useChatMessages(activeChatId);
 
@@ -46,16 +96,52 @@ export default function AiAssistant() {
     setActiveChatId(chat.id);
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, target: "chat" | "analyze") => {
+    const files = e.target.files;
+    if (!files) return;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const newFiles: AttachedFile[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) {
+        toast({ title: "Arquivo muito grande", description: `${file.name} excede 5MB`, variant: "destructive" });
+        continue;
+      }
+      try {
+        newFiles.push(await readFileAsContent(file));
+      } catch {
+        toast({ title: "Erro ao ler arquivo", description: file.name, variant: "destructive" });
+      }
+    }
+    if (target === "chat") setChatFiles(prev => [...prev, ...newFiles].slice(0, 5));
+    else setAnalyzeFiles(prev => [...prev, ...newFiles].slice(0, 5));
+    e.target.value = "";
+  };
+
+  const buildFileContext = (files: AttachedFile[]) => {
+    if (!files.length) return "";
+    return "\n\n---\nArquivos anexados:\n" + files.map(f => {
+      if (f.type.startsWith("text/") || !f.type || f.type === "text/plain") {
+        return `📄 ${f.name}:\n\`\`\`\n${f.content}\n\`\`\``;
+      }
+      if (f.type.startsWith("image/")) {
+        return `🖼️ ${f.name} (imagem ${f.type}, ${formatFileSize(f.size)}) [conteúdo base64 da imagem anexada para análise]`;
+      }
+      return `📎 ${f.name} (${f.type}, ${formatFileSize(f.size)}) [conteúdo binário codificado em base64]`;
+    }).join("\n\n");
+  };
+
   const handleSend = async () => {
-    if (!inputMessage.trim() || !activeChatId) return;
-    const msg = inputMessage;
+    if ((!inputMessage.trim() && !chatFiles.length) || !activeChatId) return;
+    const msg = inputMessage + buildFileContext(chatFiles);
     setInputMessage("");
+    setChatFiles([]);
     await sendMessage.mutateAsync({ chatId: activeChatId, content: msg, model: selectedModel });
   };
 
   const handleAnalyze = async () => {
-    if (!analyzeInput.trim()) return;
-    const result = await analyzeText.mutateAsync({ text: analyzeInput, type: analyzeType, model: selectedModel });
+    if (!analyzeInput.trim() && !analyzeFiles.length) return;
+    const text = analyzeInput + buildFileContext(analyzeFiles);
+    const result = await analyzeText.mutateAsync({ text, type: analyzeType, model: selectedModel });
     setAnalysisResult(result.analysis);
   };
 
@@ -174,8 +260,32 @@ export default function AiAssistant() {
                   )}
                 </ScrollArea>
                 {activeChatId && (
-                  <div className="border-t border-border p-4">
+                  <div className="border-t border-border p-4 space-y-2">
+                    {chatFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {chatFiles.map((f, i) => (
+                          <FileChip key={i} file={f} onRemove={() => setChatFiles(prev => prev.filter((_, idx) => idx !== i))} />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-2">
+                      <input
+                        ref={chatFileRef}
+                        type="file"
+                        multiple
+                        accept=".txt,.csv,.json,.md,.xml,.html,.log,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                        className="hidden"
+                        onChange={e => handleFileSelect(e, "chat")}
+                      />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => chatFileRef.current?.click()}
+                        title="Anexar arquivo"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </Button>
                       <Input
                         value={inputMessage}
                         onChange={e => setInputMessage(e.target.value)}
@@ -183,7 +293,7 @@ export default function AiAssistant() {
                         onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
                         disabled={sendMessage.isPending}
                       />
-                      <Button onClick={handleSend} disabled={sendMessage.isPending || !inputMessage.trim()}>
+                      <Button onClick={handleSend} disabled={sendMessage.isPending || (!inputMessage.trim() && !chatFiles.length)}>
                         <Send className="w-4 h-4" />
                       </Button>
                     </div>
@@ -213,12 +323,46 @@ export default function AiAssistant() {
                   </SelectContent>
                 </Select>
                 <Textarea
-                  rows={12}
+                  rows={10}
                   value={analyzeInput}
                   onChange={e => setAnalyzeInput(e.target.value)}
                   placeholder="Cole ou digite suas anotações aqui..."
                 />
-                <Button onClick={handleAnalyze} disabled={analyzeText.isPending || !analyzeInput.trim()} className="w-full">
+
+                {/* File upload area */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5" /> Anexar Arquivos
+                    </Label>
+                    <span className="text-xs text-muted-foreground">{analyzeFiles.length}/5 arquivos</span>
+                  </div>
+                  <input
+                    ref={analyzeFileRef}
+                    type="file"
+                    multiple
+                    accept=".txt,.csv,.json,.md,.xml,.html,.log,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                    className="hidden"
+                    onChange={e => handleFileSelect(e, "analyze")}
+                  />
+                  <div
+                    onClick={() => analyzeFileRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  >
+                    <Paperclip className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Clique para anexar arquivos (máx. 5MB cada)</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">TXT, CSV, JSON, MD, PDF, imagens</p>
+                  </div>
+                  {analyzeFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {analyzeFiles.map((f, i) => (
+                        <FileChip key={i} file={f} onRemove={() => setAnalyzeFiles(prev => prev.filter((_, idx) => idx !== i))} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button onClick={handleAnalyze} disabled={analyzeText.isPending || (!analyzeInput.trim() && !analyzeFiles.length)} className="w-full">
                   {analyzeText.isPending ? "Analisando..." : "Analisar com IA"}
                 </Button>
               </CardContent>
