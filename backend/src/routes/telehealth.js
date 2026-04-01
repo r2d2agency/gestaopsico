@@ -285,6 +285,10 @@ router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-st
     const filePath = path.join(AUDIO_DIR, fileName);
     fs.writeFileSync(filePath, req.body);
 
+    // Read session notes from headers
+    const motivo = req.headers['x-session-motivo'] ? decodeURIComponent(req.headers['x-session-motivo']) : null;
+    const anotacoes = req.headers['x-session-anotacoes'] ? decodeURIComponent(req.headers['x-session-anotacoes']) : null;
+
     await prisma.telehealthSession.update({
       where: { id: req.params.id },
       data: {
@@ -299,8 +303,8 @@ router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-st
     });
     await auditLog(session.id, 'audio_uploaded', { fileName: '***', size: req.body.length });
 
-    // Start async transcription
-    processTranscription(req.params.id, req.userId).catch(err => {
+    // Start async transcription with notes context
+    processTranscription(req.params.id, req.userId, { motivo, anotacoes }).catch(err => {
       console.error('Transcription error:', err);
     });
 
@@ -311,7 +315,7 @@ router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-st
 });
 
 // Async transcription + AI organization + auto-delete
-async function processTranscription(sessionId, userId) {
+async function processTranscription(sessionId, userId, notes = {}) {
   try {
     await prisma.telehealthSession.update({
       where: { id: sessionId },
@@ -335,10 +339,13 @@ async function processTranscription(sessionId, userId) {
     });
     await auditLog(sessionId, 'transcription_completed', { length: transcription.length });
 
-    // Organize with AI
+    // Organize with AI — include professional notes as context
     let structured = null;
     try {
-      structured = await organizeWithAi(transcription, aiKey.provider, aiKey.apiKey);
+      let enrichedTranscription = transcription;
+      if (notes.motivo) enrichedTranscription = `[Motivo da consulta informado pelo profissional: ${notes.motivo}]\n\n${enrichedTranscription}`;
+      if (notes.anotacoes) enrichedTranscription = `${enrichedTranscription}\n\n[Anotações do profissional durante a sessão: ${notes.anotacoes}]`;
+      structured = await organizeWithAi(enrichedTranscription, aiKey.provider, aiKey.apiKey);
     } catch (e) {
       console.error('AI organization error:', e);
     }
@@ -354,7 +361,7 @@ async function processTranscription(sessionId, userId) {
       const nextStepsRaw = structured?.encaminhamentos;
       const nextStepsStr = Array.isArray(nextStepsRaw) ? nextStepsRaw.join('; ') : (nextStepsRaw || null);
       const complaintRaw = structured?.motivo_sessao;
-      const complaintStr = Array.isArray(complaintRaw) ? complaintRaw.join('; ') : (complaintRaw || null);
+      const complaintStr = Array.isArray(complaintRaw) ? complaintRaw.join('; ') : (complaintRaw || notes.motivo || null);
 
       const record = await prisma.record.create({
       data: {
@@ -364,7 +371,7 @@ async function processTranscription(sessionId, userId) {
         appointmentId: session.appointmentId,
         type: session.coupleId ? 'couple' : 'individual',
         date: session.startedAt || new Date(),
-        content: transcription,
+        content: notes.anotacoes ? `${transcription}\n\n---\nAnotações do profissional:\n${notes.anotacoes}` : transcription,
         aiContent: structured ? JSON.stringify(structured) : null,
         complaint: complaintStr,
         keyPoints: keyPointsStr,
@@ -404,25 +411,14 @@ async function processTranscription(sessionId, userId) {
   } catch (err) {
     await prisma.telehealthSession.update({
       where: { id: sessionId },
-      data: { processingStatus: 'error', processingError: err.message, updatedAt: new Date() }
+      data: {
+        processingStatus: 'error',
+        processingError: err.message,
+        updatedAt: new Date()
+      }
     });
     await auditLog(sessionId, 'processing_error', { error: err.message });
-
-    // Cleanup audio even on error (after 1 retry)
-    const session = await prisma.telehealthSession.findUnique({ where: { id: sessionId } });
-    if (session?.audioFileName) {
-      const filePath = path.join(AUDIO_DIR, session.audioFileName);
-      setTimeout(async () => {
-        try {
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          await prisma.telehealthSession.update({
-            where: { id: sessionId },
-            data: { audioFileName: null, audioDeletedAt: new Date(), updatedAt: new Date() }
-          });
-          await auditLog(sessionId, 'audio_deleted', { reason: 'cleanup_after_error' });
-        } catch (e) { console.error('Cleanup error:', e); }
-      }, 3600000); // 1 hour max retention
-    }
+    // Audio is kept for 24h so the user can retry — periodic cleanup handles expiry
   }
 }
 
@@ -447,7 +443,7 @@ router.post('/:id/retry', async (req, res) => {
       where: { id: req.params.id, professionalId: req.userId }
     });
     if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
-    if (session.processingStatus !== 'error') return res.status(400).json({ error: 'Sessão não está em estado de erro' });
+    if (!['error', 'uploaded', 'none'].includes(session.processingStatus)) return res.status(400).json({ error: 'Sessão não pode ser reprocessada neste estado' });
     if (!session.audioFileName) return res.status(400).json({ error: 'Áudio já foi excluído' });
 
     processTranscription(req.params.id, req.userId).catch(console.error);
@@ -457,13 +453,13 @@ router.post('/:id/retry', async (req, res) => {
   }
 });
 
-// Periodic cleanup: delete any audio files older than 2 hours
+// Periodic cleanup: delete any audio files older than 24 hours
 setInterval(async () => {
   try {
     const stale = await prisma.telehealthSession.findMany({
       where: {
         audioFileName: { not: null },
-        audioUploadedAt: { lt: new Date(Date.now() - 7200000) }
+        audioUploadedAt: { lt: new Date(Date.now() - 86400000) } // 24h
       }
     });
     for (const s of stale) {
@@ -473,7 +469,7 @@ setInterval(async () => {
         where: { id: s.id },
         data: { audioFileName: null, audioDeletedAt: new Date(), updatedAt: new Date() }
       });
-      await auditLog(s.id, 'audio_deleted', { reason: 'periodic_cleanup' });
+      await auditLog(s.id, 'audio_deleted', { reason: 'periodic_cleanup_24h' });
     }
   } catch {}
 }, 1800000); // every 30 min
