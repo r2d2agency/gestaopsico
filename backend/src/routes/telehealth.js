@@ -285,6 +285,10 @@ router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-st
     const filePath = path.join(AUDIO_DIR, fileName);
     fs.writeFileSync(filePath, req.body);
 
+    // Read session notes from headers
+    const motivo = req.headers['x-session-motivo'] ? decodeURIComponent(req.headers['x-session-motivo']) : null;
+    const anotacoes = req.headers['x-session-anotacoes'] ? decodeURIComponent(req.headers['x-session-anotacoes']) : null;
+
     await prisma.telehealthSession.update({
       where: { id: req.params.id },
       data: {
@@ -299,8 +303,8 @@ router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-st
     });
     await auditLog(session.id, 'audio_uploaded', { fileName: '***', size: req.body.length });
 
-    // Start async transcription
-    processTranscription(req.params.id, req.userId).catch(err => {
+    // Start async transcription with notes context
+    processTranscription(req.params.id, req.userId, { motivo, anotacoes }).catch(err => {
       console.error('Transcription error:', err);
     });
 
