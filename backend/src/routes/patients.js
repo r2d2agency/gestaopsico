@@ -107,16 +107,8 @@ router.get('/', async (req, res) => {
 
     const where = {};
 
-    // Role-based filtering
-    if (user?.role === 'superadmin') {
-      // superadmin sees all patients (optionally filter by org)
-    } else if (user?.role === 'admin') {
-      // admin sees all patients in their organization
-      if (user.organizationId) {
-        where.professional = { organizationId: user.organizationId };
-      }
-    } else if (['secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
-      // secretary/financial sees all patients in their org
+    // Role-based filtering — everyone only sees patients from their own organization
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
       if (user.organizationId) {
         where.professional = { organizationId: user.organizationId };
       }
@@ -149,8 +141,12 @@ router.get('/:id', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
     const whereClause = { id: req.params.id };
-    // Only restrict to own patients for professionals
-    if (!['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+    // Restrict by organization for all admin-level roles, by professional for others
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) {
+        whereClause.professional = { organizationId: user.organizationId };
+      }
+    } else {
       whereClause.professionalId = req.userId;
     }
     const patient = await prisma.patient.findFirst({
@@ -226,12 +222,19 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const data = mapInput(req.body);
-    const result = await prisma.patient.updateMany({
-      where: { id: req.params.id, professionalId: req.userId },
-      data
-    });
-    if (result.count === 0) return res.status(404).json({ error: 'Paciente não encontrado' });
-    const updated = await prisma.patient.findUnique({ where: { id: req.params.id } });
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) {
+        whereClause.professional = { organizationId: user.organizationId };
+      }
+    } else {
+      whereClause.professionalId = req.userId;
+    }
+    // Verify patient exists within scope
+    const existing = await prisma.patient.findFirst({ where: whereClause });
+    if (!existing) return res.status(404).json({ error: 'Paciente não encontrado' });
+    const updated = await prisma.patient.update({ where: { id: existing.id }, data });
     res.json(mapPatient(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar paciente' });
@@ -241,9 +244,18 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/pacientes/:id
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.patient.deleteMany({
-      where: { id: req.params.id, professionalId: req.userId }
-    });
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) {
+        whereClause.professional = { organizationId: user.organizationId };
+      }
+    } else {
+      whereClause.professionalId = req.userId;
+    }
+    const existing = await prisma.patient.findFirst({ where: whereClause });
+    if (!existing) return res.status(404).json({ error: 'Paciente não encontrado' });
+    await prisma.patient.delete({ where: { id: existing.id } });
     res.json({ message: 'Paciente removido' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao remover paciente' });
