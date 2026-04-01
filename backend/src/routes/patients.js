@@ -244,9 +244,18 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/pacientes/:id
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.patient.deleteMany({
-      where: { id: req.params.id, professionalId: req.userId }
-    });
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) {
+        whereClause.professional = { organizationId: user.organizationId };
+      }
+    } else {
+      whereClause.professionalId = req.userId;
+    }
+    const existing = await prisma.patient.findFirst({ where: whereClause });
+    if (!existing) return res.status(404).json({ error: 'Paciente não encontrado' });
+    await prisma.patient.delete({ where: { id: existing.id } });
     res.json({ message: 'Paciente removido' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao remover paciente' });
