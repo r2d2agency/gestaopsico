@@ -4,14 +4,20 @@ const { authMiddleware } = require('../middleware/auth');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const execFileAsync = promisify(execFile);
 
 router.use(authMiddleware);
 
 const AUDIO_DIR = path.join(__dirname, '../../tmp/telehealth-audio');
 if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
+const WHISPER_SAFE_LIMIT_BYTES = 24 * 1024 * 1024; // Whisper accepts up to 25MB
+const WHISPER_INITIAL_SEGMENT_SECONDS = 600;
 
 // Helper: create audit log
 async function auditLog(sessionId, action, details) {
@@ -30,7 +36,13 @@ async function findAiKey(userId) {
 }
 
 // Helper: call OpenAI Whisper for transcription
-async function transcribeAudio(filePath, apiKey) {
+function cleanupTempDir(dirPath) {
+  try {
+    fs.rmSync(dirPath, { recursive: true, force: true });
+  } catch {}
+}
+
+async function whisperTranscribeOnce(filePath, apiKey) {
   const FormData = (await import('form-data')).default;
   const fetch = (await import('node-fetch')).default;
   
@@ -51,6 +63,97 @@ async function transcribeAudio(filePath, apiKey) {
     throw new Error(`Whisper API error: ${resp.status} - ${err}`);
   }
   return resp.text();
+}
+
+async function splitAudioIntoChunks(filePath, segmentSeconds = WHISPER_INITIAL_SEGMENT_SECONDS) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'telehealth-chunks-'));
+  const outputPattern = path.join(tempDir, 'chunk-%03d.webm');
+
+  try {
+    await execFileAsync('ffmpeg', [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-i',
+      filePath,
+      '-vn',
+      '-ac',
+      '1',
+      '-c:a',
+      'libopus',
+      '-b:a',
+      '32k',
+      '-f',
+      'segment',
+      '-segment_time',
+      String(segmentSeconds),
+      '-reset_timestamps',
+      '1',
+      outputPattern
+    ]);
+  } catch (err) {
+    cleanupTempDir(tempDir);
+    throw new Error(`Falha ao preparar áudio para transcrição: ${err.message}`);
+  }
+
+  const chunks = fs.readdirSync(tempDir)
+    .filter(name => name.startsWith('chunk-') && name.endsWith('.webm'))
+    .sort()
+    .map(name => path.join(tempDir, name));
+
+  if (chunks.length === 0) {
+    cleanupTempDir(tempDir);
+    throw new Error('Falha ao dividir o áudio em partes para transcrição.');
+  }
+
+  const hasOversizedChunks = chunks.some(chunkPath => fs.statSync(chunkPath).size > WHISPER_SAFE_LIMIT_BYTES);
+  if (hasOversizedChunks && segmentSeconds > 60) {
+    cleanupTempDir(tempDir);
+    return splitAudioIntoChunks(filePath, Math.max(60, Math.floor(segmentSeconds / 2)));
+  }
+
+  if (hasOversizedChunks) {
+    cleanupTempDir(tempDir);
+    throw new Error('Não foi possível reduzir o áudio abaixo do limite da transcrição.');
+  }
+
+  return { tempDir, chunks };
+}
+
+async function transcribeLargeAudio(filePath, apiKey) {
+  try {
+    await execFileAsync('ffmpeg', ['-version']);
+  } catch {
+    throw new Error('Áudio acima do limite da transcrição e ffmpeg não está disponível para dividir automaticamente.');
+  }
+
+  const { tempDir, chunks } = await splitAudioIntoChunks(filePath);
+  try {
+    const parts = [];
+    for (let i = 0; i < chunks.length; i += 1) {
+      const chunkText = await whisperTranscribeOnce(chunks[i], apiKey);
+      parts.push(chunkText.trim());
+    }
+    return parts.filter(Boolean).join('\n\n');
+  } finally {
+    cleanupTempDir(tempDir);
+  }
+}
+
+async function transcribeAudio(filePath, apiKey) {
+  const fileSize = fs.statSync(filePath).size;
+  if (fileSize > WHISPER_SAFE_LIMIT_BYTES) {
+    return transcribeLargeAudio(filePath, apiKey);
+  }
+
+  try {
+    return await whisperTranscribeOnce(filePath, apiKey);
+  } catch (err) {
+    if (String(err.message || '').includes('Whisper API error: 413')) {
+      return transcribeLargeAudio(filePath, apiKey);
+    }
+    throw err;
+  }
 }
 
 // Helper: organize transcription with AI
@@ -409,15 +512,20 @@ async function processTranscription(sessionId, userId, notes = {}) {
       await auditLog(sessionId, 'audio_delete_failed', { error: delErr.message });
     }
   } catch (err) {
+    const rawError = err?.message || 'Erro desconhecido no processamento';
+    const processingError = rawError.includes('Whisper API error: 413')
+      ? 'Áudio acima do limite da transcrição. O sistema tentou fracionar automaticamente, mas não conseguiu concluir.'
+      : rawError;
+
     await prisma.telehealthSession.update({
       where: { id: sessionId },
       data: {
         processingStatus: 'error',
-        processingError: err.message,
+        processingError,
         updatedAt: new Date()
       }
     });
-    await auditLog(sessionId, 'processing_error', { error: err.message });
+    await auditLog(sessionId, 'processing_error', { error: rawError });
     // Audio is kept for 24h so the user can retry — periodic cleanup handles expiry
   }
 }
