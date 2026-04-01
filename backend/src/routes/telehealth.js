@@ -315,7 +315,7 @@ router.post('/:id/upload', express.raw({ type: ['audio/*', 'application/octet-st
 });
 
 // Async transcription + AI organization + auto-delete
-async function processTranscription(sessionId, userId) {
+async function processTranscription(sessionId, userId, notes = {}) {
   try {
     await prisma.telehealthSession.update({
       where: { id: sessionId },
