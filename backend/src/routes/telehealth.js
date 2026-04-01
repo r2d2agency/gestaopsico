@@ -361,7 +361,7 @@ async function processTranscription(sessionId, userId, notes = {}) {
       const nextStepsRaw = structured?.encaminhamentos;
       const nextStepsStr = Array.isArray(nextStepsRaw) ? nextStepsRaw.join('; ') : (nextStepsRaw || null);
       const complaintRaw = structured?.motivo_sessao;
-      const complaintStr = Array.isArray(complaintRaw) ? complaintRaw.join('; ') : (complaintRaw || null);
+      const complaintStr = Array.isArray(complaintRaw) ? complaintRaw.join('; ') : (complaintRaw || notes.motivo || null);
 
       const record = await prisma.record.create({
       data: {
