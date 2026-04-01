@@ -442,16 +442,70 @@ export default function Teleatendimento() {
               <div className="flex flex-col items-center gap-4 md:gap-6 py-4 md:py-8">
                 {isCapturing ? (
                   <>
-                    <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-destructive/10 flex items-center justify-center">
-                      <Mic className="h-8 w-8 md:h-10 md:w-10 text-destructive" />
-                    </motion.div>
-                    <div className="text-center">
-                      <p className="text-2xl md:text-3xl font-mono font-bold text-foreground">{formatDuration(duration)}</p>
-                      <p className="text-sm text-destructive font-medium mt-1">● Gravando áudio</p>
+                    {/* Recording bar — like reference */}
+                    <Card className="w-full border-destructive/30 bg-destructive/5">
+                      <CardContent className="p-3 md:p-4 flex flex-col sm:flex-row items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}
+                            className="w-3 h-3 rounded-full bg-destructive shrink-0" />
+                          <span className="font-semibold text-foreground truncate">{activeSession.patient?.name || "Paciente"}</span>
+                        </div>
+                        {/* Waveform indicator */}
+                        <div className="flex items-center gap-0.5 h-6">
+                          {Array.from({ length: 20 }).map((_, i) => (
+                            <motion.div
+                              key={i}
+                              className="w-1 bg-destructive/60 rounded-full"
+                              animate={{ height: [4, Math.random() * 20 + 4, 4] }}
+                              transition={{ repeat: Infinity, duration: 0.5 + Math.random() * 0.5, delay: i * 0.05 }}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-lg font-mono font-bold text-foreground tabular-nums">{formatDuration(duration)}</span>
+                        <Button variant="destructive" size="sm" onClick={stopCapture} className="gap-1.5 shrink-0">
+                          <Pause className="h-4 w-4" /> Pausar registro
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <p className="text-sm text-muted-foreground text-center">
+                      Você pode preencher as informações abaixo durante a consulta para aprimorar o resultado do registro.
+                    </p>
+
+                    {/* Session notes fields */}
+                    <div className="grid gap-4 sm:grid-cols-2 w-full">
+                      <Card className="border-primary/20">
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">1</Badge>
+                            <span className="text-sm font-semibold text-foreground">Motivo da Consulta</span>
+                          </div>
+                          <Textarea
+                            placeholder="Ex.: Renovação de remédio da pressão"
+                            value={sessionNotes.motivo}
+                            onChange={(e) => setSessionNotes(v => ({ ...v, motivo: e.target.value }))}
+                            className="min-h-[120px] resize-none text-sm"
+                          />
+                        </CardContent>
+                      </Card>
+                      <Card className="border-primary/20">
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">2</Badge>
+                            <span className="text-sm font-semibold text-foreground">Anotações livres</span>
+                          </div>
+                          <Textarea
+                            placeholder="Não se preocupe em organizar os dados, faremos isso por você."
+                            value={sessionNotes.anotacoes}
+                            onChange={(e) => setSessionNotes(v => ({ ...v, anotacoes: e.target.value }))}
+                            className="min-h-[120px] resize-none text-sm"
+                          />
+                        </CardContent>
+                      </Card>
                     </div>
+
                     <Button variant="destructive" size="lg" onClick={stopCapture} className="gap-2 w-full sm:w-auto">
-                      <PhoneOff className="h-5 w-5" /> Encerrar Sessão
+                      <CheckCircle className="h-5 w-5" /> Finalizar consulta
                     </Button>
                   </>
                 ) : activeSession.status === "waiting" ? (
@@ -468,13 +522,17 @@ export default function Teleatendimento() {
                   </>
                 ) : activeSession.status === "capturing" ? (
                   <>
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-destructive/10 flex items-center justify-center">
-                      <Mic className="h-8 w-8 md:h-10 md:w-10 text-destructive" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm text-destructive font-medium">● Captura ativa</p>
-                      <p className="text-xs text-muted-foreground mt-1">Se você recarregou a página, encerre a captura para iniciar novamente.</p>
-                    </div>
+                    <Card className="w-full border-destructive/30 bg-destructive/5">
+                      <CardContent className="p-3 md:p-4 flex flex-col sm:flex-row items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}
+                            className="w-3 h-3 rounded-full bg-destructive shrink-0" />
+                          <span className="font-semibold text-foreground truncate">{activeSession.patient?.name || "Paciente"}</span>
+                        </div>
+                        <span className="text-sm text-destructive font-medium">● Captura ativa</span>
+                      </CardContent>
+                    </Card>
+                    <p className="text-xs text-muted-foreground text-center">Se você recarregou a página, encerre a captura para iniciar novamente.</p>
                     <Button
                       variant="destructive"
                       onClick={() => stopBackendCaptureMutation.mutate(activeSession.id)}
