@@ -222,12 +222,19 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const data = mapInput(req.body);
-    const result = await prisma.patient.updateMany({
-      where: { id: req.params.id, professionalId: req.userId },
-      data
-    });
-    if (result.count === 0) return res.status(404).json({ error: 'Paciente não encontrado' });
-    const updated = await prisma.patient.findUnique({ where: { id: req.params.id } });
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) {
+        whereClause.professional = { organizationId: user.organizationId };
+      }
+    } else {
+      whereClause.professionalId = req.userId;
+    }
+    // Verify patient exists within scope
+    const existing = await prisma.patient.findFirst({ where: whereClause });
+    if (!existing) return res.status(404).json({ error: 'Paciente não encontrado' });
+    const updated = await prisma.patient.update({ where: { id: existing.id }, data });
     res.json(mapPatient(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar paciente' });
