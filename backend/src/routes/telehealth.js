@@ -371,7 +371,7 @@ async function processTranscription(sessionId, userId, notes = {}) {
         appointmentId: session.appointmentId,
         type: session.coupleId ? 'couple' : 'individual',
         date: session.startedAt || new Date(),
-        content: transcription,
+        content: notes.anotacoes ? `${transcription}\n\n---\nAnotações do profissional:\n${notes.anotacoes}` : transcription,
         aiContent: structured ? JSON.stringify(structured) : null,
         complaint: complaintStr,
         keyPoints: keyPointsStr,
