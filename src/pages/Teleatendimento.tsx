@@ -522,7 +522,7 @@ export default function Teleatendimento() {
 
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
                     <Shield className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>O áudio é armazenado temporariamente e excluído automaticamente após a transcrição.</span>
+                    <span>O áudio é armazenado temporariamente por até 24h e excluído automaticamente após a transcrição ou expiração.</span>
                   </div>
                 </div>
               )}
