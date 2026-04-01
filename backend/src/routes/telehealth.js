@@ -404,25 +404,14 @@ async function processTranscription(sessionId, userId) {
   } catch (err) {
     await prisma.telehealthSession.update({
       where: { id: sessionId },
-      data: { processingStatus: 'error', processingError: err.message, updatedAt: new Date() }
+      data: {
+        processingStatus: 'error',
+        processingError: err.message,
+        updatedAt: new Date()
+      }
     });
     await auditLog(sessionId, 'processing_error', { error: err.message });
-
-    // Cleanup audio even on error (after 1 retry)
-    const session = await prisma.telehealthSession.findUnique({ where: { id: sessionId } });
-    if (session?.audioFileName) {
-      const filePath = path.join(AUDIO_DIR, session.audioFileName);
-      setTimeout(async () => {
-        try {
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          await prisma.telehealthSession.update({
-            where: { id: sessionId },
-            data: { audioFileName: null, audioDeletedAt: new Date(), updatedAt: new Date() }
-          });
-          await auditLog(sessionId, 'audio_deleted', { reason: 'cleanup_after_error' });
-        } catch (e) { console.error('Cleanup error:', e); }
-      }, 3600000); // 1 hour max retention
-    }
+    // Audio is kept for 24h so the user can retry — periodic cleanup handles expiry
   }
 }
 
