@@ -339,10 +339,13 @@ async function processTranscription(sessionId, userId, notes = {}) {
     });
     await auditLog(sessionId, 'transcription_completed', { length: transcription.length });
 
-    // Organize with AI
+    // Organize with AI — include professional notes as context
     let structured = null;
     try {
-      structured = await organizeWithAi(transcription, aiKey.provider, aiKey.apiKey);
+      let enrichedTranscription = transcription;
+      if (notes.motivo) enrichedTranscription = `[Motivo da consulta informado pelo profissional: ${notes.motivo}]\n\n${enrichedTranscription}`;
+      if (notes.anotacoes) enrichedTranscription = `${enrichedTranscription}\n\n[Anotações do profissional durante a sessão: ${notes.anotacoes}]`;
+      structured = await organizeWithAi(enrichedTranscription, aiKey.provider, aiKey.apiKey);
     } catch (e) {
       console.error('AI organization error:', e);
     }
