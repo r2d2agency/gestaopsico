@@ -107,16 +107,8 @@ router.get('/', async (req, res) => {
 
     const where = {};
 
-    // Role-based filtering
-    if (user?.role === 'superadmin') {
-      // superadmin sees all patients (optionally filter by org)
-    } else if (user?.role === 'admin') {
-      // admin sees all patients in their organization
-      if (user.organizationId) {
-        where.professional = { organizationId: user.organizationId };
-      }
-    } else if (['secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
-      // secretary/financial sees all patients in their org
+    // Role-based filtering — everyone only sees patients from their own organization
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
       if (user.organizationId) {
         where.professional = { organizationId: user.organizationId };
       }
