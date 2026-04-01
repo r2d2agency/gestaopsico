@@ -51,6 +51,7 @@ export default function Teleatendimento() {
   const [preflight, setPreflight] = useState<{ mic: boolean; audio: boolean; loading: boolean; err: string; checked: boolean }>({ mic: false, audio: false, loading: false, err: "", checked: false });
   const [editSession, setEditSession] = useState<TelehealthSession | null>(null);
   const [editData, setEditData] = useState<{ patientId: string; meetingLink: string }>({ patientId: "", meetingLink: "" });
+  const [sessionNotes, setSessionNotes] = useState({ motivo: "", anotacoes: "" });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
