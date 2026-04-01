@@ -141,8 +141,12 @@ router.get('/:id', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
     const whereClause = { id: req.params.id };
-    // Only restrict to own patients for professionals
-    if (!['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+    // Restrict by organization for all admin-level roles, by professional for others
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) {
+        whereClause.professional = { organizationId: user.organizationId };
+      }
+    } else {
       whereClause.professionalId = req.userId;
     }
     const patient = await prisma.patient.findFirst({
