@@ -58,7 +58,8 @@ export default function PatientAppointments() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patient-appointments"] });
       qc.invalidateQueries({ queryKey: ["patient-dashboard"] });
-      toast({ title: "Consulta agendada! ✅" });
+      const msg = data?.requires_approval ? "Consulta solicitada! Aguardando aprovação do profissional." : "Consulta agendada! ✅";
+      toast({ title: msg });
       resetBooking();
     },
     onError: (err: Error) => {
