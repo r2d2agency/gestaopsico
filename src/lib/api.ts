@@ -86,6 +86,8 @@ export const pacientesApi = {
     apiRequest<{ cep: string; street: string; complement: string; neighborhood: string; city: string; state: string }>(`/pacientes/cep/${cep}`),
   validateCpf: (cpf: string) =>
     apiRequest<{ valid: boolean; exists?: boolean; message?: string }>(`/pacientes/validate-cpf/${cpf}`),
+  generateRegistrationLink: (id: string) =>
+    apiRequest<{ link: string; token: string; patient_phone: string }>(`/pacientes/${id}/registration-link`, { method: "POST" }),
 };
 
 // Consultas
