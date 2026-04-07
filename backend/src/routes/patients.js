@@ -335,7 +335,7 @@ router.post('/:id/registration-link', async (req, res) => {
     const patient = await prisma.patient.findFirst({ where: whereClause, include: { professional: { select: { organizationId: true, organization: { select: { portalSlug: true } } } } } });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(4).toString('hex');
     await prisma.patient.update({ where: { id: patient.id }, data: { registrationToken: token, registrationCompleted: false } });
 
     const portalSlug = patient.professional?.organization?.portalSlug || '';
