@@ -13,6 +13,7 @@ function mapPatient(p) {
   return {
     id: p.id,
     name: p.name,
+    nickname: p.nickname,
     cpf: p.cpf,
     birth_date: p.birthDate,
     phone: p.phone,
@@ -42,6 +43,8 @@ function mapPatient(p) {
     charge_day: p.chargeDay,
     charge_time: p.chargeTime,
     charge_enabled: p.chargeEnabled,
+    registration_token: p.registrationToken,
+    registration_completed: p.registrationCompleted,
   };
 }
 
