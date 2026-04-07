@@ -266,4 +266,31 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /api/pacientes/:id/registration-link - generate registration completion link
+router.post('/:id/registration-link', async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) whereClause.professional = { organizationId: user.organizationId };
+    } else {
+      whereClause.professionalId = req.userId;
+    }
+    const patient = await prisma.patient.findFirst({ where: whereClause, include: { professional: { select: { organizationId: true, organization: { select: { portalSlug: true } } } } } });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    await prisma.patient.update({ where: { id: patient.id }, data: { registrationToken: token, registrationCompleted: false } });
+
+    const portalSlug = patient.professional?.organization?.portalSlug || '';
+    const baseUrl = process.env.FRONTEND_URL || req.headers.origin || '';
+    const link = `${baseUrl}/completar-cadastro/${token}`;
+
+    res.json({ link, token, patient_phone: patient.phone });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar link', details: err.message });
+  }
+});
+
 module.exports = router;
