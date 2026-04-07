@@ -99,6 +99,8 @@ export const consultasApi = {
   update: (id: string, data: Partial<Consulta>) => apiRequest<Consulta>(`/consultas/${id}`, { method: "PUT", body: data }),
   cancel: (id: string) => apiRequest(`/consultas/${id}/cancel`, { method: "POST" }),
   attend: (id: string) => apiRequest(`/consultas/${id}/attend`, { method: "POST" }),
+  approve: (id: string) => apiRequest(`/consultas/${id}/approve`, { method: "POST" }),
+  reject: (id: string) => apiRequest(`/consultas/${id}/reject`, { method: "POST" }),
 };
 
 // Casais

@@ -42,6 +42,7 @@ const statusColors: Record<string, string> = {
   confirmed: "bg-green-500",
   completed: "bg-primary",
   pending: "bg-yellow-500",
+  pending_approval: "bg-orange-500",
   cancelled: "bg-destructive",
   blocked: "bg-muted-foreground",
 };
@@ -51,6 +52,7 @@ const statusBgColors: Record<string, string> = {
   confirmed: "border-l-green-500 bg-green-500/5",
   completed: "border-l-primary bg-primary/5",
   pending: "border-l-yellow-500 bg-yellow-500/5",
+  pending_approval: "border-l-orange-500 bg-orange-500/5",
   cancelled: "border-l-destructive bg-destructive/5",
   blocked: "border-l-muted-foreground bg-muted/30",
 };
@@ -60,6 +62,7 @@ const statusLabels: Record<string, string> = {
   confirmed: "Confirmada",
   completed: "Concluída",
   pending: "Pendente",
+  pending_approval: "Aguardando Aprovação",
   cancelled: "Cancelada",
   blocked: "Bloqueado",
 };
