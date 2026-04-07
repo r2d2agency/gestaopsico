@@ -112,6 +112,7 @@ router.put('/', async (req, res) => {
     if (businessEmail !== undefined) data.businessEmail = businessEmail;
     if (businessAddress !== undefined) data.businessAddress = businessAddress;
     if (allowPatientBooking !== undefined) data.allowPatientBooking = allowPatientBooking;
+    if (requireBookingApproval !== undefined) data.requireBookingApproval = requireBookingApproval;
     if (scheduleStartHour !== undefined) data.scheduleStartHour = Number(scheduleStartHour);
     if (scheduleEndHour !== undefined) data.scheduleEndHour = Number(scheduleEndHour);
     if (patientBookingStartHour !== undefined) data.patientBookingStartHour = Number(patientBookingStartHour);
