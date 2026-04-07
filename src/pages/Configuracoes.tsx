@@ -59,7 +59,7 @@ export default function Configuracoes() {
   const [form, setForm] = useState<Partial<OrgSettings>>({
     logo: "", primaryColor: "", secondaryColor: "", accentColor: "",
     businessName: "", businessPhone: "", businessEmail: "", businessAddress: "",
-    allowPatientBooking: true,
+    allowPatientBooking: true, requireBookingApproval: false,
     scheduleStartHour: 8, scheduleEndHour: 19,
     patientBookingStartHour: 8, patientBookingEndHour: 18,
     sessionDuration: 50, bookingWeekdays: "1,2,3,4,5",

@@ -192,6 +192,7 @@ export interface OrgSettings {
   businessEmail?: string;
   businessAddress?: string;
   allowPatientBooking?: boolean;
+  requireBookingApproval?: boolean;
   portalSlug?: string;
   scheduleStartHour?: number;
   scheduleEndHour?: number;
