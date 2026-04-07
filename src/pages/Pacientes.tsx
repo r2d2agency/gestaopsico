@@ -73,7 +73,7 @@ function maskCEP(value: string): string {
 }
 
 const emptyForm = (): Partial<Patient> => ({
-  name: "", cpf: "", phone: "", email: "", gender: "",
+  name: "", nickname: "", cpf: "", phone: "", email: "", gender: "",
   birth_date: "", address: "", emergency_contact: "",
   cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
   clinical_notes: "", health_history: "", medications: "", allergies: "",
