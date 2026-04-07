@@ -5,6 +5,61 @@ const { authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// PUBLIC: GET /api/pacientes/registration/:token
+router.get('/registration/:token', async (req, res) => {
+  try {
+    const patient = await prisma.patient.findFirst({
+      where: { registrationToken: req.params.token, registrationCompleted: false },
+      select: {
+        id: true, name: true, phone: true, email: true, birthDate: true, gender: true,
+        cep: true, street: true, number: true, complement: true, neighborhood: true,
+        city: true, state: true, emergencyContact: true,
+      }
+    });
+    if (!patient) return res.status(404).json({ error: 'Link inválido ou já utilizado' });
+    res.json({
+      name: patient.name, phone: patient.phone, email: patient.email,
+      birth_date: patient.birthDate, gender: patient.gender,
+      cep: patient.cep, street: patient.street, number: patient.number,
+      complement: patient.complement, neighborhood: patient.neighborhood,
+      city: patient.city, state: patient.state, emergency_contact: patient.emergencyContact,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao carregar dados' });
+  }
+});
+
+// PUBLIC: PUT /api/pacientes/registration/:token
+router.put('/registration/:token', async (req, res) => {
+  try {
+    const patient = await prisma.patient.findFirst({
+      where: { registrationToken: req.params.token, registrationCompleted: false }
+    });
+    if (!patient) return res.status(404).json({ error: 'Link inválido ou já utilizado' });
+
+    const data = {};
+    if (req.body.phone) data.phone = req.body.phone;
+    if (req.body.email) data.email = req.body.email;
+    if (req.body.birth_date) data.birthDate = new Date(req.body.birth_date);
+    if (req.body.gender) data.gender = req.body.gender;
+    if (req.body.cep) data.cep = req.body.cep;
+    if (req.body.street) data.street = req.body.street;
+    if (req.body.number) data.number = req.body.number;
+    if (req.body.complement) data.complement = req.body.complement;
+    if (req.body.neighborhood) data.neighborhood = req.body.neighborhood;
+    if (req.body.city) data.city = req.body.city;
+    if (req.body.state) data.state = req.body.state;
+    if (req.body.emergency_contact) data.emergencyContact = req.body.emergency_contact;
+    data.registrationCompleted = true;
+    data.registrationToken = null;
+
+    await prisma.patient.update({ where: { id: patient.id }, data });
+    res.json({ message: 'Cadastro completado com sucesso' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar dados', details: err.message });
+  }
+});
+
 router.use(authMiddleware);
 
 // Helper: map camelCase Prisma output to snake_case for frontend
