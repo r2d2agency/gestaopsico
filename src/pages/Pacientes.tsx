@@ -641,7 +641,27 @@ export default function Pacientes() {
             </TabsContent>
           </Tabs>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {editingId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mr-auto"
+                onClick={async () => {
+                  try {
+                    const result = await pacientesApi.generateRegistrationLink(editingId);
+                    await navigator.clipboard.writeText(result.link);
+                    toast({ title: "Link copiado!", description: "O link de cadastro foi copiado para a área de transferência. Envie ao paciente via WhatsApp." });
+                  } catch (err: any) {
+                    toast({ title: "Erro ao gerar link", description: err.message, variant: "destructive" });
+                  }
+                }}
+              >
+                <Link2 className="w-4 h-4 mr-1" />
+                Enviar link de cadastro
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={isPending || !form.name?.trim() || cpfStatus === "invalid" || cpfStatus === "exists"}>
               {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</> : (editingId ? "Salvar Alterações" : "Cadastrar Paciente")}
