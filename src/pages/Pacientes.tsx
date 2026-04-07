@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInputInternational } from "@/components/PhoneInputInternational";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePatients, useCreatePatient, useDeletePatient, useUpdatePatient } from "@/hooks/usePatients";
 import {
@@ -480,13 +481,12 @@ export default function Pacientes() {
 
             <TabsContent value="contato" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="col-span-2">
                   <Label>Telefone / WhatsApp</Label>
-                  <Input
-                    value={form.phone}
-                    onChange={e => set("phone", maskPhone(e.target.value))}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
+                  <PhoneInputInternational
+                    value={form.phone || ""}
+                    onChange={v => set("phone", v)}
+                    placeholder="Número do telefone"
                   />
                 </div>
                 <div>
