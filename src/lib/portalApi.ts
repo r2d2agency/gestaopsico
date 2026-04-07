@@ -238,6 +238,7 @@ export interface PatientPortalMessage {
   content: string;
   sender?: "patient" | "professional";
   readAt?: string | null;
+  title?: string | null;
   fileName?: string | null;
   mimeType?: string | null;
   createdAt: string;
@@ -271,6 +272,32 @@ export const patientPortalApi = {
     apiRequest("/patient-portal/book", { method: "POST", body: data }),
   listMessages: () =>
     apiRequest<PatientPortalMessage[]>("/patient-portal/messages"),
-  sendMessage: (data: { type: "text" | "audio" | "file"; content: string; fileName?: string; mimeType?: string }) =>
+  sendMessage: (data: { type: "text" | "audio" | "file"; content: string; fileName?: string; mimeType?: string; title?: string }) =>
     apiRequest<PatientPortalMessage>("/patient-portal/messages", { method: "POST", body: data }),
+  uploadAudio: async (
+    audioBlob: Blob,
+    data?: { fileName?: string; mimeType?: string; title?: string }
+  ) => {
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    const { API_BASE_URL } = await import("./api");
+
+    const response = await fetch(`${API_BASE_URL}/patient-portal/messages/audio`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "Content-Type": data?.mimeType || audioBlob.type || "application/octet-stream",
+        ...(data?.fileName ? { "X-File-Name": encodeURIComponent(data.fileName) } : {}),
+        ...(data?.mimeType ? { "X-Mime-Type": encodeURIComponent(data.mimeType) } : {}),
+        ...(data?.title ? { "X-Message-Title": encodeURIComponent(data.title) } : {}),
+      },
+      body: audioBlob,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Erro ao enviar áudio");
+    }
+
+    return response.json() as Promise<PatientPortalMessage>;
+  },
 };

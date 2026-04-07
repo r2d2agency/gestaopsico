@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Plus, Mic, MicOff, BookOpen, Calendar, Clock,
   FileText, Loader2, Trash2
@@ -16,6 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { patientPortalApi, type PatientPortalMessage } from "@/lib/portalApi";
+import { AudioMessagePlayer } from "@/components/messages/AudioMessagePlayer";
+
+const getAudioExtension = (mimeType: string) => {
+  if (mimeType.includes("mp4") || mimeType.includes("m4a") || mimeType.includes("aac")) return "m4a";
+  if (mimeType.includes("mpeg")) return "mp3";
+  if (mimeType.includes("ogg")) return "ogg";
+  if (mimeType.includes("wav")) return "wav";
+  return "webm";
+};
 
 export default function PatientMessages() {
   const qc = useQueryClient();
@@ -24,7 +33,9 @@ export default function PatientMessages() {
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [audioBlob, setAudioBlob] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [audioMimeType, setAudioMimeType] = useState("audio/webm");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -38,18 +49,28 @@ export default function PatientMessages() {
   const sendMutation = useMutation({
     mutationFn: (payload: {
       type: "text" | "audio";
-      content: string;
+      content?: string;
+      audioBlob?: Blob;
       fileName?: string;
       mimeType?: string;
       title?: string;
-    }) =>
-      patientPortalApi.sendMessage({
-        ...payload,
+    }) => {
+      if (payload.type === "audio" && payload.audioBlob) {
+        return patientPortalApi.uploadAudio(payload.audioBlob, {
+          fileName: payload.fileName,
+          mimeType: payload.mimeType,
+          title: payload.title,
+        });
+      }
+
+      return patientPortalApi.sendMessage({
         type: payload.type,
-        content: payload.content,
+        content: payload.content || "",
         fileName: payload.fileName,
         mimeType: payload.mimeType,
-      }),
+        title: payload.title,
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patient-messages"] });
       toast({ title: "Registro salvo! 📝" });
@@ -63,11 +84,27 @@ export default function PatientMessages() {
       }),
   });
 
+  const clearRecordedAudio = () => {
+    setAudioBlob(null);
+    setAudioMimeType("audio/webm");
+    setAudioPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+    };
+  }, [audioPreviewUrl]);
+
   const resetForm = () => {
     setNewOpen(false);
     setTitle("");
     setText("");
-    setAudioBlob(null);
+    clearRecordedAudio();
     setIsRecording(false);
     setRecordingTime(0);
   };
@@ -76,9 +113,9 @@ export default function PatientMessages() {
     if (audioBlob) {
       sendMutation.mutate({
         type: "audio",
-        content: audioBlob,
-        fileName: `diario-${Date.now()}.webm`,
-        mimeType: "audio/webm",
+        audioBlob,
+        fileName: `diario-${Date.now()}.${getAudioExtension(audioMimeType)}`,
+        mimeType: audioMimeType,
         title: title || undefined,
       });
     } else if (text.trim()) {
@@ -93,16 +130,54 @@ export default function PatientMessages() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const preferredMimeType =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/mp4")
+            ? "audio/mp4"
+            : undefined;
+
+      const recorder = preferredMimeType
+        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
+        : new MediaRecorder(stream);
+
+      const resolvedMimeType = recorder.mimeType || preferredMimeType || "audio/webm";
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (timerRef.current) clearInterval(timerRef.current);
+        setIsRecording(false);
+        toast({
+          title: "Erro ao gravar",
+          description: "Não foi possível capturar o áudio",
+          variant: "destructive",
+        });
+      };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const reader = new FileReader();
-        reader.onload = () => {
-          setAudioBlob(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
+        if (chunksRef.current.length === 0) {
+          clearRecordedAudio();
+          toast({
+            title: "Áudio vazio",
+            description: "Grave novamente para salvar seu registro",
+            variant: "destructive",
+          });
+          stream.getTracks().forEach((t) => t.stop());
+          setRecordingTime(0);
+          return;
+        }
+
+        const blob = new Blob(chunksRef.current, { type: resolvedMimeType });
+        const previewUrl = URL.createObjectURL(blob);
+
+        setAudioBlob(blob);
+        setAudioMimeType(resolvedMimeType);
+        setAudioPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return previewUrl;
+        });
         stream.getTracks().forEach((t) => t.stop());
         setRecordingTime(0);
       };
@@ -228,9 +303,8 @@ export default function PatientMessages() {
                         ) : msg.type === "audio" ? (
                           <div className="flex items-center gap-2">
                             <Mic className="w-4 h-4 text-primary shrink-0" />
-                            <audio
-                              controls
-                              src={msg.content}
+                            <AudioMessagePlayer
+                              source={msg.content}
                               className="h-8 w-full max-w-[250px]"
                             />
                           </div>
@@ -347,16 +421,12 @@ export default function PatientMessages() {
               <div className="p-4 rounded-lg bg-muted/50 border border-border">
                 <div className="flex items-center gap-3">
                   <Mic className="w-5 h-5 text-primary" />
-                  <audio
-                    controls
-                    src={audioBlob}
-                    className="h-8 flex-1"
-                  />
+                  <audio controls src={audioPreviewUrl || undefined} className="h-8 flex-1" />
                   <Button
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
-                    onClick={() => setAudioBlob(null)}
+                    onClick={clearRecordedAudio}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>

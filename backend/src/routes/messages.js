@@ -31,6 +31,12 @@ function buildMessageWhere(user) {
   return { professionalId: user.id };
 }
 
+function getMessagePreview(message) {
+  if (message.type === 'audio') return '🎤 Áudio';
+  if (message.type === 'file') return message.fileName || '📎 Arquivo';
+  return message.content;
+}
+
 async function resolveConversationProfessionalId(patientId, user) {
   const patient = await prisma.patient.findFirst({
     where: {
@@ -72,7 +78,7 @@ router.get('/', async (req, res) => {
           patientName: message.patient.name,
           unreadCount: 0,
           lastMessageAt: message.createdAt,
-          lastMessage: message.content,
+          lastMessage: getMessagePreview(message),
           lastSender: message.sender,
         });
       }
