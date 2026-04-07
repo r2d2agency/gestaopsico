@@ -272,6 +272,26 @@ export default function Agenda() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.approve(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta aprovada!" });
+      setViewApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.reject(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta rejeitada!" });
+      setViewApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const openViewDialog = (apt: any) => {
     setViewApt(apt);
     setEditMode(false);
