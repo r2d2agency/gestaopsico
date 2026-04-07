@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/api";
+import { AudioMessagePlayer } from "@/components/messages/AudioMessagePlayer";
 
 interface Conversation {
   patientId: string;
@@ -25,14 +26,10 @@ interface Message {
   type: string;
   content: string;
   fileName?: string;
+  mimeType?: string;
   readAt?: string;
   createdAt: string;
 }
-
-const normalizeAudioSrc = (v: string) =>
-  /^data:audio\/[\w.-]+;base64,/.test(v)
-    ? v
-    : `data:audio/webm;base64,${v.replace(/^data:[^,]*,?/, "").replace(/^audo\/bas64,?/, "").replace(/^audio\/bas64,?/, "")}`;
 
 export default function Mensagens() {
   const qc = useQueryClient();
@@ -211,7 +208,7 @@ export default function Mensagens() {
                         {msg.type === "audio" || msg.content?.startsWith("data:audio") || msg.content?.startsWith("data:audo") ? (
                           <div className="flex items-center gap-2">
                             <Mic className="w-4 h-4 shrink-0" />
-                            <audio controls className="max-w-[220px] h-8" src={normalizeAudioSrc(msg.content)} />
+                            <AudioMessagePlayer source={msg.content} className="max-w-[220px] h-8" />
                           </div>
                         ) : (
                           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>

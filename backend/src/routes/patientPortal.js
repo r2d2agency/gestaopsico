@@ -1,10 +1,48 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
 const { authMiddleware, generateToken } = require('../middleware/auth');
+const { getStoredAudioPath, decodeHeaderValue } = require('../utils/messageAudio');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+function canAccessPortalMessage(user, message) {
+  if (!user || !message) return false;
+  if (user.patientId && user.patientId === message.patientId) return true;
+  if (user.id === message.professionalId) return true;
+  if (user.role === 'superadmin') return true;
+
+  return ['admin', 'secretary', 'financial', 'secretary_financial'].includes(user.role)
+    && !!user.organizationId
+    && user.organizationId === message.professional?.organizationId;
+}
+
+async function getPortalMessageForAccess(userId, messageId) {
+  const [user, message] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, patientId: true, organizationId: true },
+    }),
+    prisma.patientPortalMessage.findUnique({
+      where: { id: messageId },
+      include: { professional: { select: { organizationId: true } } },
+    }),
+  ]);
+
+  if (!canAccessPortalMessage(user, message)) return null;
+  return message;
+}
+
+function decodeLegacyAudioContent(content) {
+  const normalized = String(content || '')
+    .replace(/^data:[^,]*,?/i, '')
+    .replace(/^audo\/bas64,?/i, '')
+    .replace(/^audio\/bas64,?/i, '');
+
+  return normalized ? Buffer.from(normalized, 'base64') : null;
+}
 
 // POST /api/patient-portal/create-access - professional creates patient login
 router.post('/create-access', authMiddleware, async (req, res) => {
@@ -315,10 +353,90 @@ router.get('/messages', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/messages/:messageId/audio', authMiddleware, async (req, res) => {
+  try {
+    const message = await getPortalMessageForAccess(req.userId, req.params.messageId);
+    if (!message || message.type !== 'audio') {
+      return res.status(404).json({ error: 'Áudio não encontrado' });
+    }
+
+    const audioPath = getStoredAudioPath(message.id, message.mimeType);
+    if (fs.existsSync(audioPath)) {
+      res.setHeader('Content-Type', message.mimeType || 'audio/webm');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      return res.sendFile(audioPath);
+    }
+
+    const legacyAudioBuffer = decodeLegacyAudioContent(message.content);
+    if (!legacyAudioBuffer) {
+      return res.status(404).json({ error: 'Áudio não encontrado' });
+    }
+
+    res.setHeader('Content-Type', message.mimeType || 'audio/webm');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.send(legacyAudioBuffer);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao carregar áudio', details: err.message });
+  }
+});
+
 // POST /api/patient-portal/messages - create patient message
+router.post('/messages/audio', authMiddleware, express.raw({ type: ['audio/*', 'application/octet-stream'], limit: '50mb' }), async (req, res) => {
+  try {
+    if (!req.body || !req.body.length) {
+      return res.status(400).json({ error: 'Áudio é obrigatório' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { patientId: true }
+    });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const patient = await prisma.patient.findUnique({
+      where: { id: user.patientId },
+      select: { id: true, professionalId: true }
+    });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    const mimeType = decodeHeaderValue(req.headers['x-mime-type']) || req.headers['content-type'] || 'audio/webm';
+    const fileName = decodeHeaderValue(req.headers['x-file-name']);
+    const title = decodeHeaderValue(req.headers['x-message-title']);
+
+    const createdMessage = await prisma.patientPortalMessage.create({
+      data: {
+        patientId: patient.id,
+        professionalId: patient.professionalId,
+        sender: 'patient',
+        type: 'audio',
+        content: 'uploading',
+        title: title || null,
+        isDiary: true,
+        fileName: fileName || null,
+        mimeType
+      }
+    });
+
+    const audioPath = getStoredAudioPath(createdMessage.id, mimeType);
+    fs.writeFileSync(audioPath, Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body));
+
+    const message = await prisma.patientPortalMessage.update({
+      where: { id: createdMessage.id },
+      data: {
+        content: `/api/patient-portal/messages/${createdMessage.id}/audio`,
+        fileName: fileName || createdMessage.fileName
+      }
+    });
+
+    res.status(201).json(message);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar áudio', details: err.message });
+  }
+});
+
 router.post('/messages', authMiddleware, async (req, res) => {
   try {
-    const { type, content, fileName, mimeType } = req.body;
+    const { type, content, fileName, mimeType, title } = req.body;
     if (!type || !content) {
       return res.status(400).json({ error: 'type e content são obrigatórios' });
     }
@@ -342,6 +460,8 @@ router.post('/messages', authMiddleware, async (req, res) => {
         sender: 'patient',
         type,
         content,
+        title: title || null,
+        isDiary: true,
         fileName: fileName || null,
         mimeType: mimeType || null
       }
