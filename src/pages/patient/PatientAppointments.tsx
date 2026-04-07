@@ -144,8 +144,8 @@ export default function PatientAppointments() {
                         </span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px]">
-                      {apt.status === "confirmed" ? "Confirmada" : "Agendada"}
+                    <Badge variant="outline" className={`text-[9px] ${apt.status === "pending_approval" ? "border-orange-500 text-orange-600" : ""}`}>
+                      {apt.status === "confirmed" ? "Confirmada" : apt.status === "pending_approval" ? "Aguardando Aprovação" : "Agendada"}
                     </Badge>
                   </div>
                 </CardContent>
