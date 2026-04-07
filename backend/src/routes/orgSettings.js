@@ -96,7 +96,7 @@ router.put('/', async (req, res) => {
     const {
       logo, primaryColor, secondaryColor, accentColor,
       businessName, businessPhone, businessEmail, businessAddress,
-      allowPatientBooking, portalSlug,
+      allowPatientBooking, requireBookingApproval, portalSlug,
       scheduleStartHour, scheduleEndHour,
       patientBookingStartHour, patientBookingEndHour,
       sessionDuration, bookingWeekdays, timezone
