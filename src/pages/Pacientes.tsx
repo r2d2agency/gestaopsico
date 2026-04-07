@@ -162,7 +162,7 @@ export default function Pacientes() {
   const openEdit = (p: Patient) => {
     setEditingId(p.id);
     setForm({
-      name: p.name, cpf: p.cpf || "", phone: p.phone || "", email: p.email || "",
+      name: p.name, nickname: p.nickname || "", cpf: p.cpf || "", phone: p.phone || "", email: p.email || "",
       gender: p.gender || "", birth_date: p.birth_date ? String(p.birth_date).slice(0, 10) : "",
       address: p.address || "", cep: p.cep || "", street: p.street || "",
       number: p.number || "", complement: p.complement || "",
