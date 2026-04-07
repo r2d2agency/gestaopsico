@@ -336,7 +336,10 @@ export default function Pacientes() {
                         <span className="text-xs font-bold text-secondary-foreground">{p.name.split(" ").map(n => n[0]).join("").slice(0, 2)}</span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {p.name}
+                          {p.nickname && <span className="text-xs text-muted-foreground ml-1">({p.nickname})</span>}
+                        </p>
                         <p className="text-xs text-muted-foreground">{p.cpf || "—"}</p>
                       </div>
                     </div>
