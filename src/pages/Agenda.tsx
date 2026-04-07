@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
-  Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
+  Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, Check,
   UserCheck, Heart, Ban, Filter, Users, CalendarIcon, Repeat, Briefcase,
   Plane, Stethoscope, GraduationCap, Home, Coffee, LayoutGrid, List, CalendarDays
 } from "lucide-react";
