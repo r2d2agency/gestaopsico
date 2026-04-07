@@ -900,21 +900,46 @@ export default function Agenda() {
                     <Video className="w-4 h-4" />
                     Iniciar Teleconsulta
                   </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button size="sm" variant="outline" onClick={startEditing}>
-                      Editar / Reagendar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => cancelMutation.mutate(viewApt.id)}
-                      disabled={cancelMutation.isPending}
-                    >
-                      {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                      <Ban className="w-4 h-4 mr-1" />
-                      Cancelar
-                    </Button>
-                  </div>
+                  {viewApt.status === "pending_approval" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => approveMutation.mutate(viewApt.id)}
+                        disabled={approveMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {approveMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                        <Check className="w-4 h-4 mr-1" />
+                        Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => rejectMutation.mutate(viewApt.id)}
+                        disabled={rejectMutation.isPending}
+                      >
+                        {rejectMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                        <Ban className="w-4 h-4 mr-1" />
+                        Rejeitar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" onClick={startEditing}>
+                        Editar / Reagendar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => cancelMutation.mutate(viewApt.id)}
+                        disabled={cancelMutation.isPending}
+                      >
+                        {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                        <Ban className="w-4 h-4 mr-1" />
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
               {viewApt.type !== "blocked" && viewApt.status === "cancelled" && (
