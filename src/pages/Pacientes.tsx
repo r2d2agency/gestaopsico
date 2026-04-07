@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Filter, MoreHorizontal, Phone, Trash2, Edit,
-  Key, Bell, DollarSign, Copy, Loader2, CheckCircle2, XCircle, MapPin, FileText
+  Key, Bell, DollarSign, Copy, Loader2, CheckCircle2, XCircle, MapPin, FileText, Link2, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
