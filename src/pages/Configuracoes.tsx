@@ -396,7 +396,20 @@ export default function Configuracoes() {
                 </button>
               </div>
 
-              {/* Horários do profissional */}
+              {/* Toggle aprovação */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Aprovação obrigatória</p>
+                  <p className="text-xs text-muted-foreground">Exigir aprovação do psicólogo para agendamentos feitos pelo paciente</p>
+                </div>
+                <button
+                  onClick={() => setForm(prev => ({ ...prev, requireBookingApproval: !prev.requireBookingApproval }))}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${form.requireBookingApproval ? 'bg-primary' : 'bg-muted'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.requireBookingApproval ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
               <div className="p-4 rounded-lg border border-border space-y-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">🗓️ Horário da Agenda (Profissional / Secretária)</p>
