@@ -55,7 +55,7 @@ export default function PatientAppointments() {
   const bookMutation = useMutation({
     mutationFn: () =>
       patientPortalApi.book({ date: dateStr, time: selectedTime!, mode, notes: notes || undefined }),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ["patient-appointments"] });
       qc.invalidateQueries({ queryKey: ["patient-dashboard"] });
       const msg = data?.requires_approval ? "Consulta solicitada! Aguardando aprovação do profissional." : "Consulta agendada! ✅";
