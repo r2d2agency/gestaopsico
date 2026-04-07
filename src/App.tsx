@@ -43,6 +43,7 @@ import Mensagens from "./pages/Mensagens";
 import Prontuarios from "./pages/Prontuarios";
 import Relatorios from "./pages/Relatorios";
 import Teleatendimento from "./pages/Teleatendimento";
+import CompletarCadastro from "./pages/CompletarCadastro";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/p/:slug" element={<PortalLogin />} />
+            <Route path="/completar-cadastro/:token" element={<CompletarCadastro />} />
             {/* Admin / Superadmin */}
             <Route element={<ProtectedRoute requiredRole="superadmin"><AdminLayout /></ProtectedRoute>}>
               <Route path="/admin" element={<AdminDashboard />} />

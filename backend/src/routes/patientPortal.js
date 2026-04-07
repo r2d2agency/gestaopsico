@@ -131,7 +131,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         ? prisma.organizationSetting.findUnique({
             where: { organizationId },
             select: {
-              allowPatientBooking: true, businessName: true, logo: true,
+              allowPatientBooking: true, requireBookingApproval: true, businessName: true, logo: true,
               primaryColor: true, accentColor: true, secondaryColor: true,
               patientBookingStartHour: true, patientBookingEndHour: true,
               sessionDuration: true, bookingWeekdays: true
@@ -152,6 +152,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       recentMood,
       patientName: user.name,
       allowBooking: orgSettings?.allowPatientBooking ?? true,
+      requireApproval: orgSettings?.requireBookingApproval ?? false,
       clinicName: orgSettings?.businessName || organization?.name || patient.professional?.name || null,
       clinicLogo: orgSettings?.logo || organization?.logo || null,
       primaryColor: orgSettings?.primaryColor || null,
@@ -296,9 +297,10 @@ router.post('/book', authMiddleware, async (req, res) => {
     const orgId = user.organizationId || patient.professional?.organizationId;
     const orgSettings = orgId ? await prisma.organizationSetting.findUnique({
       where: { organizationId: orgId },
-      select: { sessionDuration: true }
+      select: { sessionDuration: true, requireBookingApproval: true }
     }) : null;
     const sessionDuration = orgSettings?.sessionDuration ?? 50;
+    const requireApproval = orgSettings?.requireBookingApproval ?? false;
 
     // Check if slot is still available
     const targetDate = new Date(date + 'T00:00:00.000Z');
@@ -321,7 +323,7 @@ router.post('/book', authMiddleware, async (req, res) => {
         time,
         duration: sessionDuration,
         value: patient.sessionValue || 0,
-        status: 'scheduled',
+        status: requireApproval ? 'pending_approval' : 'scheduled',
         paymentStatus: 'pending',
         mode: mode || 'in_person',
         notes: notes || null
@@ -329,7 +331,7 @@ router.post('/book', authMiddleware, async (req, res) => {
       include: { professional: { select: { name: true } } }
     });
 
-    res.status(201).json(appointment);
+    res.status(201).json({ ...appointment, requires_approval: requireApproval });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao agendar consulta', details: err.message });
   }

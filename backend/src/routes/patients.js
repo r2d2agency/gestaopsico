@@ -5,6 +5,61 @@ const { authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// PUBLIC: GET /api/pacientes/registration/:token
+router.get('/registration/:token', async (req, res) => {
+  try {
+    const patient = await prisma.patient.findFirst({
+      where: { registrationToken: req.params.token, registrationCompleted: false },
+      select: {
+        id: true, name: true, phone: true, email: true, birthDate: true, gender: true,
+        cep: true, street: true, number: true, complement: true, neighborhood: true,
+        city: true, state: true, emergencyContact: true,
+      }
+    });
+    if (!patient) return res.status(404).json({ error: 'Link inválido ou já utilizado' });
+    res.json({
+      name: patient.name, phone: patient.phone, email: patient.email,
+      birth_date: patient.birthDate, gender: patient.gender,
+      cep: patient.cep, street: patient.street, number: patient.number,
+      complement: patient.complement, neighborhood: patient.neighborhood,
+      city: patient.city, state: patient.state, emergency_contact: patient.emergencyContact,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao carregar dados' });
+  }
+});
+
+// PUBLIC: PUT /api/pacientes/registration/:token
+router.put('/registration/:token', async (req, res) => {
+  try {
+    const patient = await prisma.patient.findFirst({
+      where: { registrationToken: req.params.token, registrationCompleted: false }
+    });
+    if (!patient) return res.status(404).json({ error: 'Link inválido ou já utilizado' });
+
+    const data = {};
+    if (req.body.phone) data.phone = req.body.phone;
+    if (req.body.email) data.email = req.body.email;
+    if (req.body.birth_date) data.birthDate = new Date(req.body.birth_date);
+    if (req.body.gender) data.gender = req.body.gender;
+    if (req.body.cep) data.cep = req.body.cep;
+    if (req.body.street) data.street = req.body.street;
+    if (req.body.number) data.number = req.body.number;
+    if (req.body.complement) data.complement = req.body.complement;
+    if (req.body.neighborhood) data.neighborhood = req.body.neighborhood;
+    if (req.body.city) data.city = req.body.city;
+    if (req.body.state) data.state = req.body.state;
+    if (req.body.emergency_contact) data.emergencyContact = req.body.emergency_contact;
+    data.registrationCompleted = true;
+    data.registrationToken = null;
+
+    await prisma.patient.update({ where: { id: patient.id }, data });
+    res.json({ message: 'Cadastro completado com sucesso' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar dados', details: err.message });
+  }
+});
+
 router.use(authMiddleware);
 
 // Helper: map camelCase Prisma output to snake_case for frontend
@@ -13,6 +68,7 @@ function mapPatient(p) {
   return {
     id: p.id,
     name: p.name,
+    nickname: p.nickname,
     cpf: p.cpf,
     birth_date: p.birthDate,
     phone: p.phone,
@@ -42,11 +98,14 @@ function mapPatient(p) {
     charge_day: p.chargeDay,
     charge_time: p.chargeTime,
     charge_enabled: p.chargeEnabled,
+    registration_token: p.registrationToken,
+    registration_completed: p.registrationCompleted,
   };
 }
 
 function mapInput(body) {
   const data = {};
+  if (body.nickname !== undefined) data.nickname = body.nickname || null;
   if (body.name !== undefined) data.name = body.name;
   if (body.cpf !== undefined) data.cpf = body.cpf || null;
   if (body.birth_date !== undefined) data.birthDate = body.birth_date ? new Date(body.birth_date) : null;
@@ -259,6 +318,33 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Paciente removido' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao remover paciente' });
+  }
+});
+
+// POST /api/pacientes/:id/registration-link - generate registration completion link
+router.post('/:id/registration-link', async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
+    const whereClause = { id: req.params.id };
+    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+      if (user.organizationId) whereClause.professional = { organizationId: user.organizationId };
+    } else {
+      whereClause.professionalId = req.userId;
+    }
+    const patient = await prisma.patient.findFirst({ where: whereClause, include: { professional: { select: { organizationId: true, organization: { select: { portalSlug: true } } } } } });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    await prisma.patient.update({ where: { id: patient.id }, data: { registrationToken: token, registrationCompleted: false } });
+
+    const portalSlug = patient.professional?.organization?.portalSlug || '';
+    const baseUrl = process.env.FRONTEND_URL || req.headers.origin || '';
+    const link = `${baseUrl}/completar-cadastro/${token}`;
+
+    res.json({ link, token, patient_phone: patient.phone });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar link', details: err.message });
   }
 });
 

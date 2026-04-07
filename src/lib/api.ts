@@ -86,6 +86,8 @@ export const pacientesApi = {
     apiRequest<{ cep: string; street: string; complement: string; neighborhood: string; city: string; state: string }>(`/pacientes/cep/${cep}`),
   validateCpf: (cpf: string) =>
     apiRequest<{ valid: boolean; exists?: boolean; message?: string }>(`/pacientes/validate-cpf/${cpf}`),
+  generateRegistrationLink: (id: string) =>
+    apiRequest<{ link: string; token: string; patient_phone: string }>(`/pacientes/${id}/registration-link`, { method: "POST" }),
 };
 
 // Consultas
@@ -97,6 +99,8 @@ export const consultasApi = {
   update: (id: string, data: Partial<Consulta>) => apiRequest<Consulta>(`/consultas/${id}`, { method: "PUT", body: data }),
   cancel: (id: string) => apiRequest(`/consultas/${id}/cancel`, { method: "POST" }),
   attend: (id: string) => apiRequest(`/consultas/${id}/attend`, { method: "POST" }),
+  approve: (id: string) => apiRequest(`/consultas/${id}/approve`, { method: "POST" }),
+  reject: (id: string) => apiRequest(`/consultas/${id}/reject`, { method: "POST" }),
 };
 
 // Casais
@@ -166,6 +170,7 @@ export const dashboardApi = {
 export interface Patient {
   id: string;
   name: string;
+  nickname?: string;
   cpf: string;
   birth_date: string;
   phone: string;
@@ -193,6 +198,8 @@ export interface Patient {
   charge_day?: number;
   charge_time?: string;
   charge_enabled?: boolean;
+  registration_token?: string;
+  registration_completed?: boolean;
   created_at: string;
 }
 

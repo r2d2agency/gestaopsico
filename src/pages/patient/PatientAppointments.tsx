@@ -55,10 +55,11 @@ export default function PatientAppointments() {
   const bookMutation = useMutation({
     mutationFn: () =>
       patientPortalApi.book({ date: dateStr, time: selectedTime!, mode, notes: notes || undefined }),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ["patient-appointments"] });
       qc.invalidateQueries({ queryKey: ["patient-dashboard"] });
-      toast({ title: "Consulta agendada! ✅" });
+      const msg = data?.requires_approval ? "Consulta solicitada! Aguardando aprovação do profissional." : "Consulta agendada! ✅";
+      toast({ title: msg });
       resetBooking();
     },
     onError: (err: Error) => {
@@ -144,8 +145,8 @@ export default function PatientAppointments() {
                         </span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px]">
-                      {apt.status === "confirmed" ? "Confirmada" : "Agendada"}
+                    <Badge variant="outline" className={`text-[9px] ${apt.status === "pending_approval" ? "border-orange-500 text-orange-600" : ""}`}>
+                      {apt.status === "confirmed" ? "Confirmada" : apt.status === "pending_approval" ? "Aguardando Aprovação" : "Agendada"}
                     </Badge>
                   </div>
                 </CardContent>

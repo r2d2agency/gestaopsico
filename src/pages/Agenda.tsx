@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
-  Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2,
+  Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, Check,
   UserCheck, Heart, Ban, Filter, Users, CalendarIcon, Repeat, Briefcase,
   Plane, Stethoscope, GraduationCap, Home, Coffee, LayoutGrid, List, CalendarDays
 } from "lucide-react";
@@ -42,6 +42,7 @@ const statusColors: Record<string, string> = {
   confirmed: "bg-green-500",
   completed: "bg-primary",
   pending: "bg-yellow-500",
+  pending_approval: "bg-orange-500",
   cancelled: "bg-destructive",
   blocked: "bg-muted-foreground",
 };
@@ -51,6 +52,7 @@ const statusBgColors: Record<string, string> = {
   confirmed: "border-l-green-500 bg-green-500/5",
   completed: "border-l-primary bg-primary/5",
   pending: "border-l-yellow-500 bg-yellow-500/5",
+  pending_approval: "border-l-orange-500 bg-orange-500/5",
   cancelled: "border-l-destructive bg-destructive/5",
   blocked: "border-l-muted-foreground bg-muted/30",
 };
@@ -60,6 +62,7 @@ const statusLabels: Record<string, string> = {
   confirmed: "Confirmada",
   completed: "Concluída",
   pending: "Pendente",
+  pending_approval: "Aguardando Aprovação",
   cancelled: "Cancelada",
   blocked: "Bloqueado",
 };
@@ -264,6 +267,26 @@ export default function Agenda() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments"] });
       toast({ title: "Consulta cancelada!" });
+      setViewApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.approve(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta aprovada!" });
+      setViewApt(null);
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.reject(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Consulta rejeitada!" });
       setViewApt(null);
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -877,21 +900,46 @@ export default function Agenda() {
                     <Video className="w-4 h-4" />
                     Iniciar Teleconsulta
                   </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button size="sm" variant="outline" onClick={startEditing}>
-                      Editar / Reagendar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => cancelMutation.mutate(viewApt.id)}
-                      disabled={cancelMutation.isPending}
-                    >
-                      {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                      <Ban className="w-4 h-4 mr-1" />
-                      Cancelar
-                    </Button>
-                  </div>
+                  {viewApt.status === "pending_approval" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => approveMutation.mutate(viewApt.id)}
+                        disabled={approveMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {approveMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                        <Check className="w-4 h-4 mr-1" />
+                        Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => rejectMutation.mutate(viewApt.id)}
+                        disabled={rejectMutation.isPending}
+                      >
+                        {rejectMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                        <Ban className="w-4 h-4 mr-1" />
+                        Rejeitar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" onClick={startEditing}>
+                        Editar / Reagendar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => cancelMutation.mutate(viewApt.id)}
+                        disabled={cancelMutation.isPending}
+                      >
+                        {cancelMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                        <Ban className="w-4 h-4 mr-1" />
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
               {viewApt.type !== "blocked" && viewApt.status === "cancelled" && (

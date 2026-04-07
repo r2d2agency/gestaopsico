@@ -71,6 +71,7 @@ model OrganizationSetting {
   businessEmail  String?      @map("business_email") @db.VarChar(255)
   businessAddress String?     @map("business_address")
   allowPatientBooking Boolean @default(true) @map("allow_patient_booking")
+  requireBookingApproval Boolean @default(false) @map("require_booking_approval")
   scheduleStartHour  Int      @default(8) @map("schedule_start_hour")
   scheduleEndHour    Int      @default(19) @map("schedule_end_hour")
   patientBookingStartHour Int @default(8) @map("patient_booking_start_hour")
@@ -192,6 +193,7 @@ model Patient {
   professionalId   String        @map("professional_id") @db.Uuid
   professional     User          @relation("professionalPatients", fields: [professionalId], references: [id])
   name             String        @db.VarChar(255)
+  nickname         String?       @db.VarChar(100)
   cpf              String?       @db.VarChar(14)
   birthDate        DateTime?     @map("birth_date") @db.Date
   phone            String?       @db.VarChar(20)
@@ -219,6 +221,8 @@ model Patient {
   chargeDay        Int?          @default(5) @map("charge_day")
   chargeTime       String?       @default("10:00") @map("charge_time") @db.VarChar(5)
   chargeEnabled    Boolean       @default(false) @map("charge_enabled")
+  registrationToken String?      @map("registration_token") @db.VarChar(255)
+  registrationCompleted Boolean  @default(false) @map("registration_completed")
   createdAt        DateTime      @default(now()) @map("created_at")
   appointments     Appointment[]
   records          Record[]

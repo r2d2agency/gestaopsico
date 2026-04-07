@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Filter, MoreHorizontal, Phone, Trash2, Edit,
-  Key, Bell, DollarSign, Copy, Loader2, CheckCircle2, XCircle, MapPin, FileText
+  Key, Bell, DollarSign, Copy, Loader2, CheckCircle2, XCircle, MapPin, FileText, Link2, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +73,7 @@ function maskCEP(value: string): string {
 }
 
 const emptyForm = (): Partial<Patient> => ({
-  name: "", cpf: "", phone: "", email: "", gender: "",
+  name: "", nickname: "", cpf: "", phone: "", email: "", gender: "",
   birth_date: "", address: "", emergency_contact: "",
   cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
   clinical_notes: "", health_history: "", medications: "", allergies: "",
@@ -162,7 +162,7 @@ export default function Pacientes() {
   const openEdit = (p: Patient) => {
     setEditingId(p.id);
     setForm({
-      name: p.name, cpf: p.cpf || "", phone: p.phone || "", email: p.email || "",
+      name: p.name, nickname: p.nickname || "", cpf: p.cpf || "", phone: p.phone || "", email: p.email || "",
       gender: p.gender || "", birth_date: p.birth_date ? String(p.birth_date).slice(0, 10) : "",
       address: p.address || "", cep: p.cep || "", street: p.street || "",
       number: p.number || "", complement: p.complement || "",
@@ -336,7 +336,10 @@ export default function Pacientes() {
                         <span className="text-xs font-bold text-secondary-foreground">{p.name.split(" ").map(n => n[0]).join("").slice(0, 2)}</span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {p.name}
+                          {p.nickname && <span className="text-xs text-muted-foreground ml-1">({p.nickname})</span>}
+                        </p>
                         <p className="text-xs text-muted-foreground">{p.cpf || "—"}</p>
                       </div>
                     </div>
@@ -422,9 +425,13 @@ export default function Pacientes() {
 
             <TabsContent value="pessoal" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+                <div>
                   <Label>Nome Completo *</Label>
                   <Input value={form.name} onChange={e => set("name", e.target.value)} placeholder="Nome do paciente" />
+                </div>
+                <div>
+                  <Label>Apelido</Label>
+                  <Input value={form.nickname || ""} onChange={e => set("nickname", e.target.value)} placeholder="Como prefere ser chamado(a)" />
                 </div>
                 <div>
                   <Label>CPF</Label>
@@ -634,7 +641,27 @@ export default function Pacientes() {
             </TabsContent>
           </Tabs>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {editingId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mr-auto"
+                onClick={async () => {
+                  try {
+                    const result = await pacientesApi.generateRegistrationLink(editingId);
+                    await navigator.clipboard.writeText(result.link);
+                    toast({ title: "Link copiado!", description: "O link de cadastro foi copiado para a área de transferência. Envie ao paciente via WhatsApp." });
+                  } catch (err: any) {
+                    toast({ title: "Erro ao gerar link", description: err.message, variant: "destructive" });
+                  }
+                }}
+              >
+                <Link2 className="w-4 h-4 mr-1" />
+                Enviar link de cadastro
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={isPending || !form.name?.trim() || cpfStatus === "invalid" || cpfStatus === "exists"}>
               {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</> : (editingId ? "Salvar Alterações" : "Cadastrar Paciente")}
