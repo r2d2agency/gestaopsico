@@ -50,6 +50,7 @@ function mapPatient(p) {
 
 function mapInput(body) {
   const data = {};
+  if (body.nickname !== undefined) data.nickname = body.nickname || null;
   if (body.name !== undefined) data.name = body.name;
   if (body.cpf !== undefined) data.cpf = body.cpf || null;
   if (body.birth_date !== undefined) data.birthDate = body.birth_date ? new Date(body.birth_date) : null;
