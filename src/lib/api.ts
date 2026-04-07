@@ -166,6 +166,7 @@ export const dashboardApi = {
 export interface Patient {
   id: string;
   name: string;
+  nickname?: string;
   cpf: string;
   birth_date: string;
   phone: string;
@@ -193,6 +194,8 @@ export interface Patient {
   charge_day?: number;
   charge_time?: string;
   charge_enabled?: boolean;
+  registration_token?: string;
+  registration_completed?: boolean;
   created_at: string;
 }
 
