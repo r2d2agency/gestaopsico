@@ -152,6 +152,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       recentMood,
       patientName: user.name,
       allowBooking: orgSettings?.allowPatientBooking ?? true,
+      requireApproval: orgSettings?.requireBookingApproval ?? false,
       clinicName: orgSettings?.businessName || organization?.name || patient.professional?.name || null,
       clinicLogo: orgSettings?.logo || organization?.logo || null,
       primaryColor: orgSettings?.primaryColor || null,
