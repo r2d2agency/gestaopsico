@@ -422,9 +422,13 @@ export default function Pacientes() {
 
             <TabsContent value="pessoal" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+                <div>
                   <Label>Nome Completo *</Label>
                   <Input value={form.name} onChange={e => set("name", e.target.value)} placeholder="Nome do paciente" />
+                </div>
+                <div>
+                  <Label>Apelido</Label>
+                  <Input value={form.nickname || ""} onChange={e => set("nickname", e.target.value)} placeholder="Como prefere ser chamado(a)" />
                 </div>
                 <div>
                   <Label>CPF</Label>
