@@ -229,4 +229,38 @@ router.post('/:id/attend', async (req, res) => {
   }
 });
 
+// POST /api/consultas/:id/approve - approve a pending_approval appointment
+router.post('/:id/approve', async (req, res) => {
+  try {
+    const apt = await prisma.appointment.findFirst({
+      where: { id: req.params.id, professionalId: req.userId, status: 'pending_approval' }
+    });
+    if (!apt) return res.status(404).json({ error: 'Consulta não encontrada ou já aprovada' });
+    const updated = await prisma.appointment.update({
+      where: { id: apt.id },
+      data: { status: 'scheduled' }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao aprovar consulta', details: err.message });
+  }
+});
+
+// POST /api/consultas/:id/reject - reject a pending_approval appointment
+router.post('/:id/reject', async (req, res) => {
+  try {
+    const apt = await prisma.appointment.findFirst({
+      where: { id: req.params.id, professionalId: req.userId, status: 'pending_approval' }
+    });
+    if (!apt) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const updated = await prisma.appointment.update({
+      where: { id: apt.id },
+      data: { status: 'cancelled', notes: (apt.notes ? apt.notes + ' | ' : '') + 'Rejeitado pelo profissional' }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao rejeitar consulta', details: err.message });
+  }
+});
+
 module.exports = router;
