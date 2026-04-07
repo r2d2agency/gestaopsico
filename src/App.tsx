@@ -43,6 +43,7 @@ import Mensagens from "./pages/Mensagens";
 import Prontuarios from "./pages/Prontuarios";
 import Relatorios from "./pages/Relatorios";
 import Teleatendimento from "./pages/Teleatendimento";
+import CompletarCadastro from "./pages/CompletarCadastro";
 
 const queryClient = new QueryClient();
 
