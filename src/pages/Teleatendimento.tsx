@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import StructuredSessionContent from "@/components/telehealth/StructuredSessionContent";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   waiting: { label: "Aguardando", color: "bg-muted text-muted-foreground", icon: <Clock className="h-4 w-4" /> },
