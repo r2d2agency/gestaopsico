@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pacientesApi, consultasApi, casaisApi, type Consulta } from "@/lib/api";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
+import StructuredSessionContent from "@/components/telehealth/StructuredSessionContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
