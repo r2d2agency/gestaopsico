@@ -7,10 +7,10 @@ import { ptBR } from "date-fns/locale";
 import { Users, FileText, AlertTriangle, Tag, TrendingUp, BarChart3, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function ClinicalDashboard() {
+export default function ClinicalDashboard({ patientId }: { patientId?: string } = {}) {
   const { data, isLoading } = useQuery({
-    queryKey: ["clinical-dashboard"],
-    queryFn: () => recordsApi.clinicalDashboard(),
+    queryKey: ["clinical-dashboard", patientId],
+    queryFn: () => recordsApi.clinicalDashboard(patientId),
     staleTime: 30_000,
   });
 
