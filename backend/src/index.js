@@ -31,8 +31,14 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const allowedOrigins = (process.env.FRONTEND_URL || '*').split(',').map(s => s.trim());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: allowedOrigins.length === 1 && allowedOrigins[0] === '*'
+    ? '*'
+    : (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+        else cb(null, true); // allow all for now, tighten later
+      },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
