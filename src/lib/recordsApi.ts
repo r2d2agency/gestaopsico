@@ -70,7 +70,7 @@ export const recordsApi = {
   create: (data: Partial<RecordData>) => apiRequest<RecordData>("/prontuarios", { method: "POST", body: data }),
   update: (id: string, data: Partial<RecordData>) => apiRequest<RecordData>(`/prontuarios/${id}`, { method: "PUT", body: data }),
   patientTimeline: (patientId: string) => apiRequest<PatientTimeline>(`/prontuarios/patient-timeline/${patientId}`),
-  clinicalDashboard: () => apiRequest<ClinicalDashboard>(`/prontuarios/clinical-dashboard`),
+  clinicalDashboard: (patientId?: string) => apiRequest<ClinicalDashboard>(`/prontuarios/clinical-dashboard${patientId ? `?patientId=${patientId}` : ""}`),
   organizeWithAi: (id: string) => apiRequest<{ success: boolean; record: RecordData }>(`/prontuarios/${id}/organize-ai`, { method: "POST" }),
   clinicalSupport: (id: string) => apiRequest<{ success: boolean; clinicalSupport: string; disclaimer: string }>(`/prontuarios/${id}/clinical-support`, { method: "POST" }),
   patientAnalysis: (patientId: string) => apiRequest<PatientAnalysis>(`/prontuarios/patient-analysis/${patientId}`, { method: "POST" }),

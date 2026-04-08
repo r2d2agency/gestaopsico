@@ -65,24 +65,30 @@ router.get('/patient-timeline/:patientId', async (req, res) => {
 // GET /api/prontuarios/clinical-dashboard
 router.get('/clinical-dashboard', async (req, res) => {
   try {
+    const { patientId } = req.query;
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    const recordWhere = { professionalId: req.userId };
+    if (patientId) recordWhere.patientId = patientId;
+
     const [totalPatients, recentRecords, allRecords, patientsWithRecords] = await Promise.all([
-      prisma.patient.count({ where: { professionalId: req.userId, status: 'active' } }),
+      patientId
+        ? prisma.patient.count({ where: { id: patientId, professionalId: req.userId, status: 'active' } })
+        : prisma.patient.count({ where: { professionalId: req.userId, status: 'active' } }),
       prisma.record.findMany({
-        where: { professionalId: req.userId, date: { gte: thirtyDaysAgo } },
+        where: { ...recordWhere, date: { gte: thirtyDaysAgo } },
         include: { patient: { select: { id: true, name: true } } },
         orderBy: { date: 'desc' },
         take: 10,
       }),
       prisma.record.findMany({
-        where: { professionalId: req.userId },
+        where: recordWhere,
         select: { id: true, patientId: true, content: true, complaint: true, keyPoints: true, themes: true, date: true },
       }),
       prisma.record.groupBy({
         by: ['patientId'],
-        where: { professionalId: req.userId, patientId: { not: null } },
+        where: { ...recordWhere, patientId: { not: null } },
         _count: { id: true },
         orderBy: { _count: { id: 'desc' } },
         take: 10,

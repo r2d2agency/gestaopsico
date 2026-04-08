@@ -692,7 +692,7 @@ export default function Prontuarios() {
                     </Card>
                   </div>
                 ) : (
-                  <ClinicalDashboard />
+                  <ClinicalDashboard patientId={selectedEntity?.type === "patient" ? selectedEntity.id : undefined} />
                 )}
               </TabsContent>
             </Tabs>
