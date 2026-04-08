@@ -946,24 +946,9 @@ export default function Teleatendimento() {
                     </div>
                   )}
 
-                  {detailSession.structuredContent && (() => {
-                    try {
-                      const sc = JSON.parse(detailSession.structuredContent);
-                      return (
-                        <div>
-                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><Brain className="h-4 w-4" /> Conteúdo Organizado</p>
-                          <div className="space-y-3 bg-muted p-4 rounded-lg">
-                            {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo</p><p className="text-sm">{sc.motivo_sessao}</p></div>}
-                            {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas</p><div className="flex flex-wrap gap-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
-                            {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm">{sc.observacoes_relevantes}</p></div>}
-                            {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm">{sc.evolucao}</p></div>}
-                            {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm">{sc.encaminhamentos}</p></div>}
-                            {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm">{sc.resumo}</p></div>}
-                          </div>
-                        </div>
-                      );
-                    } catch { return null; }
-                  })()}
+                  {detailSession.structuredContent && (
+                    <StructuredSessionContent data={detailSession.structuredContent} />
+                  )}
 
                   {detailSession.recordId && (
                     <div className="flex items-center gap-2 text-sm text-success">
