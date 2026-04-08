@@ -160,23 +160,60 @@ async function transcribeAudio(filePath, apiKey) {
 async function organizeWithAi(transcription, provider, apiKey) {
   const fetch = (await import('node-fetch')).default;
   
-  const systemPrompt = `Você é um assistente clínico para psicólogos. Organize a transcrição de uma sessão terapêutica no seguinte formato estruturado. NÃO emita diagnósticos. Apenas organize o conteúdo.
+  const systemPrompt = `Você é um assistente clínico especializado para psicólogos. Organize a transcrição de uma sessão terapêutica em um relatório clínico completo e estruturado. NÃO emita diagnósticos definitivos. Organize e analise o conteúdo de forma profissional.
 
-Responda em JSON com estas chaves:
-- motivo_sessao: motivo/queixa principal da sessão
-- temas_abordados: array de temas discutidos
-- observacoes_relevantes: observações clínicas relevantes
-- evolucao: evolução do paciente
-- encaminhamentos: próximos passos ou encaminhamentos
-- resumo: resumo conciso da sessão
-- pontos_principais: array de pontos-chave`;
+Responda SEMPRE em JSON com TODAS estas chaves (use "Não mencionado." quando não houver informação):
+
+{
+  "registro_consulta": {
+    "historico_paciente": {
+      "queixas_previas": ["array de queixas prévias mencionadas"],
+      "consultas_previas": ["informações sobre consultas/tratamentos anteriores"],
+      "condicoes_psiquiatricas": ["condições psiquiátricas mencionadas ou observadas"],
+      "medicacoes_em_uso": ["medicações mencionadas pelo paciente"]
+    }
+  },
+  "queixa_principal": ["array com os pontos da queixa principal desta sessão"],
+  "objetivo": "objetivo terapêutico identificado na sessão",
+  "observacoes": ["array de observações clínicas do profissional sobre o paciente - comportamentos, padrões, insights"],
+  "testes_psicologicos": ["menções a testes psicológicos aplicados, planejados ou sugeridos"],
+  "avaliacao": "parágrafo com avaliação clínica geral do caso - síntese do quadro atual do paciente",
+  "planos": {
+    "intervencoes": ["array de intervenções terapêuticas realizadas ou planejadas"],
+    "encaminhamento": ["encaminhamentos sugeridos ou realizados"]
+  },
+  "estrategias": {
+    "categorias": [
+      {
+        "titulo": "Nome da categoria (ex: Gestão emocional, Rotina, etc.)",
+        "itens": ["array de estratégias/tarefas específicas sugeridas"]
+      }
+    ]
+  },
+  "sugestoes_cid": "Análise descritiva das possíveis hipóteses diagnósticas baseadas nos sintomas relatados, SEM afirmar diagnóstico definitivo. Mencione os códigos CID relevantes como hipótese.",
+  "temas_abordados": ["array de temas/assuntos discutidos na sessão"],
+  "resumo": "resumo conciso e profissional de toda a sessão",
+  "pontos_principais": ["array dos pontos-chave mais importantes da sessão"],
+  "motivo_sessao": "motivo/queixa que trouxe o paciente à sessão",
+  "observacoes_relevantes": "síntese das observações clínicas mais relevantes",
+  "evolucao": "análise da evolução do paciente em relação a sessões anteriores (se mencionado)",
+  "encaminhamentos": "próximos passos definidos"
+}
+
+IMPORTANTE:
+- Seja detalhado e profissional em cada seção
+- Liste observações como itens individuais e específicos
+- Nas estratégias, agrupe por categorias temáticas
+- A avaliação deve ser um parágrafo analítico completo
+- Nas sugestões de CID, seja cauteloso e use linguagem de hipótese
+- Mantenha compatibilidade com os campos legados (motivo_sessao, temas_abordados, observacoes_relevantes, evolucao, encaminhamentos, resumo, pontos_principais)`;
 
   let url, headers, body;
   if (provider === 'openai') {
     url = 'https://api.openai.com/v1/chat/completions';
     headers = { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
     body = JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: transcription }],
       response_format: { type: 'json_object' }
     });
@@ -184,8 +221,8 @@ Responda em JSON com estas chaves:
     url = 'https://api.anthropic.com/v1/messages';
     headers = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' };
     body = JSON.stringify({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 4096,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content: transcription }]
     });
@@ -194,7 +231,7 @@ Responda em JSON com estas chaves:
     headers = { 'Content-Type': 'application/json' };
     body = JSON.stringify({
       contents: [{ parts: [{ text: `${systemPrompt}\n\nTranscrição:\n${transcription}` }] }],
-      generationConfig: { responseMimeType: 'application/json' }
+      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 8192 }
     });
   }
 

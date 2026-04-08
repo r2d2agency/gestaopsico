@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pacientesApi, consultasApi, casaisApi, type Consulta } from "@/lib/api";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
+import StructuredSessionContent from "@/components/telehealth/StructuredSessionContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -816,7 +817,14 @@ export default function Prontuarios() {
               {selectedRecord.aiContent && (
                 <div>
                   <Label className="text-xs text-primary flex items-center gap-1"><Sparkles className="w-3 h-3" /> Resumo IA</Label>
-                  <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 mt-1 text-sm whitespace-pre-wrap">{selectedRecord.aiContent}</div>
+                  {(() => {
+                    try {
+                      JSON.parse(selectedRecord.aiContent);
+                      return <div className="mt-2"><StructuredSessionContent data={selectedRecord.aiContent} /></div>;
+                    } catch {
+                      return <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 mt-1 text-sm whitespace-pre-wrap">{selectedRecord.aiContent}</div>;
+                    }
+                  })()}
                 </div>
               )}
 

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import StructuredSessionContent from "@/components/telehealth/StructuredSessionContent";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   waiting: { label: "Aguardando", color: "bg-muted text-muted-foreground", icon: <Clock className="h-4 w-4" /> },
@@ -592,24 +593,9 @@ export default function Teleatendimento() {
                 <CardContent className="p-4 space-y-4">
                   <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm"><FileText className="h-4 w-4" /> Transcrição</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto bg-muted p-4 rounded-lg">{statusData.transcription}</p>
-                  {statusData.structuredContent && (() => {
-                    try {
-                      const sc = JSON.parse(statusData.structuredContent);
-                      return (
-                        <>
-                          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm"><Brain className="h-4 w-4" /> Conteúdo Organizado</h3>
-                          <div className="space-y-3 bg-muted p-4 rounded-lg">
-                            {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo da Sessão</p><p className="text-sm text-foreground">{sc.motivo_sessao}</p></div>}
-                            {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas Abordados</p><div className="flex flex-wrap gap-1 mt-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
-                            {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm text-foreground">{sc.observacoes_relevantes}</p></div>}
-                            {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm text-foreground">{sc.evolucao}</p></div>}
-                            {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm text-foreground">{sc.encaminhamentos}</p></div>}
-                            {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm text-foreground">{sc.resumo}</p></div>}
-                          </div>
-                        </>
-                      );
-                    } catch { return null; }
-                  })()}
+                  {statusData.structuredContent && (
+                    <StructuredSessionContent data={statusData.structuredContent} />
+                  )}
                   <div className="flex items-center gap-2 text-xs text-success">
                     <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente do sistema
                   </div>
@@ -961,24 +947,9 @@ export default function Teleatendimento() {
                     </div>
                   )}
 
-                  {detailSession.structuredContent && (() => {
-                    try {
-                      const sc = JSON.parse(detailSession.structuredContent);
-                      return (
-                        <div>
-                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><Brain className="h-4 w-4" /> Conteúdo Organizado</p>
-                          <div className="space-y-3 bg-muted p-4 rounded-lg">
-                            {sc.motivo_sessao && <div><p className="text-xs font-medium text-primary">Motivo</p><p className="text-sm">{sc.motivo_sessao}</p></div>}
-                            {sc.temas_abordados?.length > 0 && <div><p className="text-xs font-medium text-primary">Temas</p><div className="flex flex-wrap gap-1">{sc.temas_abordados.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div>}
-                            {sc.observacoes_relevantes && <div><p className="text-xs font-medium text-primary">Observações</p><p className="text-sm">{sc.observacoes_relevantes}</p></div>}
-                            {sc.evolucao && <div><p className="text-xs font-medium text-primary">Evolução</p><p className="text-sm">{sc.evolucao}</p></div>}
-                            {sc.encaminhamentos && <div><p className="text-xs font-medium text-primary">Próximos Passos</p><p className="text-sm">{sc.encaminhamentos}</p></div>}
-                            {sc.resumo && <div><p className="text-xs font-medium text-primary">Resumo</p><p className="text-sm">{sc.resumo}</p></div>}
-                          </div>
-                        </div>
-                      );
-                    } catch { return null; }
-                  })()}
+                  {detailSession.structuredContent && (
+                    <StructuredSessionContent data={detailSession.structuredContent} />
+                  )}
 
                   {detailSession.recordId && (
                     <div className="flex items-center gap-2 text-sm text-success">
