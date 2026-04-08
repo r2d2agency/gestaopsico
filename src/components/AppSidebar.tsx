@@ -47,6 +47,7 @@ export default function AppSidebar({ open, onClose }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const [commOpen, setCommOpen] = useState(false);
   const { data: orgSettings } = useQuery({
     queryKey: ["org-settings"],
     queryFn: () => orgSettingsApi.get(),
@@ -57,9 +58,13 @@ export default function AppSidebar({ open, onClose }: AppSidebarProps) {
   const role = user?.role || "professional";
   const userRoles = role === "secretary_financial" ? ["secretary_financial", "secretary", "financial"] : [role];
 
-  const navItems = isPatient
-    ? []
-    : allNav.filter((item) => !item.roles || userRoles.some((r) => item.roles!.includes(r)));
+  const filterByRole = (items: NavItem[]) =>
+    isPatient ? [] : items.filter((item) => !item.roles || userRoles.some((r) => item.roles!.includes(r)));
+
+  const navItems = filterByRole(mainNav);
+  const commItems = filterByRole(commNav);
+
+  const isCommActive = commNav.some((item) => location.pathname === item.path);
 
   const handleLogout = () => {
     logout();
