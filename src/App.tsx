@@ -26,6 +26,8 @@ import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
 import AdminBranding from "./pages/admin/AdminBranding";
 import SecretarySettings from "./pages/SecretarySettings";
 import Notifications from "./pages/Notifications";
+import Campanhas from "./pages/Campanhas";
+import Documentos from "./pages/Documentos";
 import Configuracoes from "./pages/Configuracoes";
 import TestManager from "./pages/TestManager";
 import CasaisPage from "./pages/CasaisPage";
