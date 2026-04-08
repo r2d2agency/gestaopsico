@@ -39,7 +39,7 @@ export default function Campanhas() {
 
   const { data: patients = [] } = useQuery({
     queryKey: ["patients-list"],
-    queryFn: () => apiRequest<Patient[]>("/patients?limit=500"),
+    queryFn: () => apiRequest<Patient[]>("/pacientes"),
     enabled: dialogOpen && step >= 2,
   });
 
