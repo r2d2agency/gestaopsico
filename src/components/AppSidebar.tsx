@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Calendar, DollarSign, FileText, Heart, Video,
   BarChart3, Settings, LogOut, Sparkles, Bot, Bell, ClipboardList, Shield,
-  HelpCircle, MessageSquare, Building2, X,
+  HelpCircle, MessageSquare, Building2, X, ChevronDown, Megaphone, FileUp,
+  MessagesSquare,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +15,7 @@ type NavItem = { icon: typeof LayoutDashboard; label: string; path: string; role
 const APP_NAME = "Psico Gleego";
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "1.0.0";
 
-const allNav: NavItem[] = [
+const mainNav: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Pacientes", path: "/pacientes", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Heart, label: "Casais", path: "/casais", roles: ["admin", "professional", "psychologist", "superadmin"] },
@@ -25,10 +27,15 @@ const allNav: NavItem[] = [
   { icon: ClipboardList, label: "Testes", path: "/testes", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Sparkles, label: "Assistente IA", path: "/assistente-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Bot, label: "Secretária IA", path: "/secretaria-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
-  { icon: MessageSquare, label: "Mensagens", path: "/mensagens", roles: ["admin", "professional", "psychologist", "secretary", "secretary_financial", "superadmin"] },
-  { icon: Bell, label: "Notificações", path: "/notificacoes" },
   { icon: BarChart3, label: "Relatórios", path: "/relatorios", roles: ["admin", "professional", "psychologist", "financial", "secretary_financial", "superadmin"] },
   { icon: HelpCircle, label: "Ajuda", path: "/ajuda" },
+];
+
+const commNav: NavItem[] = [
+  { icon: Bell, label: "Notificações WhatsApp", path: "/notificacoes" },
+  { icon: MessageSquare, label: "Mensagens no App", path: "/mensagens", roles: ["admin", "professional", "psychologist", "secretary", "secretary_financial", "superadmin"] },
+  { icon: Megaphone, label: "Campanhas", path: "/campanhas", roles: ["admin", "professional", "psychologist", "superadmin"] },
+  { icon: FileUp, label: "Envio de Documentos", path: "/documentos", roles: ["admin", "professional", "psychologist", "superadmin"] },
 ];
 
 interface AppSidebarProps {
