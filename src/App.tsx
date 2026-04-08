@@ -93,6 +93,8 @@ const App = () => (
               <Route path="/secretaria-ia" element={<SecretarySettings />} />
               <Route path="/notificacoes" element={<Notifications />} />
               <Route path="/mensagens" element={<Mensagens />} />
+              <Route path="/campanhas" element={<Campanhas />} />
+              <Route path="/documentos" element={<Documentos />} />
               <Route path="/testes" element={<TestManager />} />
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/consultas" element={<Dashboard />} />
