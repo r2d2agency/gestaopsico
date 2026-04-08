@@ -26,6 +26,8 @@ import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
 import AdminBranding from "./pages/admin/AdminBranding";
 import SecretarySettings from "./pages/SecretarySettings";
 import Notifications from "./pages/Notifications";
+import Campanhas from "./pages/Campanhas";
+import Documentos from "./pages/Documentos";
 import Configuracoes from "./pages/Configuracoes";
 import TestManager from "./pages/TestManager";
 import CasaisPage from "./pages/CasaisPage";
@@ -91,6 +93,8 @@ const App = () => (
               <Route path="/secretaria-ia" element={<SecretarySettings />} />
               <Route path="/notificacoes" element={<Notifications />} />
               <Route path="/mensagens" element={<Mensagens />} />
+              <Route path="/campanhas" element={<Campanhas />} />
+              <Route path="/documentos" element={<Documentos />} />
               <Route path="/testes" element={<TestManager />} />
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/consultas" element={<Dashboard />} />
