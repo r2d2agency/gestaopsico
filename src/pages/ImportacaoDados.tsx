@@ -452,10 +452,10 @@ function FileDropZone({ label, description, icon: Icon, file, count, onSelect, o
             <Icon className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm font-medium text-foreground mb-1">{label}</p>
             <p className="text-xs text-muted-foreground mb-3">{description}</p>
-            <label className="cursor-pointer">
-              <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none">
+             <label className="cursor-pointer inline-block">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
                 <Upload className="w-3.5 h-3.5" /> Selecionar arquivo
-              </Button>
+              </span>
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) onSelect(f);
