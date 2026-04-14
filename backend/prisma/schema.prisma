@@ -127,6 +127,7 @@ model User {
   secretaryConfigs SecretaryConfig[]
   patientPortalMessages PatientPortalMessage[] @relation("portalMessageProfessional")
   telehealthSessions    TelehealthSession[]    @relation("telehealthProfessional")
+  importBatches         ImportBatch[]
 
   @@map("users")
 }
@@ -223,6 +224,8 @@ model Patient {
   chargeEnabled    Boolean       @default(false) @map("charge_enabled")
   registrationToken String?      @map("registration_token") @db.VarChar(255)
   registrationCompleted Boolean  @default(false) @map("registration_completed")
+  importBatchId  String?  @map("import_batch_id") @db.Uuid
+  importBatch    ImportBatch? @relation(fields: [importBatchId], references: [id])
   createdAt        DateTime      @default(now()) @map("created_at")
   appointments     Appointment[]
   records          Record[]
@@ -249,6 +252,8 @@ model Couple {
   patient2Id     String        @map("patient2_id") @db.Uuid
   patient2       Patient       @relation("patient2", fields: [patient2Id], references: [id])
   name           String?       @db.VarChar(255)
+  importBatchId   String?  @map("import_batch_id") @db.Uuid
+  importBatch     ImportBatch? @relation(fields: [importBatchId], references: [id])
   createdAt      DateTime      @default(now()) @map("created_at")
   appointments   Appointment[]
   records        Record[]
@@ -274,6 +279,8 @@ model Appointment {
   paymentStatus  String         @default("pending") @map("payment_status") @db.VarChar(20)
   mode           String         @default("video") @db.VarChar(20)
   attended       Boolean        @default(false)
+  importBatchId   String?  @map("import_batch_id") @db.Uuid
+  importBatch     ImportBatch? @relation(fields: [importBatchId], references: [id])
   notes          String?
   createdAt      DateTime       @default(now()) @map("created_at")
   records        Record[]
@@ -359,9 +366,29 @@ model Account {
   paymentMethod  String?  @map("payment_method") @db.VarChar(20)
   notes          String?
   recurrence     String?  @db.VarChar(20)
+  importBatchId  String?  @map("import_batch_id") @db.Uuid
+  importBatch    ImportBatch? @relation(fields: [importBatchId], references: [id])
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("accounts")
+}
+
+model ImportBatch {
+  id             String   @id @default(uuid()) @db.Uuid
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  type           String   @default("xlsx") @db.VarChar(30)
+  fileName       String?  @map("file_name") @db.VarChar(255)
+  status         String   @default("completed") @db.VarChar(20)
+  summary        Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  patients       Patient[]
+  appointments   Appointment[]
+  accounts       Account[]
+  couples        Couple[]
+
+  @@index([professionalId])
+  @@map("import_batches")
 }
 
 model MoodEntry {

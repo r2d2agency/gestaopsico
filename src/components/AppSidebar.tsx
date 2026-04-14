@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, DollarSign, FileText, Heart, Video,
   BarChart3, Settings, LogOut, Sparkles, Bot, Bell, ClipboardList, Shield,
   HelpCircle, MessageSquare, Building2, X, ChevronDown, Megaphone, FileUp,
-  MessagesSquare,
+  MessagesSquare, Upload,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,7 @@ const mainNav: NavItem[] = [
   { icon: Bot, label: "Secretária IA", path: "/secretaria-ia", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: BarChart3, label: "Relatórios", path: "/relatorios", roles: ["admin", "professional", "psychologist", "financial", "secretary_financial", "superadmin"] },
   { icon: HelpCircle, label: "Ajuda", path: "/ajuda" },
+  { icon: Upload, label: "Importação de Dados", path: "/importacao", roles: ["admin", "professional", "psychologist", "superadmin"] },
 ];
 
 const commNav: NavItem[] = [
