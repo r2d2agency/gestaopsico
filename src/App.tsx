@@ -46,6 +46,7 @@ import Prontuarios from "./pages/Prontuarios";
 import Relatorios from "./pages/Relatorios";
 import Teleatendimento from "./pages/Teleatendimento";
 import CompletarCadastro from "./pages/CompletarCadastro";
+import ImportacaoDados from "./pages/ImportacaoDados";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/teleatendimento" element={<Teleatendimento />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/importacao" element={<ImportacaoDados />} />
               <Route path="/ajuda" element={<HelpPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
