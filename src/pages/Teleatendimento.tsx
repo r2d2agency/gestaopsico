@@ -384,17 +384,14 @@ export default function Teleatendimento() {
   };
 
   // ============================
-  // RECORDING MODAL (fullscreen overlay)
+  // RECORDING MODAL (fullscreen overlay) - inline JSX to avoid remount on state change
   // ============================
-  const RecordingModal = () => {
-    if (!showRecordingModal || !activeSession) return null;
+  const recordingModalProc = activeSession ? (PROCESSING_MAP[activeSession.processingStatus] || PROCESSING_MAP.none) : PROCESSING_MAP.none;
+  const recordingModalIsProcessing = activeSession ? ["uploaded", "transcribing", "organizing"].includes(activeSession.processingStatus) : false;
+  const recordingModalIsCompleted = activeSession?.processingStatus === "completed";
+  const recordingModalIsError = activeSession?.processingStatus === "error";
 
-    const proc = PROCESSING_MAP[activeSession.processingStatus] || PROCESSING_MAP.none;
-    const isProcessing = ["uploaded", "transcribing", "organizing"].includes(activeSession.processingStatus);
-    const isCompleted = activeSession.processingStatus === "completed";
-    const isError = activeSession.processingStatus === "error";
-
-    return (
+  const recordingModalContent = (showRecordingModal && activeSession) ? (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -406,16 +403,31 @@ export default function Teleatendimento() {
           <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-border px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                {isCapturing && !isPaused && (
-                  <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 1 }}
-                    className="w-3 h-3 rounded-full bg-destructive" />
+                {isCapturing && (
+                  <div className="flex items-center gap-2 bg-destructive/10 text-destructive px-3 py-1.5 rounded-full">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className={`absolute inline-flex h-full w-full rounded-full bg-destructive ${isPaused ? "" : "animate-ping"} opacity-75`}></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                    </span>
+                    <span className="font-mono text-sm font-medium">{formatDuration(duration)}</span>
+                  </div>
                 )}
-                {isPaused && <div className="w-3 h-3 rounded-full bg-warning" />}
-                <span className="font-semibold text-foreground">{activeSession.patient?.name || "Paciente"}</span>
+                {recordingModalIsProcessing && (
+                  <div className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full">
+                    {recordingModalProc.icon}
+                    <span className="text-sm font-medium">{recordingModalProc.label}</span>
+                  </div>
+                )}
+                {recordingModalIsCompleted && (
+                  <div className="flex items-center gap-2 bg-success/10 text-success px-3 py-1.5 rounded-full">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Concluído</span>
+                  </div>
+                )}
               </div>
-              {isCapturing && (
-                <span className="text-lg font-mono font-bold text-foreground tabular-nums">{formatDuration(duration)}</span>
-              )}
+              <span className="text-sm text-muted-foreground hidden sm:inline">
+                {activeSession.patient?.name || "Sessão"}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               {isCapturing && (
@@ -434,12 +446,12 @@ export default function Teleatendimento() {
                   </Button>
                 </>
               )}
-              {!isCapturing && !isProcessing && !isCompleted && (
+              {!isCapturing && !recordingModalIsProcessing && !recordingModalIsCompleted && (
                 <Button size="sm" variant="ghost" onClick={() => { setShowRecordingModal(false); }}>
                   <X className="h-4 w-4" />
                 </Button>
               )}
-              {(isCompleted || isError) && (
+              {(recordingModalIsCompleted || recordingModalIsError) && (
                 <Button size="sm" variant="outline" onClick={() => { setShowRecordingModal(false); setActiveSession(null); }}>
                   Fechar
                 </Button>
@@ -555,64 +567,52 @@ export default function Teleatendimento() {
             </Card>
 
             {/* Processing status */}
-            {activeSession.processingStatus !== "none" && (
+            {recordingModalIsProcessing && (
               <Card>
+                <CardContent className="p-4 flex items-center gap-3">
+                  {recordingModalProc.icon}
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{recordingModalProc.label}</p>
+                    <p className="text-xs text-muted-foreground">Aguarde enquanto processamos o áudio da sessão...</p>
+                  </div>
+                  <Progress className="flex-1 ml-4" value={activeSession.processingStatus === "transcribing" ? 50 : activeSession.processingStatus === "organizing" ? 80 : 30} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error */}
+            {recordingModalIsError && (
+              <Card className="border-destructive/20">
                 <CardContent className="p-4 space-y-3">
-                  <h3 className="font-semibold text-foreground text-sm">Status do Processamento</h3>
-                  <div className="space-y-2">
-                    {["uploaded", "transcribing", "organizing", "completed"].map((step) => {
-                      const s = PROCESSING_MAP[step];
-                      const currentIdx = ["none", "uploaded", "transcribing", "organizing", "completed"].indexOf(activeSession.processingStatus);
-                      const stepIdx = ["none", "uploaded", "transcribing", "organizing", "completed"].indexOf(step);
-                      const isDone = stepIdx < currentIdx || (stepIdx === currentIdx && activeSession.processingStatus === "completed");
-                      const isCurrent = step === activeSession.processingStatus;
-                      return (
-                        <div key={step} className={`flex items-center gap-3 p-2 rounded-lg ${isCurrent ? "bg-primary/5 border border-primary/20" : ""}`}>
-                          {isDone ? <CheckCircle className="h-4 w-4 text-success" /> : isCurrent ? s.icon : <div className="h-4 w-4 rounded-full border-2 border-muted" />}
-                          <span className={`text-sm ${isDone ? "text-success" : isCurrent ? "text-foreground font-medium" : "text-muted-foreground"}`}>{s.label}</span>
-                        </div>
-                      );
-                    })}
-                    {isError && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/5 border border-destructive/20">
-                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                        <span className="text-sm text-destructive flex-1">{activeSession.processingError || "Erro desconhecido"}</span>
-                        <Button size="sm" variant="outline" onClick={() => retryMutation.mutate(activeSession.id)}>
-                          <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
-                        </Button>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Erro no processamento</span>
                   </div>
+                  <p className="text-xs text-muted-foreground">{activeSession.processingError || "Erro desconhecido"}</p>
+                  <Button size="sm" variant="outline" onClick={() => retryMutation.mutate(activeSession.id)} disabled={retryMutation.isPending}>
+                    <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
+                  </Button>
                 </CardContent>
               </Card>
             )}
 
-            {/* Transcription result */}
-            {isCompleted && statusData?.transcription && (
+            {/* Completed - structured content */}
+            {recordingModalIsCompleted && activeSession.structuredContent && (
               <Card>
-                <CardContent className="p-4 space-y-4">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm"><FileText className="h-4 w-4" /> Transcrição</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto bg-muted p-4 rounded-lg">{statusData.transcription}</p>
-                  {statusData.structuredContent && (
-                    <StructuredSessionContent data={statusData.structuredContent} />
-                  )}
-                  <div className="flex items-center gap-2 text-xs text-success">
-                    <Trash2 className="h-3 w-3" /> Áudio excluído automaticamente do sistema
-                  </div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-primary" /> Registro Organizado pela IA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StructuredSessionContent data={activeSession.structuredContent} />
                 </CardContent>
               </Card>
             )}
-
-            {/* Security notice */}
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
-              <Shield className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>O áudio é armazenado temporariamente por até 24h e excluído automaticamente após a transcrição ou expiração.</span>
-            </div>
           </div>
         </div>
       </motion.div>
-    );
-  };
+  ) : null;
 
   // ============================
   // Active session view (pre-recording)
@@ -763,7 +763,7 @@ export default function Teleatendimento() {
   return (
     <>
       <AnimatePresence>
-        <RecordingModal />
+        {recordingModalContent}
       </AnimatePresence>
 
       <div className="p-3 md:p-6 space-y-4 md:space-y-6">
