@@ -359,9 +359,29 @@ model Account {
   paymentMethod  String?  @map("payment_method") @db.VarChar(20)
   notes          String?
   recurrence     String?  @db.VarChar(20)
+  importBatchId  String?  @map("import_batch_id") @db.Uuid
+  importBatch    ImportBatch? @relation(fields: [importBatchId], references: [id])
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("accounts")
+}
+
+model ImportBatch {
+  id             String   @id @default(uuid()) @db.Uuid
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  type           String   @default("xlsx") @db.VarChar(30)
+  fileName       String?  @map("file_name") @db.VarChar(255)
+  status         String   @default("completed") @db.VarChar(20)
+  summary        Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  patients       Patient[]
+  appointments   Appointment[]
+  accounts       Account[]
+  couples        Couple[]
+
+  @@index([professionalId])
+  @@map("import_batches")
 }
 
 model MoodEntry {
