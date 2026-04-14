@@ -566,6 +566,54 @@ export default function Teleatendimento() {
               </CardContent>
             </Card>
 
+            {/* Processing status */}
+            {recordingModalIsProcessing && (
+              <Card>
+                <CardContent className="p-4 flex items-center gap-3">
+                  {recordingModalProc.icon}
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{recordingModalProc.label}</p>
+                    <p className="text-xs text-muted-foreground">Aguarde enquanto processamos o áudio da sessão...</p>
+                  </div>
+                  <Progress className="flex-1 ml-4" value={activeSession.processingStatus === "transcribing" ? 50 : activeSession.processingStatus === "organizing" ? 80 : 30} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error */}
+            {recordingModalIsError && (
+              <Card className="border-destructive/20">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Erro no processamento</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{activeSession.processingError || "Erro desconhecido"}</p>
+                  <Button size="sm" variant="outline" onClick={() => retryMutation.mutate(activeSession.id)} disabled={retryMutation.isPending}>
+                    <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Completed - structured content */}
+            {recordingModalIsCompleted && activeSession.structuredContent && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-primary" /> Registro Organizado pela IA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StructuredSessionContent data={activeSession.structuredContent} />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </motion.div>
+  ) : null;
+
   // ============================
   // Active session view (pre-recording)
   // ============================
