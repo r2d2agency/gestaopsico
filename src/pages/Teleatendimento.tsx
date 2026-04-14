@@ -763,7 +763,7 @@ export default function Teleatendimento() {
   return (
     <>
       <AnimatePresence>
-        <RecordingModal />
+        {recordingModalContent}
       </AnimatePresence>
 
       <div className="p-3 md:p-6 space-y-4 md:space-y-6">
