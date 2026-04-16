@@ -8,6 +8,7 @@ const COUNTRY_CODES = [
   { code: "+55", country: "BR", flag: "🇧🇷", label: "Brasil" },
   { code: "+1", country: "US", flag: "🇺🇸", label: "EUA/Canadá" },
   { code: "+351", country: "PT", flag: "🇵🇹", label: "Portugal" },
+  { code: "+353", country: "IE", flag: "🇮🇪", label: "Irlanda" },
   { code: "+44", country: "GB", flag: "🇬🇧", label: "Reino Unido" },
   { code: "+34", country: "ES", flag: "🇪🇸", label: "Espanha" },
   { code: "+33", country: "FR", flag: "🇫🇷", label: "França" },
