@@ -7,16 +7,35 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
-// GET /api/accounts - list accounts (contas a pagar/receber)
+// GET /api/accounts - list accounts (contas a pagar/receber) with rich filters
 router.get('/', async (req, res) => {
   try {
-    const { type, status, category, startDate, endDate, page = 1, limit = 50 } = req.query;
+    const { type, status, category, startDate, endDate, period, patientId, page = 1, limit = 200 } = req.query;
     const where = { professionalId: req.userId };
 
     if (type) where.type = type;
     if (status) where.status = status;
     if (category) where.category = category;
-    if (startDate || endDate) {
+    if (patientId) where.patientId = patientId;
+
+    // Period shortcuts: this_month, next_month, last_month, open, overdue
+    if (period) {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      if (period === 'this_month') {
+        where.dueDate = { gte: new Date(y, m, 1), lte: new Date(y, m + 1, 0, 23, 59, 59) };
+      } else if (period === 'next_month') {
+        where.dueDate = { gte: new Date(y, m + 1, 1), lte: new Date(y, m + 2, 0, 23, 59, 59) };
+      } else if (period === 'last_month') {
+        where.dueDate = { gte: new Date(y, m - 1, 1), lte: new Date(y, m, 0, 23, 59, 59) };
+      } else if (period === 'open') {
+        where.status = { in: ['pending', 'overdue'] };
+      } else if (period === 'overdue') {
+        where.status = 'overdue';
+        where.dueDate = { lt: new Date() };
+      }
+    } else if (startDate || endDate) {
       where.dueDate = {};
       if (startDate) where.dueDate.gte = new Date(startDate);
       if (endDate) where.dueDate.lte = new Date(endDate);
@@ -28,7 +47,7 @@ router.get('/', async (req, res) => {
         orderBy: { dueDate: 'asc' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
-        include: { patient: { select: { id: true, name: true } } }
+        include: { patient: { select: { id: true, name: true, sessionValue: true, billingMode: true } } }
       }),
       prisma.account.count({ where })
     ]);
@@ -80,6 +99,169 @@ router.get('/summary', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao calcular resumo' });
+  }
+});
+
+// GET /api/accounts/patient/:patientId/financial - patient financial view
+// Returns sessions attended + payments + balance (acumulado)
+router.get('/patient/:patientId/financial', async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    const patient = await prisma.patient.findFirst({
+      where: { id: patientId, professionalId: req.userId },
+      select: {
+        id: true, name: true,
+        sessionValue: true, monthlyValue: true, billingMode: true,
+      }
+    });
+    if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+
+    // All attended sessions
+    const sessions = await prisma.appointment.findMany({
+      where: {
+        professionalId: req.userId,
+        patientId,
+        attended: true,
+      },
+      orderBy: { date: 'desc' },
+      select: { id: true, date: true, time: true, duration: true, value: true, type: true, status: true }
+    });
+
+    // All accounts (receivable) for this patient
+    const accounts = await prisma.account.findMany({
+      where: {
+        professionalId: req.userId,
+        patientId,
+        type: 'receivable',
+      },
+      orderBy: { dueDate: 'desc' },
+    });
+
+    const sessionValueDefault = patient.sessionValue ? Number(patient.sessionValue) : 0;
+
+    // Compute totals
+    const totalSessions = sessions.length;
+    const totalChargedSessions = sessions.reduce((sum, s) => {
+      const val = s.value ? Number(s.value) : sessionValueDefault;
+      return sum + val;
+    }, 0);
+
+    const totalCharged = accounts.reduce((s, a) => s + Number(a.value), 0);
+    const totalPaid = accounts.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.value), 0);
+    const totalPending = accounts.filter(a => a.status === 'pending').reduce((s, a) => s + Number(a.value), 0);
+    const totalOverdue = accounts.filter(a => a.status === 'overdue').reduce((s, a) => s + Number(a.value), 0);
+
+    // Identify which sessions are already in an invoice (account.notes has session_ids:)
+    const billedSessionIds = new Set();
+    accounts.forEach(a => {
+      if (a.notes) {
+        const m = a.notes.match(/session_ids:([a-f0-9,\-]+)/);
+        if (m) m[1].split(',').forEach(id => billedSessionIds.add(id));
+      }
+    });
+
+    const sessionsWithBilling = sessions.map(s => ({
+      ...s,
+      value: s.value ? Number(s.value) : sessionValueDefault,
+      billed: billedSessionIds.has(s.id),
+    }));
+
+    const unbilledTotal = sessionsWithBilling.filter(s => !s.billed)
+      .reduce((sum, s) => sum + Number(s.value || 0), 0);
+
+    res.json({
+      patient: {
+        id: patient.id, name: patient.name,
+        sessionValue: sessionValueDefault,
+        monthlyValue: patient.monthlyValue ? Number(patient.monthlyValue) : null,
+        billingMode: patient.billingMode,
+      },
+      stats: {
+        totalSessions,
+        totalChargedSessions,
+        totalCharged,
+        totalPaid,
+        totalPending,
+        totalOverdue,
+        unbilledTotal,
+        unbilledCount: sessionsWithBilling.filter(s => !s.billed).length,
+        balance: totalPending + totalOverdue, // saldo a pagar
+      },
+      sessions: sessionsWithBilling,
+      accounts: accounts.map(a => ({
+        id: a.id,
+        description: a.description,
+        value: Number(a.value),
+        dueDate: a.dueDate,
+        paidAt: a.paidAt,
+        status: a.status,
+        paymentMethod: a.paymentMethod,
+        notes: a.notes,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar financeiro do paciente', details: err.message });
+  }
+});
+
+// POST /api/accounts/bulk-pay - mark multiple accounts as paid
+router.post('/bulk-pay', async (req, res) => {
+  try {
+    const { ids, paymentMethod, paidAt } = req.body;
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ error: 'IDs são obrigatórios' });
+    }
+    const date = paidAt ? new Date(paidAt) : new Date();
+    const result = await prisma.account.updateMany({
+      where: { id: { in: ids }, professionalId: req.userId },
+      data: { status: 'paid', paidAt: date, ...(paymentMethod ? { paymentMethod } : {}) }
+    });
+    res.json({ message: 'Pagamentos registrados', count: result.count });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao dar baixa nos pagamentos', details: err.message });
+  }
+});
+
+// POST /api/accounts/bulk-charge - generate consolidated charge from multiple accounts
+router.post('/bulk-charge', async (req, res) => {
+  try {
+    const { ids, dueDate, description } = req.body;
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ error: 'IDs são obrigatórios' });
+    }
+
+    const accounts = await prisma.account.findMany({
+      where: { id: { in: ids }, professionalId: req.userId, type: 'receivable' },
+      include: { patient: { select: { id: true, name: true, phone: true, email: true } } }
+    });
+    if (!accounts.length) return res.status(404).json({ error: 'Contas não encontradas' });
+
+    // Group by patient
+    const byPatient = {};
+    accounts.forEach(a => {
+      const pid = a.patientId || 'no-patient';
+      if (!byPatient[pid]) byPatient[pid] = { patient: a.patient, items: [], total: 0 };
+      byPatient[pid].items.push({
+        id: a.id,
+        description: a.description,
+        value: Number(a.value),
+        dueDate: a.dueDate,
+      });
+      byPatient[pid].total += Number(a.value);
+    });
+
+    const charges = Object.values(byPatient).map(group => ({
+      patient: group.patient,
+      items: group.items,
+      total: group.total,
+      dueDate: dueDate || new Date(),
+      description: description || `Cobrança consolidada - ${group.items.length} item(s)`,
+    }));
+
+    res.json({ charges, totalAmount: charges.reduce((s, c) => s + c.total, 0) });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar cobrança consolidada', details: err.message });
   }
 });
 
