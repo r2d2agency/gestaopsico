@@ -769,8 +769,11 @@ export default function Teleatendimento() {
       <div className="p-3 md:p-6 space-y-4 md:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-foreground">Teleatendimento</h1>
-            <p className="text-muted-foreground text-xs md:text-sm">Sessões com captura segura de áudio e transcrição automática</p>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+              Teleatendimento Inteligente
+              <Badge variant="outline" className="text-[10px] py-0 h-4 bg-primary/5 text-primary border-primary/20">IA Ativa</Badge>
+            </h1>
+            <p className="text-muted-foreground text-xs md:text-sm max-w-lg">Capture sessões (Google Meet/Zoom), transcreva automaticamente e gere prontuários estruturados usando Inteligência Artificial.</p>
           </div>
           <Button onClick={handleNewSession} className="gap-2 w-full sm:w-auto"><Plus className="h-4 w-4" /> Nova Sessão</Button>
         </div>
