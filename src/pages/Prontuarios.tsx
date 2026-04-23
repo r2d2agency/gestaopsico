@@ -25,6 +25,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 import MoodDashboard from "@/components/MoodDashboard";
+import PatientHub from "@/components/records/PatientHub";
+import { LayoutDashboard } from "lucide-react";
 
 const EMPTY_FORM = {
   patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
