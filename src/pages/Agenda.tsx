@@ -45,6 +45,8 @@ const statusColors: Record<string, string> = {
   pending_approval: "bg-orange-500",
   cancelled: "bg-destructive",
   blocked: "bg-muted-foreground",
+  missed: "bg-destructive",
+  attended: "bg-success",
 };
 
 const statusBgColors: Record<string, string> = {
@@ -55,6 +57,8 @@ const statusBgColors: Record<string, string> = {
   pending_approval: "border-l-orange-500 bg-orange-500/5",
   cancelled: "border-l-destructive bg-destructive/5",
   blocked: "border-l-muted-foreground bg-muted/30",
+  missed: "border-l-destructive bg-destructive/5",
+  attended: "border-l-success bg-success/5",
 };
 
 const statusLabels: Record<string, string> = {
@@ -65,6 +69,8 @@ const statusLabels: Record<string, string> = {
   pending_approval: "Aguardando Aprovação",
   cancelled: "Cancelada",
   blocked: "Bloqueado",
+  missed: "Faltou",
+  attended: "Compareceu",
 };
 
 const emptyConsulta: Partial<Consulta> = {
@@ -237,6 +243,15 @@ export default function Agenda() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments"] });
       toast({ title: "Comparecimento registrado e conta a receber gerada!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+  
+  const missMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.miss(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Falta registrada e conta a receber gerada!" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -884,6 +899,28 @@ export default function Agenda() {
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Observações</p>
                   <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{viewApt.notes}</p>
+                </div>
+              )}
+              {viewApt.type !== "blocked" && (viewApt.status === "scheduled" || viewApt.status === "confirmed" || viewApt.status === "pending") && (
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    className="border-success text-success hover:bg-success hover:text-success-foreground"
+                    onClick={() => attendMutation.mutate(viewApt.id)}
+                    disabled={attendMutation.isPending}
+                  >
+                    {attendMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserCheck className="w-4 h-4 mr-2" />}
+                    Compareceu
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => missMutation.mutate(viewApt.id)}
+                    disabled={missMutation.isPending}
+                  >
+                    {missMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Ban className="w-4 h-4 mr-2" />}
+                    Faltou
+                  </Button>
                 </div>
               )}
               {viewApt.type !== "blocked" && viewApt.status !== "cancelled" && (
