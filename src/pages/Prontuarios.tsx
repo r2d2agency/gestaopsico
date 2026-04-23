@@ -566,7 +566,12 @@ export default function Prontuarios() {
               {/* Timeline tab */}
               <TabsContent value="timeline" className="mt-4">
                 {selectedEntity.type === "patient" ? (
-                  <PatientTimeline patients={patients} selectedPatientId={selectedEntity.id} onSelectPatient={() => {}} />
+                  <PatientTimeline 
+                    patients={patients} 
+                    selectedPatientId={selectedEntity.id} 
+                    onSelectPatient={() => {}} 
+                    appointments={patientApts}
+                  />
                 ) : (
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center">
