@@ -26,7 +26,9 @@ import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 import MoodDashboard from "@/components/MoodDashboard";
 import PatientHub from "@/components/records/PatientHub";
+import PatientInsights from "@/components/records/PatientInsights";
 import { LayoutDashboard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const EMPTY_FORM = {
   patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
@@ -39,6 +41,7 @@ type TypeFilter = "all" | "individual" | "couple";
 
 export default function Prontuarios() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialPatientId = searchParams.get("patientId") || "";
   const initialCoupleId = searchParams.get("coupleId") || "";
@@ -715,7 +718,12 @@ export default function Prontuarios() {
                     </Card>
                   </div>
                 ) : (
-                  <ClinicalDashboard patientId={selectedEntity?.type === "patient" ? selectedEntity.id : undefined} />
+                  <PatientInsights
+                    patientId={selectedEntity.id}
+                    patientName={selectedEntity.name}
+                    onScheduleSession={() => navigate(`/agenda?patientId=${selectedEntity.id}`)}
+                    onSendTest={() => navigate(`/testes?patientId=${selectedEntity.id}`)}
+                  />
                 )}
               </TabsContent>
             </Tabs>
