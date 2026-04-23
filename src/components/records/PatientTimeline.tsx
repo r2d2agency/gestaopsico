@@ -16,9 +16,10 @@ interface Props {
   patients: any[];
   selectedPatientId: string;
   onSelectPatient: (id: string) => void;
+  appointments?: any[];
 }
 
-export default function PatientTimeline({ patients, selectedPatientId, onSelectPatient }: Props) {
+export default function PatientTimeline({ patients, selectedPatientId, onSelectPatient, appointments = [] }: Props) {
   const [analysis, setAnalysis] = useState<PatientAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
