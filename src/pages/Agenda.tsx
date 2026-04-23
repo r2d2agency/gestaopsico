@@ -240,6 +240,15 @@ export default function Agenda() {
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
+  
+  const missMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.miss(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Falta registrada e conta a receber gerada!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
 
   const blockMutation = useMutation({
     mutationFn: (data: any) => consultasApi.create({ ...data, type: "blocked", status: "blocked" }),
