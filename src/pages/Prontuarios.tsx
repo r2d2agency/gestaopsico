@@ -49,7 +49,7 @@ export default function Prontuarios() {
     initialPatientId ? { type: "patient", id: initialPatientId, name: "" } :
     initialCoupleId ? { type: "couple", id: initialCoupleId, name: initialCoupleName } : null
   );
-  const [detailTab, setDetailTab] = useState("records");
+  const [detailTab, setDetailTab] = useState("overview");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -239,12 +239,12 @@ export default function Prontuarios() {
 
   const handleSelectEntity = (type: "patient" | "couple", id: string, name: string) => {
     setSelectedEntity({ type, id, name });
-    setDetailTab("records");
+    setDetailTab("overview");
   };
 
   const handleBack = () => {
     setSelectedEntity(null);
-    setDetailTab("records");
+    setDetailTab("overview");
   };
 
   const patientAppointments = form.patientId
