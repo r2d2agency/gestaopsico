@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Brain, TrendingUp, AlertTriangle, Tag, Calendar, FileText, Sparkles, User } from "lucide-react";
+import { Brain, TrendingUp, AlertTriangle, Tag, Calendar, FileText, Sparkles, User, Clock, Video, CheckCircle2, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Props {
