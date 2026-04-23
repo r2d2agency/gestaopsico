@@ -25,6 +25,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 import MoodDashboard from "@/components/MoodDashboard";
+import PatientHub from "@/components/records/PatientHub";
+import { LayoutDashboard } from "lucide-react";
 
 const EMPTY_FORM = {
   patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
@@ -47,7 +49,7 @@ export default function Prontuarios() {
     initialPatientId ? { type: "patient", id: initialPatientId, name: "" } :
     initialCoupleId ? { type: "couple", id: initialCoupleId, name: initialCoupleName } : null
   );
-  const [detailTab, setDetailTab] = useState("records");
+  const [detailTab, setDetailTab] = useState("overview");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -237,12 +239,12 @@ export default function Prontuarios() {
 
   const handleSelectEntity = (type: "patient" | "couple", id: string, name: string) => {
     setSelectedEntity({ type, id, name });
-    setDetailTab("records");
+    setDetailTab("overview");
   };
 
   const handleBack = () => {
     setSelectedEntity(null);
-    setDetailTab("records");
+    setDetailTab("overview");
   };
 
   const patientAppointments = form.patientId
@@ -386,9 +388,14 @@ export default function Prontuarios() {
           /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
           <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <Tabs value={detailTab} onValueChange={setDetailTab}>
-              <TabsList className={`grid w-full max-w-2xl ${selectedEntity.type === "patient" ? "grid-cols-5" : "grid-cols-4"}`}>
+              <TabsList className={`grid w-full max-w-3xl ${selectedEntity.type === "patient" ? "grid-cols-6" : "grid-cols-4"}`}>
+                {selectedEntity.type === "patient" && (
+                  <TabsTrigger value="overview" className="flex items-center gap-1.5">
+                    <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Visão Geral</span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="records" className="flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Registros</span>
+                  <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Sessões</span>
                 </TabsTrigger>
                 <TabsTrigger value="agenda" className="flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4" /> <span className="hidden sm:inline">Agenda</span>
@@ -402,9 +409,20 @@ export default function Prontuarios() {
                   </TabsTrigger>
                 )}
                 <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span>
+                  <BarChart3 className="w-4 h-4" /> <span className="hidden sm:inline">Insights</span>
                 </TabsTrigger>
               </TabsList>
+
+              {/* Visão Geral - Hub Clínico 360º */}
+              {selectedEntity.type === "patient" && (
+                <TabsContent value="overview" className="mt-4">
+                  <PatientHub
+                    patientId={selectedEntity.id}
+                    patientName={selectedEntity.name}
+                    onNavigate={setDetailTab}
+                  />
+                </TabsContent>
+              )}
 
               {/* Records tab */}
               <TabsContent value="records" className="space-y-4 mt-4">
