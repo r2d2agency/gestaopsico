@@ -191,21 +191,47 @@ router.get('/financial', authMiddleware, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
 
-    const payments = await prisma.payment.findMany({
-      where: { patientId: user.patientId },
-      orderBy: { createdAt: 'desc' },
-      include: { appointment: { select: { date: true, type: true } } }
+    // Pull from accounts (real billing entries) + legacy payments table
+    const [accounts, sessions] = await Promise.all([
+      prisma.account.findMany({
+        where: { patientId: user.patientId, type: 'receivable' },
+        orderBy: { dueDate: 'desc' },
+      }),
+      prisma.appointment.count({
+        where: { patientId: user.patientId, attended: true }
+      }),
+    ]);
+
+    const total = accounts.reduce((s, a) => s + Number(a.value), 0);
+    const paid = accounts.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.value), 0);
+    const pending = accounts.filter(a => a.status === 'pending').reduce((s, a) => s + Number(a.value), 0);
+    const overdue = accounts.filter(a => a.status === 'overdue').reduce((s, a) => s + Number(a.value), 0);
+
+    const items = accounts.map(a => ({
+      id: a.id,
+      description: a.description,
+      value: Number(a.value),
+      dueDate: a.dueDate,
+      paidAt: a.paidAt,
+      status: a.status,
+      paymentMethod: a.paymentMethod,
+      createdAt: a.createdAt,
+    }));
+
+    res.json({
+      payments: items, // keep `payments` key for backward compat with the app
+      items,
+      sessionsCount: sessions,
+      summary: {
+        total,
+        paid,
+        pending,
+        overdue,
+        balance: pending + overdue, // saldo a pagar
+      }
     });
-
-    const summary = {
-      total: payments.reduce((s, p) => s + Number(p.value), 0),
-      paid: payments.filter(p => p.status === 'paid').reduce((s, p) => s + Number(p.value), 0),
-      pending: payments.filter(p => p.status === 'pending').reduce((s, p) => s + Number(p.value), 0)
-    };
-
-    res.json({ payments, summary });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar financeiro' });
+    res.status(500).json({ error: 'Erro ao buscar financeiro', details: err.message });
   }
 });
 

@@ -19,7 +19,8 @@ import { ptBR } from "date-fns/locale";
 import {
   FileText, Plus, Search, Calendar, User, Edit, Eye, Sparkles, Brain,
   AlertTriangle, TrendingUp, Tag, BarChart3, Clock, ChevronRight, ArrowLeft,
-  Users, Heart, Filter, CalendarDays, Trash2, RefreshCw, CheckCircle2, Smile
+  Users, Heart, Filter, CalendarDays, Trash2, RefreshCw, CheckCircle2, Smile,
+  DollarSign,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
@@ -27,6 +28,7 @@ import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 import MoodDashboard from "@/components/MoodDashboard";
 import PatientHub from "@/components/records/PatientHub";
 import PatientInsights from "@/components/records/PatientInsights";
+import PatientFinancial from "@/components/records/PatientFinancial";
 import { LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -391,7 +393,7 @@ export default function Prontuarios() {
           /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
           <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <Tabs value={detailTab} onValueChange={setDetailTab}>
-              <TabsList className={`grid w-full max-w-3xl ${selectedEntity.type === "patient" ? "grid-cols-6" : "grid-cols-4"}`}>
+              <TabsList className={`grid w-full max-w-4xl ${selectedEntity.type === "patient" ? "grid-cols-7" : "grid-cols-4"}`}>
                 {selectedEntity.type === "patient" && (
                   <TabsTrigger value="overview" className="flex items-center gap-1.5">
                     <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Visão Geral</span>
@@ -403,6 +405,11 @@ export default function Prontuarios() {
                 <TabsTrigger value="agenda" className="flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4" /> <span className="hidden sm:inline">Agenda</span>
                 </TabsTrigger>
+                {selectedEntity.type === "patient" && (
+                  <TabsTrigger value="financial" className="flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4" /> <span className="hidden sm:inline">Financeiro</span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="timeline" className="flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4" /> <span className="hidden sm:inline">Evolução</span>
                 </TabsTrigger>
@@ -424,6 +431,13 @@ export default function Prontuarios() {
                     patientName={selectedEntity.name}
                     onNavigate={setDetailTab}
                   />
+                </TabsContent>
+              )}
+
+              {/* Financeiro - cobrança e pagamentos */}
+              {selectedEntity.type === "patient" && (
+                <TabsContent value="financial" className="mt-4">
+                  <PatientFinancial patientId={selectedEntity.id} patientName={selectedEntity.name} />
                 </TabsContent>
               )}
 
