@@ -30,6 +30,31 @@ export interface AccountsSummary {
   balance: number;
 }
 
+export interface PatientFinancialView {
+  patient: { id: string; name: string; sessionValue: number; monthlyValue: number | null; billingMode: string };
+  stats: {
+    totalSessions: number;
+    totalChargedSessions: number;
+    totalCharged: number;
+    totalPaid: number;
+    totalPending: number;
+    totalOverdue: number;
+    unbilledTotal: number;
+    unbilledCount: number;
+    balance: number;
+  };
+  sessions: Array<{ id: string; date: string; time: string; duration: number; value: number; type: string; status: string; billed: boolean }>;
+  accounts: Array<{ id: string; description: string; value: number; dueDate: string; paidAt?: string; status: string; paymentMethod?: string; notes?: string }>;
+}
+
+export interface ConsolidatedCharge {
+  patient: { id: string; name: string; phone?: string; email?: string };
+  items: Array<{ id: string; description: string; value: number; dueDate: string }>;
+  total: number;
+  dueDate: string;
+  description: string;
+}
+
 export const accountsApi = {
   list: (params?: Record<string, string>) =>
     apiRequest<{ data: Account[]; total: number }>(
@@ -37,6 +62,12 @@ export const accountsApi = {
     ),
   summary: (month?: string) =>
     apiRequest<AccountsSummary>(`/accounts/summary${month ? `?month=${month}` : ""}`),
+  patientFinancial: (patientId: string) =>
+    apiRequest<PatientFinancialView>(`/accounts/patient/${patientId}/financial`),
+  bulkPay: (data: { ids: string[]; paymentMethod?: string; paidAt?: string }) =>
+    apiRequest<{ message: string; count: number }>(`/accounts/bulk-pay`, { method: "POST", body: data }),
+  bulkCharge: (data: { ids: string[]; dueDate?: string; description?: string }) =>
+    apiRequest<{ charges: ConsolidatedCharge[]; totalAmount: number }>(`/accounts/bulk-charge`, { method: "POST", body: data }),
   create: (data: Partial<Account>) =>
     apiRequest<Account>("/accounts", { method: "POST", body: data }),
   update: (id: string, data: Partial<Account>) =>
