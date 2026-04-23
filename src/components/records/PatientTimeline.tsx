@@ -22,6 +22,7 @@ interface Props {
 export default function PatientTimeline({ patients, selectedPatientId, onSelectPatient, appointments = [] }: Props) {
   const [analysis, setAnalysis] = useState<PatientAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [selectedForBilling, setSelectedForBilling] = useState<string[]>([]);
 
   const { data: timeline, isLoading } = useQuery({
     queryKey: ["patient-timeline", selectedPatientId],
@@ -39,6 +40,36 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar análise");
     } finally { setAnalysisLoading(false); }
+  };
+
+  const upcomingApts = appointments.filter(a => {
+    const aptDate = new Date(a.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return aptDate >= today && a.status !== "cancelled" && a.status !== "completed";
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const billableSessions = appointments.filter(a => 
+    (a.status === "completed" || a.attended === true) && a.payment_status === "pending"
+  );
+
+  const totalBilling = billableSessions
+    .filter(s => selectedForBilling.includes(s.id))
+    .reduce((acc, s) => acc + (s.value || 0), 0);
+
+  const handleCloseBilling = () => {
+    if (selectedForBilling.length === 0) {
+      toast.error("Selecione pelo menos uma sessão para faturar");
+      return;
+    }
+    const dates = billableSessions
+      .filter(s => selectedForBilling.includes(s.id))
+      .map(s => format(new Date(s.date), "dd/MM"))
+      .join(", ");
+    
+    toast.success(`Faturamento de R$ ${(totalBilling / 100).toFixed(2)} gerado para as sessões: ${dates}`);
+    // Here we would call an API to generate the invoice
+    setSelectedForBilling([]);
   };
 
   return (
