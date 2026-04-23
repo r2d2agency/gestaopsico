@@ -41,6 +41,7 @@ type TypeFilter = "all" | "individual" | "couple";
 
 export default function Prontuarios() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialPatientId = searchParams.get("patientId") || "";
   const initialCoupleId = searchParams.get("coupleId") || "";
