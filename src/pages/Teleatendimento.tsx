@@ -300,7 +300,7 @@ export default function Teleatendimento() {
         await telehealthApi.uploadAudio(activeSession.id, blob, {
           motivo: sessionNotes.motivo,
           anotacoes: sessionNotes.anotacoes,
-          // We can't pass agentId to uploadAudio yet, but we'll trigger it after upload
+          agentId: selectedAgentId === "default" ? undefined : selectedAgentId,
         });
         
         // If an agent is selected, we could potentially pass it to the processing step
@@ -494,8 +494,8 @@ export default function Teleatendimento() {
 
           {/* Content */}
           <div className="flex-1 p-4 md:p-6 max-w-4xl mx-auto w-full space-y-4">
-            {/* Session notes */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Session notes and prompt selection */}
+            <div className="grid gap-4 sm:grid-cols-3">
               <Card className="border-primary/20">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center gap-2">
@@ -522,6 +522,35 @@ export default function Teleatendimento() {
                     onChange={(e) => setSessionNotes(v => ({ ...v, anotacoes: e.target.value }))}
                     className="min-h-[100px] resize-none text-sm"
                   />
+                </CardContent>
+              </Card>
+              <Card className="border-primary/20">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">3</Badge>
+                    <span className="text-sm font-semibold text-foreground">Prompt Especialista</span>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground leading-tight">Escolha qual modelo de análise deve ser usado automaticamente ao finalizar.</p>
+                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Selecione o prompt..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Padrão do Sistema</SelectItem>
+                        {agents.filter(a => a.isActive).map(agent => (
+                          <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="p-2 rounded bg-muted/50 border border-border">
+                      <p className="text-[10px] text-muted-foreground italic">
+                        {selectedAgentId === "default" 
+                          ? "O sistema usará a organização clínica padrão." 
+                          : agents.find(a => a.id === selectedAgentId)?.description || "Análise personalizada selecionada."}
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
