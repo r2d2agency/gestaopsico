@@ -199,7 +199,7 @@ Seja objetivo, clínico e prático. Lembre-se: este é apoio organizacional, nã
         <Card className="border-border/60">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <AlertTriangle className="w-4 h-4 text-warning" />
               <span className="text-xs text-muted-foreground">Incompletas</span>
             </div>
             <p className="text-2xl font-bold text-foreground">{insights.incomplete}</p>
