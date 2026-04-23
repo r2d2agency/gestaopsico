@@ -91,7 +91,12 @@ export default function Dashboard() {
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="text-sm font-mono text-muted-foreground w-12 shrink-0">{apt.time}</span>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{apt.patient}</p>
+                          <Link 
+                            to={`/prontuarios?${apt.type === "Casal" ? `coupleId=${apt.couple_id}` : `patientId=${apt.patient_id}`}`}
+                            className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block"
+                          >
+                            {apt.patient}
+                          </Link>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
                             apt.type === "Casal" ? "bg-info/10 text-info" : "bg-secondary text-secondary-foreground"
                           }`}>
