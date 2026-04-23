@@ -895,6 +895,28 @@ export default function Agenda() {
                   <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{viewApt.notes}</p>
                 </div>
               )}
+              {viewApt.type !== "blocked" && (viewApt.status === "scheduled" || viewApt.status === "confirmed" || viewApt.status === "pending") && (
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    className="border-success text-success hover:bg-success hover:text-success-foreground"
+                    onClick={() => attendMutation.mutate(viewApt.id)}
+                    disabled={attendMutation.isPending}
+                  >
+                    {attendMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserCheck className="w-4 h-4 mr-2" />}
+                    Compareceu
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => missMutation.mutate(viewApt.id)}
+                    disabled={missMutation.isPending}
+                  >
+                    {missMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Ban className="w-4 h-4 mr-2" />}
+                    Faltou
+                  </Button>
+                </div>
+              )}
               {viewApt.type !== "blocked" && viewApt.status !== "cancelled" && (
                 <div className="flex flex-col gap-2 mt-4">
                   <Button
