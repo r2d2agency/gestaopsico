@@ -135,6 +135,90 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
             )}
           </div>
 
+          {/* Billing Section */}
+          {billableSessions.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-primary" /> Faturamento Pendente
+                  </div>
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    {billableSessions.length} sessões
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  {billableSessions.map(session => (
+                    <div key={session.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-border/50">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedForBilling.includes(session.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedForBilling(prev => [...prev, session.id]);
+                            else setSelectedForBilling(prev => prev.filter(id => id !== session.id));
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <div>
+                          <p className="text-xs font-medium text-foreground">
+                            {format(new Date(session.date), "dd/MM/yyyy")} - {session.time}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Valor: R$ {(session.value / 100).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] uppercase">Pendente</Badge>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="pt-2 border-t border-primary/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Total Selecionado</p>
+                    <p className="text-lg font-bold text-primary">R$ {(totalBilling / 100).toFixed(2)}</p>
+                  </div>
+                  <Button size="sm" onClick={handleCloseBilling} disabled={selectedForBilling.length === 0}>
+                    Fechar Faturamento
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Upcoming Sessions */}
+          {upcomingApts.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground flex items-center gap-1.5"><Clock className="w-4 h-4" /> Próximas Sessões</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {upcomingApts.map((apt, i) => (
+                  <motion.div key={apt.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}>
+                    <Card className="bg-muted/30 border-dashed">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-bold">Agendada</Badge>
+                          <span className="text-[10px] text-muted-foreground font-mono">{apt.time}</span>
+                        </div>
+                        <p className="text-sm font-medium text-foreground">
+                          {format(new Date(apt.date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                          {apt.mode === "video" ? (
+                            <Badge className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">ONLINE</Badge>
+                          ) : (
+                            <Badge className="text-[9px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">PRESENCIAL</Badge>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">R$ {(apt.value / 100).toFixed(2)}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Themes Map */}
           {timeline.themes.length > 0 && (
             <Card>
