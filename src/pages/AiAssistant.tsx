@@ -160,7 +160,7 @@ export default function AiAssistant() {
           <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" /> Assistente IA
           </h1>
-          <p className="text-muted-foreground mt-1">Use agentes de IA para análises e suporte clínico</p>
+          <p className="text-muted-foreground mt-1">Use agentes de IA para análises, suporte clínico e prompts especializados</p>
         </div>
         <Select value={selectedModel} onValueChange={setSelectedModel}>
           <SelectTrigger className="w-44">
@@ -178,7 +178,7 @@ export default function AiAssistant() {
         <TabsList className="bg-muted">
           <TabsTrigger value="chat" className="gap-1.5"><MessageSquare className="w-4 h-4" />Chat</TabsTrigger>
           <TabsTrigger value="analyze" className="gap-1.5"><FileText className="w-4 h-4" />Analisar</TabsTrigger>
-          <TabsTrigger value="customize" className="gap-1.5"><Settings2 className="w-4 h-4" />Personalizar</TabsTrigger>
+          <TabsTrigger value="customize" className="gap-1.5"><Settings2 className="w-4 h-4" />Prompts Especialistas</TabsTrigger>
         </TabsList>
 
         {/* ===== CHAT TAB ===== */}

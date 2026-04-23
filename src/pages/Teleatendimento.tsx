@@ -17,11 +17,14 @@ import {
   Mic, MicOff, Phone, PhoneOff, Clock, Shield, CheckCircle, AlertCircle,
   Upload, FileText, Brain, Trash2, Video, ExternalLink, Loader2, RefreshCw,
   Eye, Plus, ArrowLeft, Headphones, Monitor, Volume2, Info, Pause, Play,
-  Paperclip, X, File, Image as ImageIcon
+  Paperclip, X, File, Image as ImageIcon, Copy, MessageSquare, Sparkles, Settings2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 import StructuredSessionContent from "@/components/telehealth/StructuredSessionContent";
+import { useAiAgents, useAnalyzeText } from "@/hooks/useAi";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   waiting: { label: "Aguardando", color: "bg-muted text-muted-foreground", icon: <Clock className="h-4 w-4" /> },
@@ -83,6 +86,11 @@ export default function Teleatendimento() {
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([]);
   const [showRecordingModal, setShowRecordingModal] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("default");
+  const [manualAnalysisResult, setManualAnalysisResult] = useState<string | null>(null);
+
+  const { data: agents = [] } = useAiAgents();
+  const analyzeTextMutation = useAnalyzeText();
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -292,7 +300,13 @@ export default function Teleatendimento() {
         await telehealthApi.uploadAudio(activeSession.id, blob, {
           motivo: sessionNotes.motivo,
           anotacoes: sessionNotes.anotacoes,
+          agentId: selectedAgentId === "default" ? undefined : selectedAgentId,
         });
+        
+        // If an agent is selected, we could potentially pass it to the processing step
+        // For now, the backend uses a default. We'll trigger processing manually if needed
+        // or update the backend to support agentId in the next step.
+        
         setActiveSession(prev => prev ? { ...prev, status: "uploaded", processingStatus: "uploaded" } : null);
         toast.success("Áudio enviado! Transcrição em andamento...");
       } catch (err: any) {
@@ -480,8 +494,8 @@ export default function Teleatendimento() {
 
           {/* Content */}
           <div className="flex-1 p-4 md:p-6 max-w-4xl mx-auto w-full space-y-4">
-            {/* Session notes */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Session notes and prompt selection */}
+            <div className="grid gap-4 sm:grid-cols-3">
               <Card className="border-primary/20">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center gap-2">
@@ -508,6 +522,35 @@ export default function Teleatendimento() {
                     onChange={(e) => setSessionNotes(v => ({ ...v, anotacoes: e.target.value }))}
                     className="min-h-[100px] resize-none text-sm"
                   />
+                </CardContent>
+              </Card>
+              <Card className="border-primary/20">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">3</Badge>
+                    <span className="text-sm font-semibold text-foreground">Prompt Especialista</span>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground leading-tight">Escolha qual modelo de análise deve ser usado automaticamente ao finalizar.</p>
+                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Selecione o prompt..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Padrão do Sistema</SelectItem>
+                        {agents.filter(a => a.isActive).map(agent => (
+                          <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="p-2 rounded bg-muted/50 border border-border">
+                      <p className="text-[10px] text-muted-foreground italic">
+                        {selectedAgentId === "default" 
+                          ? "O sistema usará a organização clínica padrão." 
+                          : agents.find(a => a.id === selectedAgentId)?.description || "Análise personalizada selecionada."}
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -596,18 +639,109 @@ export default function Teleatendimento() {
               </Card>
             )}
 
-            {/* Completed - structured content */}
-            {recordingModalIsCompleted && activeSession.structuredContent && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Brain className="h-4 w-4 text-primary" /> Registro Organizado pela IA
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <StructuredSessionContent data={activeSession.structuredContent} />
-                </CardContent>
-              </Card>
+            {/* Completed - structured content and full transcription */}
+            {recordingModalIsCompleted && (
+              <div className="space-y-6">
+                {activeSession.structuredContent && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Brain className="h-4 w-4 text-primary" /> Registro Organizado pela IA
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <StructuredSessionContent data={activeSession.structuredContent} />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Manual Analysis with Specialist Prompt */}
+                {activeSession.transcription && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" /> Análise com Especialista
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1 space-y-2">
+                          <Label className="text-xs">Selecione um Agente Especialista</Label>
+                          <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o prompt..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="default">Padrão do Sistema</SelectItem>
+                              {agents.filter(a => a.isActive).map(agent => (
+                                <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button 
+                          onClick={async () => {
+                            const result = await analyzeTextMutation.mutateAsync({
+                              text: activeSession.transcription!,
+                              agentId: selectedAgentId === "default" ? undefined : selectedAgentId,
+                              type: "sessao"
+                            });
+                            setManualAnalysisResult(result.analysis);
+                          }}
+                          disabled={analyzeTextMutation.isPending}
+                        >
+                          {analyzeTextMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
+                          Analisar
+                        </Button>
+                      </div>
+
+                      {manualAnalysisResult && (
+                        <div className="mt-4 p-4 bg-background rounded-lg border border-primary/10 prose prose-sm max-w-none">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-bold text-primary">RESULTADO DA ANÁLISE:</span>
+                            <Button variant="ghost" size="sm" onClick={() => setManualAnalysisResult(null)}><X className="h-3 w-3" /></Button>
+                          </div>
+                          <div className="whitespace-pre-wrap text-sm">{manualAnalysisResult}</div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeSession.transcription && (
+                  <Card>
+                    <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-primary" /> Transcrição Completa
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                        onClick={() => {
+                          navigator.clipboard.writeText(activeSession.transcription!);
+                          toast.success("Transcrição copiada!");
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copiar Tudo
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                        <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                          {activeSession.transcription}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex justify-center gap-4 pt-4">
+                  <Button variant="outline" className="gap-2" onClick={() => setShowRecordingModal(false)}>
+                    <CheckCircle className="h-4 w-4" /> Concluir e Fechar
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
