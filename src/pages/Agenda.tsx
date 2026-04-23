@@ -45,6 +45,8 @@ const statusColors: Record<string, string> = {
   pending_approval: "bg-orange-500",
   cancelled: "bg-destructive",
   blocked: "bg-muted-foreground",
+  missed: "bg-destructive",
+  attended: "bg-success",
 };
 
 const statusBgColors: Record<string, string> = {
@@ -55,6 +57,8 @@ const statusBgColors: Record<string, string> = {
   pending_approval: "border-l-orange-500 bg-orange-500/5",
   cancelled: "border-l-destructive bg-destructive/5",
   blocked: "border-l-muted-foreground bg-muted/30",
+  missed: "border-l-destructive bg-destructive/5",
+  attended: "border-l-success bg-success/5",
 };
 
 const statusLabels: Record<string, string> = {
