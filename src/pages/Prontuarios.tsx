@@ -718,7 +718,12 @@ export default function Prontuarios() {
                     </Card>
                   </div>
                 ) : (
-                  <ClinicalDashboard patientId={selectedEntity?.type === "patient" ? selectedEntity.id : undefined} />
+                  <PatientInsights
+                    patientId={selectedEntity.id}
+                    patientName={selectedEntity.name}
+                    onScheduleSession={() => navigate(`/agenda?patientId=${selectedEntity.id}`)}
+                    onSendTest={() => navigate(`/testes?patientId=${selectedEntity.id}`)}
+                  />
                 )}
               </TabsContent>
             </Tabs>
