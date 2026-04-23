@@ -65,6 +65,8 @@ const statusLabels: Record<string, string> = {
   pending_approval: "Aguardando Aprovação",
   cancelled: "Cancelada",
   blocked: "Bloqueado",
+  missed: "Faltou",
+  attended: "Compareceu",
 };
 
 const emptyConsulta: Partial<Consulta> = {
