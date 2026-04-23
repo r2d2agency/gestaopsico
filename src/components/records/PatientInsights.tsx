@@ -282,7 +282,7 @@ Seja objetivo, clínico e prático. Lembre-se: este é apoio organizacional, nã
                 </div>
               </ScrollArea>
               <div className="flex items-start gap-1.5 pt-2 border-t border-primary/10">
-                <AlertTriangle className="w-3 h-3 text-amber-600 mt-0.5 shrink-0" />
+                <AlertTriangle className="w-3 h-3 text-warning mt-0.5 shrink-0" />
                 <p className="text-[10px] text-muted-foreground italic">
                   Esta análise é apoio organizacional. Não constitui diagnóstico — o psicólogo revisa e valida todas as informações.
                 </p>
