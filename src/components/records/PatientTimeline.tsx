@@ -139,18 +139,18 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
               </CardContent>
             </Card>
           </div>
-            {timeline.records.length > 0 && (
-              <Card>
-                <CardContent className="pt-4 text-center">
-                  <p className="text-sm font-medium text-primary">
-                    {format(new Date(timeline.records[0].date), "MMM yyyy", { locale: ptBR })} →{" "}
-                    {format(new Date(timeline.records[timeline.records.length - 1].date), "MMM yyyy", { locale: ptBR })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Período</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+
+          {timeline.records.length > 0 && (
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-sm font-medium text-primary">
+                  {format(new Date(timeline.records[0].date), "MMM yyyy", { locale: ptBR })} →{" "}
+                  {format(new Date(timeline.records[timeline.records.length - 1].date), "MMM yyyy", { locale: ptBR })}
+                </p>
+                <p className="text-xs text-muted-foreground">Período</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Billing Section */}
           {billableSessions.length > 0 && (
