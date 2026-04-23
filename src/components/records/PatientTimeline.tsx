@@ -109,19 +109,36 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
       {timeline && (
         <>
           {/* Summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold text-primary">{timeline.totalSessions}</p>
-                <p className="text-xs text-muted-foreground">Sessões registradas</p>
+                <p className="text-xs text-muted-foreground">Sessões totais</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-2xl font-bold text-success">
+                  {appointments.filter(a => a.status === "completed" || a.attended === true).length}
+                </p>
+                <p className="text-xs text-muted-foreground">Presenças</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-2xl font-bold text-destructive">
+                  {appointments.filter(a => a.status === "missed").length}
+                </p>
+                <p className="text-xs text-muted-foreground">Faltas</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold text-primary">{timeline.themes.length}</p>
-                <p className="text-xs text-muted-foreground">Temas identificados</p>
+                <p className="text-xs text-muted-foreground">Temas</p>
               </CardContent>
             </Card>
+          </div>
             {timeline.records.length > 0 && (
               <Card>
                 <CardContent className="pt-4 text-center">
