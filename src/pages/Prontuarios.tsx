@@ -26,7 +26,9 @@ import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 import MoodDashboard from "@/components/MoodDashboard";
 import PatientHub from "@/components/records/PatientHub";
+import PatientInsights from "@/components/records/PatientInsights";
 import { LayoutDashboard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const EMPTY_FORM = {
   patientId: "", coupleId: "", appointmentId: "", type: "individual" as string,
