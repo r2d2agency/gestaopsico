@@ -501,4 +501,41 @@ router.post('/messages', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/patient-portal/tasks - patient's tasks
+router.get('/tasks', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const tasks = await prisma.task.findMany({
+      where: { patientId: user.patientId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar tarefas' });
+  }
+});
+
+// POST /api/patient-portal/tasks/:id/check-in - patient completes a task
+router.post('/tasks/:id/check-in', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user?.patientId) return res.status(403).json({ error: 'Acesso negado' });
+
+    const task = await prisma.task.update({
+      where: { id: req.params.id, patientId: user.patientId },
+      data: {
+        status: 'completed',
+        completedAt: new Date()
+      }
+    });
+
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao registrar check-in' });
+  }
+});
+
 module.exports = router;
