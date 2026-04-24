@@ -30,7 +30,8 @@ import PatientHub from "@/components/records/PatientHub";
 import PremiumClinicalRecord from "@/components/records/PremiumClinicalRecord";
 import PatientInsights from "@/components/records/PatientInsights";
 import PatientFinancial from "@/components/records/PatientFinancial";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, Target } from "lucide-react";
+import PatientGoals from "@/components/records/PatientGoals";
 import { useNavigate } from "react-router-dom";
 
 const EMPTY_FORM = {
