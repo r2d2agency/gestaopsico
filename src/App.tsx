@@ -99,7 +99,7 @@ const App = () => (
               <Route path="/documentos" element={<Documentos />} />
               <Route path="/testes" element={<TestManager />} />
               <Route path="/casais" element={<CasaisPage />} />
-              <Route path="/consultas" element={<Dashboard />} />
+              <Route path="/recursos" element={<RecursosPage />} />
               <Route path="/prontuarios" element={<Prontuarios />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/teleatendimento" element={<Teleatendimento />} />
