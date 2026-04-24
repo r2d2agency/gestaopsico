@@ -723,18 +723,22 @@ export default function Prontuarios() {
                                       <User className="w-4 h-4 text-primary" />
                                       <span className="font-medium text-sm">Paciente 1</span>
                                     </div>
-                                    <p className="text-foreground font-semibold">{couple.patient1?.name}</p>
+                                    <button
+                                      onClick={() => couple.patient1?.id && handleSelectEntity("patient", couple.patient1.id, couple.patient1.name)}
+                                      className="text-foreground font-semibold hover:text-primary transition-colors hover:underline text-left"
+                                    >
+                                      {couple.patient1?.name}
+                                    </button>
                                     {couple.patient1?.email && <p className="text-xs text-muted-foreground">{couple.patient1.email}</p>}
-                                    {couple.patient1?.phone && <p className="text-xs text-muted-foreground">{couple.patient1.phone}</p>}
-                                  </CardContent>
-                                </Card>
-                                <Card className="border-border/60">
-                                  <CardContent className="pt-4">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <User className="w-4 h-4 text-primary" />
+...
                                       <span className="font-medium text-sm">Paciente 2</span>
                                     </div>
-                                    <p className="text-foreground font-semibold">{couple.patient2?.name}</p>
+                                    <button
+                                      onClick={() => couple.patient2?.id && handleSelectEntity("patient", couple.patient2.id, couple.patient2.name)}
+                                      className="text-foreground font-semibold hover:text-primary transition-colors hover:underline text-left"
+                                    >
+                                      {couple.patient2?.name}
+                                    </button>
                                     {couple.patient2?.email && <p className="text-xs text-muted-foreground">{couple.patient2.email}</p>}
                                     {couple.patient2?.phone && <p className="text-xs text-muted-foreground">{couple.patient2.phone}</p>}
                                   </CardContent>
