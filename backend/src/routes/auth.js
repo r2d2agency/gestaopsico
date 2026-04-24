@@ -4,7 +4,7 @@ const { PrismaClient, Prisma } = require('@prisma/client');
 const { authMiddleware, generateToken } = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 function isDuplicateConstraintError(error) {
   return Boolean(

@@ -1,10 +1,10 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+
 const { authMiddleware } = require('../middleware/auth');
 const { superadminGuard } = require('../middleware/adminGuard');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // GET /api/plans (public - for registration)
 router.get('/', async (req, res) => {
