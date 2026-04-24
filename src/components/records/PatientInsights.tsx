@@ -128,6 +128,23 @@ Seja objetivo, clínico e prático. Lembre-se: este é apoio organizacional, nã
     }
   };
 
+  const handleEvolutionAnalysis = async () => {
+    if (records.length < 2) {
+      toast.error("São necessárias pelo menos 2 sessões para análise evolutiva");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const result = await recordsApi.patientAnalysis(patientId);
+      setEvolutionAnalysis(result.analysis);
+      toast.success("Análise evolutiva concluída!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao analisar evolução");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
