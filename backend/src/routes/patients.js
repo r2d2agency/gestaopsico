@@ -164,6 +164,10 @@ router.get('/', async (req, res) => {
   try {
     const { search, status } = req.query;
 
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+
     // Fetch user to determine role and org
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
@@ -173,31 +177,39 @@ router.get('/', async (req, res) => {
     const where = {};
 
     // Role-based filtering — everyone only sees patients from their own organization
-    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
+    if (user && ['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user.role)) {
       if (user.organizationId) {
         where.professional = { organizationId: user.organizationId };
       }
     } else {
-      // professional sees only their own patients
+      // professional sees only their own patients (or if user not found, they see nothing)
       where.professionalId = req.userId;
     }
 
     if (status) where.status = status;
-    if (search) {
+    if (search && typeof search === 'string') {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { cpf: { contains: search } }
       ];
     }
+
     const patients = await prisma.patient.findMany({
       where,
       include: { professional: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(patients.map(mapPatient));
+
+    const mappedPatients = (patients || []).map(mapPatient);
+    res.json(mappedPatients);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar pacientes', details: err.message });
+    console.error('Error listing patients:', err);
+    res.status(500).json({ 
+      error: 'Erro ao listar pacientes', 
+      details: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+    });
   }
 });
 
