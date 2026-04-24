@@ -334,4 +334,8 @@ export const patientPortalApi = {
 
     return response.json() as Promise<PatientPortalMessage>;
   },
+  listTasks: () =>
+    apiRequest<any[]>("/patient-portal/tasks"),
+  checkInTask: (id: string) =>
+    apiRequest(`/patient-portal/tasks/${id}/check-in`, { method: "POST" }),
 };
