@@ -47,6 +47,7 @@ import Relatorios from "./pages/Relatorios";
 import Teleatendimento from "./pages/Teleatendimento";
 import CompletarCadastro from "./pages/CompletarCadastro";
 import ImportacaoDados from "./pages/ImportacaoDados";
+import RecursosPage from "./pages/Recursos";
 
 const queryClient = new QueryClient();
 
