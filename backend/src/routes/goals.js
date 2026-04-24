@@ -19,7 +19,8 @@ router.get('/', async (req, res) => {
     });
     res.json(goals);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar objetivos' });
+    console.error('Error fetching goals:', err);
+    res.status(500).json({ error: 'Erro ao listar objetivos', details: err.message });
   }
 });
 
@@ -39,7 +40,8 @@ router.post('/', async (req, res) => {
     });
     res.status(201).json(goal);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar objetivo' });
+    console.error('Error creating goal:', err);
+    res.status(500).json({ error: 'Erro ao criar objetivo', details: err.message });
   }
 });
 
@@ -62,7 +64,8 @@ router.put('/:id', async (req, res) => {
     });
     res.json(goal);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar objetivo' });
+    console.error('Error updating goal:', err);
+    res.status(500).json({ error: 'Erro ao atualizar objetivo', details: err.message });
   }
 });
 
@@ -74,7 +77,8 @@ router.delete('/:id', async (req, res) => {
     });
     res.json({ message: 'Objetivo excluído' });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao excluir objetivo' });
+    console.error('Error deleting goal:', err);
+    res.status(500).json({ error: 'Erro ao excluir objetivo', details: err.message });
   }
 });
 
