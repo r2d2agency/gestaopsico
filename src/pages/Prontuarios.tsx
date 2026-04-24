@@ -455,6 +455,13 @@ export default function Prontuarios() {
                 </TabsContent>
               )}
 
+              {/* Testes - gestão de testes psicológicos */}
+              {selectedEntity.type === "patient" && (
+                <TabsContent value="tests" className="mt-4">
+                  <PatientTestsTab patientId={selectedEntity.id} patientName={selectedEntity.name} />
+                </TabsContent>
+              )}
+
               {/* Financeiro - cobrança e pagamentos */}
               {selectedEntity.type === "patient" && (
                 <TabsContent value="financial" className="mt-4">
