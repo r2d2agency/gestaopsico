@@ -98,7 +98,7 @@ export default function Prontuarios() {
   // Appointments for the selected patient (detail view)
   const { data: patientApts = [], isLoading: aptsLoading } = useQuery<Consulta[]>({
     queryKey: ["patient-appointments", selectedEntity?.id],
-    queryFn: () => consultasApi.list({}),
+    queryFn: () => consultasApi.list({ patientId: selectedEntity?.id || "" }),
     enabled: !!selectedEntity && selectedEntity.type === "patient",
   });
 

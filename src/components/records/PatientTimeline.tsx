@@ -42,14 +42,16 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
     } finally { setAnalysisLoading(false); }
   };
 
-  const upcomingApts = appointments.filter(a => {
+  const patientApts = appointments.filter(a => a.patientId === selectedPatientId || a.patient_id === selectedPatientId || (a.patient?.id === selectedPatientId));
+  
+  const upcomingApts = patientApts.filter(a => {
     const aptDate = new Date(a.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return aptDate >= today && a.status !== "cancelled" && a.status !== "completed";
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const billableSessions = appointments.filter(a => 
+  const billableSessions = patientApts.filter(a => 
     (a.status === "completed" || a.attended === true) && a.payment_status === "pending"
   );
 
@@ -119,7 +121,7 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold text-success">
-                  {appointments.filter(a => a.status === "completed" || a.attended === true).length}
+                  {patientApts.filter(a => a.status === "completed" || a.attended === true).length}
                 </p>
                 <p className="text-xs text-muted-foreground">Presenças</p>
               </CardContent>
@@ -127,7 +129,7 @@ export default function PatientTimeline({ patients, selectedPatientId, onSelectP
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold text-destructive">
-                  {appointments.filter(a => a.status === "missed").length}
+                  {patientApts.filter(a => a.status === "missed").length}
                 </p>
                 <p className="text-xs text-muted-foreground">Faltas</p>
               </CardContent>

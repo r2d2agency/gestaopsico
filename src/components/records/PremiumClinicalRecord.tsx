@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
 import { moodApi } from "@/lib/portalApi";
 import { pacientesApi, type Patient, type Consulta, consultasApi } from "@/lib/api";
+import { goalsApi } from "@/lib/goalsApi";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -53,18 +54,23 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
     enabled: !!patientId,
   });
 
-  const { data: allApts = [] } = useQuery<Consulta[]>({
+  const { data: patientApts = [] } = useQuery<Consulta[]>({
     queryKey: ["patient-appointments-premium", patientId],
-    queryFn: () => consultasApi.list({}),
+    queryFn: () => consultasApi.list({ patientId }),
+    enabled: !!patientId,
+  });
+
+  const { data: therapeuticGoals = [] } = useQuery({
+    queryKey: ["patient-goals-premium", patientId],
+    queryFn: () => goalsApi.list(patientId),
     enabled: !!patientId,
   });
 
   const stats = useMemo(() => {
-    const apts = allApts.filter((a: any) => a.patientId === patientId || a.patient?.id === patientId || a.patient_id === patientId);
-    const completed = apts.filter((a: any) => a.status === "completed" || a.attended === true);
-    const cancelled = apts.filter((a: any) => a.status === "cancelled");
+    const completed = patientApts.filter((a: any) => a.status === "completed" || a.attended === true);
+    const cancelled = patientApts.filter((a: any) => a.status === "cancelled");
     const totalSessions = timeline?.totalSessions ?? completed.length;
-    const adherenceRate = apts.length > 0 ? Math.round((completed.length / apts.length) * 100) : 0;
+    const adherenceRate = patientApts.length > 0 ? Math.round((completed.length / patientApts.length) * 100) : 0;
     
     return {
       totalSessions,
@@ -72,22 +78,18 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
       adherenceRate,
       lastSession: timeline?.records?.[0],
     };
-  }, [allApts, patientId, timeline]);
+  }, [patientApts, patientId, timeline]);
 
   // Premium derived data (Mocked or extrapolated from existing data)
   const clinicalMap = useMemo(() => ({
-    emotionalPatterns: ["Perfeccionismo adaptativo", "Evitação emocional sob estresse", "Necessidade de validação externa"],
-    triggers: ["Prazos de trabalho", "Críticas de familiares", "Finais de semana prolongados"],
-    defenseMechanisms: ["Intelectualização", "Sublimação", "Racionalização"],
-    dominantThemes: timeline?.themes?.slice(0, 4).map(t => t.name) || ["Ansiedade", "Autoestima", "Carreira", "Relacionamentos"],
-  }), [timeline]);
+    emotionalPatterns: patient?.emotional_patterns?.split('\n').filter(Boolean) || ["Não registrados"],
+    triggers: patient?.triggers?.split('\n').filter(Boolean) || ["Não registrados"],
+    defenseMechanisms: patient?.defense_mechanisms?.split('\n').filter(Boolean) || ["Não registrados"],
+    dominantThemes: timeline?.themes?.slice(0, 4).map(t => t.name) || ["Nenhum tema identificado"],
+  }), [patient, timeline]);
 
-  const therapeuticGoals = [
-    { id: "1", title: "Regulação da ansiedade social", progress: 65, status: "in_progress" },
-    { id: "2", title: "Estabelecimento de limites no trabalho", progress: 40, status: "in_progress" },
-    { id: "3", title: "Melhoria do padrão de sono", progress: 100, status: "completed" },
-    { id: "4", title: "Reestruturação cognitiva de crenças centrais", progress: 20, status: "in_progress" },
-  ];
+  // Removed hardcoded therapeuticGoals as they are now fetched from goalsApi
+
 
   return (
     <div className="space-y-6">
