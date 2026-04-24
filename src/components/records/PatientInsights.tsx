@@ -31,6 +31,8 @@ export default function PatientInsights({
 }: PatientInsightsProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("default");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [evolutionAnalysis, setEvolutionAnalysis] = useState<any | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const { data: agents = [] } = useAiAgents();
   const analyzeMutation = useAnalyzeText();
