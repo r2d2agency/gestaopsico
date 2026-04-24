@@ -17,6 +17,10 @@ import {
 import { motion } from "framer-motion";
 import ClinicalMap from "./ClinicalMap";
 
+const MOOD_LABELS = ["", "Muito ruim", "Ruim", "Neutro", "Bom", "Ótimo"];
+const MOOD_ICONS = [null, Frown, Frown, Meh, Smile, Smile];
+const MOOD_COLORS = ["", "text-destructive", "text-orange-500", "text-amber-500", "text-emerald-500", "text-emerald-600"];
+
 interface Props {
   patientId: string;
   patientName: string;
