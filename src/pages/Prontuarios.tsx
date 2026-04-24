@@ -129,9 +129,20 @@ export default function Prontuarios() {
     mutationFn: (id: string) => consultasApi.attend(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-financial-detail"] });
       toast.success("Comparecimento registrado");
     },
     onError: () => toast.error("Erro ao registrar comparecimento"),
+  });
+
+  const missAptMutation = useMutation({
+    mutationFn: (id: string) => consultasApi.miss(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-financial-detail"] });
+      toast.success("Falta registrada");
+    },
+    onError: () => toast.error("Erro ao registrar falta"),
   });
 
   // Build card list: patients + couples with record counts
@@ -584,6 +595,7 @@ export default function Prontuarios() {
                               onEdit={() => { setEditingApt(apt); setEditAptDialog(true); }}
                               onCancel={() => cancelAptMutation.mutate(apt.id)}
                               onAttend={() => attendAptMutation.mutate(apt.id)}
+                              onMiss={() => missAptMutation.mutate(apt.id)}
                               isCancelling={cancelAptMutation.isPending}
                             />
                           ))}
@@ -606,6 +618,8 @@ export default function Prontuarios() {
                               apt={apt}
                               onEdit={() => { setEditingApt(apt); setEditAptDialog(true); }}
                               onCancel={() => cancelAptMutation.mutate(apt.id)}
+                              onAttend={() => attendAptMutation.mutate(apt.id)}
+                              onMiss={() => missAptMutation.mutate(apt.id)}
                               isPast
                             />
                           ))}
@@ -1087,11 +1101,12 @@ const STATUS_LABELS: Record<string, string> = {
   scheduled: "Agendada", completed: "Realizada", cancelled: "Cancelada", blocked: "Bloqueado",
 };
 
-function AppointmentCard({ apt, onEdit, onCancel, onAttend, isPast, isCancelling }: {
+function AppointmentCard({ apt, onEdit, onCancel, onAttend, onMiss, isPast, isCancelling }: {
   apt: any;
   onEdit: () => void;
   onCancel: () => void;
   onAttend?: () => void;
+  onMiss?: () => void;
   isPast?: boolean;
   isCancelling?: boolean;
 }) {
@@ -1127,10 +1142,19 @@ function AppointmentCard({ apt, onEdit, onCancel, onAttend, isPast, isCancelling
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {!isPast && apt.status === "scheduled" && onAttend && (
-              <Button size="sm" variant="outline" className="text-xs text-green-600 border-green-200 hover:bg-green-50" onClick={onAttend}>
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Compareceu
-              </Button>
+            {apt.status === "scheduled" && (
+              <div className="flex items-center gap-1">
+                {onAttend && (
+                  <Button size="sm" variant="outline" className="text-[10px] h-7 px-2 text-green-600 border-green-200 hover:bg-green-50" onClick={onAttend}>
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Compareceu
+                  </Button>
+                )}
+                {onMiss && (
+                  <Button size="sm" variant="outline" className="text-[10px] h-7 px-2 text-destructive border-destructive/20 hover:bg-destructive/5" onClick={onMiss}>
+                    <AlertTriangle className="w-3 h-3 mr-1" /> Faltou
+                  </Button>
+                )}
+              </div>
             )}
             <Button size="sm" variant="ghost" className="text-xs" onClick={onEdit}>
               <Edit className="w-3.5 h-3.5" />

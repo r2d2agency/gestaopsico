@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DollarSign, TrendingUp, AlertCircle, CheckCircle, Filter, Wallet,
-  CalendarClock, Send, ArrowDownToLine, Search, FileText, Clock,
+  CalendarClock, Send, ArrowDownToLine, Search, FileText, Clock, Plus, User,
 } from "lucide-react";
+import PatientSearchSelect from "@/components/PatientSearchSelect";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,18 +45,24 @@ export default function Financeiro() {
   const [period, setPeriod] = useState<string>("this_month");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
+  const [entryDialogOpen, setEntryDialogOpen] = useState(false);
+  const [entryForm, setEntryForm] = useState({
+    patientId: "", description: "", value: "", dueDate: new Date().toISOString().split("T")[0], type: "receivable" as "receivable" | "payable"
+  });
   const [chargeData, setChargeData] = useState<{ charges: ConsolidatedCharge[]; totalAmount: number } | null>(null);
 
   const queryParams = useMemo(() => {
     const p: Record<string, string> = { type: "receivable" };
     if (period !== "all") p.period = period;
     if (statusFilter !== "all") p.status = statusFilter;
+    if (selectedPatientId) p.patientId = selectedPatientId;
     return p;
-  }, [period, statusFilter]);
+  }, [period, statusFilter, selectedPatientId]);
 
   const { data: accountsData, isLoading } = useQuery({
     queryKey: ["accounts", queryParams],
@@ -155,6 +162,21 @@ export default function Financeiro() {
     onError: (e: any) => toast.error(e.message || "Erro"),
   });
 
+  const createEntry = useMutation({
+    mutationFn: (data: any) => accountsApi.create({ ...data, value: Number(data.value) }),
+    onSuccess: () => {
+      toast.success("Lançamento criado");
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-tab-summary"] });
+      setEntryDialogOpen(false);
+      setEntryForm({
+        patientId: "", description: "", value: "", dueDate: new Date().toISOString().split("T")[0], type: "receivable"
+      });
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao criar lançamento"),
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -163,6 +185,9 @@ export default function Financeiro() {
           <h1 className="text-2xl font-display font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground mt-1 text-sm">Gestão de cobranças, baixas e previsão</p>
         </div>
+        <Button className="gradient-primary border-0 shadow-glow" onClick={() => setEntryDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
+        </Button>
       </div>
 
       {/* Summary KPIs */}
@@ -223,7 +248,14 @@ export default function Financeiro() {
               );
             })}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="w-full md:w-[280px]">
+              <PatientSearchSelect 
+                value={selectedPatientId} 
+                onValueChange={setSelectedPatientId}
+                placeholder="Filtrar por paciente..."
+              />
+            </div>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -431,6 +463,63 @@ export default function Financeiro() {
           </div>
           <DialogFooter>
             <Button onClick={() => setChargeDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* New Entry Dialog */}
+      <Dialog open={entryDialogOpen} onOpenChange={setEntryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" /> Novo Lançamento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Paciente (opcional)</Label>
+              <PatientSearchSelect 
+                value={entryForm.patientId} 
+                onValueChange={(id) => setEntryForm({ ...entryForm, patientId: id })} 
+              />
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Input 
+                value={entryForm.description} 
+                onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })} 
+                placeholder="Ex: Sessão avulsa, Pacote 4 sessões..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Valor (R$)</Label>
+                <Input 
+                  type="number" 
+                  value={entryForm.value} 
+                  onChange={(e) => setEntryForm({ ...entryForm, value: e.target.value })} 
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <Label>Vencimento</Label>
+                <Input 
+                  type="date" 
+                  value={entryForm.dueDate} 
+                  onChange={(e) => setEntryForm({ ...entryForm, dueDate: e.target.value })} 
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEntryDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              className="gradient-primary border-0" 
+              onClick={() => createEntry.mutate(entryForm)}
+              disabled={createEntry.isPending || !entryForm.description || !entryForm.value}
+            >
+              {createEntry.isPending ? "Salvando..." : "Criar Lançamento"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
