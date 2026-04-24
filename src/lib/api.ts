@@ -202,6 +202,11 @@ export interface Patient {
   registration_token?: string;
   registration_completed?: boolean;
   created_at: string;
+  // Mapa Clínico fields
+  emotional_patterns?: string;
+  triggers?: string;
+  defense_mechanisms?: string;
+  dominant_themes?: string;
 }
 
 export interface Consulta {
