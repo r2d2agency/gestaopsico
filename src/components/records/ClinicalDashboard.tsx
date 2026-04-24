@@ -112,7 +112,15 @@ export default function ClinicalDashboard({
                   className="flex items-center justify-between py-2 border-b last:border-0"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-sm font-medium truncate">{r.patient?.name || "—"}</span>
+                    <button
+                      onClick={() => {
+                        if (r.patientId && r.patient?.name) onSelectPatient?.(r.patientId, r.patient.name);
+                        else if (r.coupleId && r.couple?.name) onSelectCouple?.(r.coupleId, r.couple.name);
+                      }}
+                      className="text-sm font-medium truncate text-left hover:text-primary transition-colors hover:underline"
+                    >
+                      {r.patient?.name || r.couple?.name || "—"}
+                    </button>
                     {(!r.complaint && !r.keyPoints && !r.content) && (
                       <Badge variant="destructive" className="text-[10px]">Incompleto</Badge>
                     )}
