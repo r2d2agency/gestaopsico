@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, Check,
@@ -125,6 +126,9 @@ type PipelineFilter = "today" | "week" | "month" | "custom";
 
 export default function Agenda() {
   const routerNavigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const patientIdParam = searchParams.get("patientId");
+  
   const { user } = useAuth();
   const role = user?.role || "professional";
   const isSecretary = role === "secretary";
@@ -137,6 +141,13 @@ export default function Agenda() {
   const [blockOpen, setBlockOpen] = useState(false);
   const [form, setForm] = useState<Partial<Consulta>>({ ...emptyConsulta });
   const [selectedProfessional, setSelectedProfessional] = useState("");
+
+  useEffect(() => {
+    if (patientIdParam) {
+      setForm(prev => ({ ...prev, patient_id: patientIdParam, date: format(new Date(), "yyyy-MM-dd"), time: "08:00" }));
+      setDialogOpen(true);
+    }
+  }, [patientIdParam]);
   const [blockReason, setBlockReason] = useState("");
   const [blockTime, setBlockTime] = useState("");
   const [blockEndTime, setBlockEndTime] = useState("");

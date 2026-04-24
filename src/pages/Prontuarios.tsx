@@ -20,7 +20,7 @@ import {
   FileText, Plus, Search, Calendar, User, Edit, Eye, Sparkles, Brain,
   AlertTriangle, TrendingUp, Tag, BarChart3, Clock, ChevronRight, ArrowLeft,
   Users, Heart, Filter, CalendarDays, Trash2, RefreshCw, CheckCircle2, Smile,
-  DollarSign,
+  DollarSign, ClipboardList
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
@@ -30,6 +30,7 @@ import PatientHub from "@/components/records/PatientHub";
 import PremiumClinicalRecord from "@/components/records/PremiumClinicalRecord";
 import PatientInsights from "@/components/records/PatientInsights";
 import PatientFinancial from "@/components/records/PatientFinancial";
+import PatientTestsTab from "@/components/records/PatientTestsTab";
 import { LayoutDashboard, Target } from "lucide-react";
 import PatientGoals from "@/components/records/PatientGoals";
 import { useNavigate } from "react-router-dom";
@@ -406,7 +407,7 @@ export default function Prontuarios() {
           /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
           <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <Tabs value={detailTab} onValueChange={setDetailTab}>
-              <TabsList className={`grid w-full max-w-4xl ${selectedEntity.type === "patient" ? "grid-cols-8" : "grid-cols-5"}`}>
+              <TabsList className={`grid w-full max-w-5xl ${selectedEntity.type === "patient" ? "grid-cols-9" : "grid-cols-6"}`}>
                 {selectedEntity.type === "patient" && (
                   <TabsTrigger value="overview" className="flex items-center gap-1.5">
                     <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Visão Geral</span>
@@ -421,6 +422,11 @@ export default function Prontuarios() {
                 <TabsTrigger value="agenda" className="flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4" /> <span className="hidden sm:inline">Agenda</span>
                 </TabsTrigger>
+                {selectedEntity.type === "patient" && (
+                  <TabsTrigger value="tests" className="flex items-center gap-1.5">
+                    <ClipboardList className="w-4 h-4" /> <span className="hidden sm:inline">Testes</span>
+                  </TabsTrigger>
+                )}
                 {selectedEntity.type === "patient" && (
                   <TabsTrigger value="financial" className="flex items-center gap-1.5">
                     <DollarSign className="w-4 h-4" /> <span className="hidden sm:inline">Financeiro</span>
@@ -446,6 +452,13 @@ export default function Prontuarios() {
                     patientId={selectedEntity.id}
                     patientName={selectedEntity.name}
                   />
+                </TabsContent>
+              )}
+
+              {/* Testes - gestão de testes psicológicos */}
+              {selectedEntity.type === "patient" && (
+                <TabsContent value="tests" className="mt-4">
+                  <PatientTestsTab patientId={selectedEntity.id} patientName={selectedEntity.name} />
                 </TabsContent>
               )}
 
@@ -581,9 +594,19 @@ export default function Prontuarios() {
                   <>
                     {/* Upcoming */}
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-primary" /> Próximas Consultas ({selectedPatientApts.upcoming.length})
-                      </h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" /> Próximas Consultas ({selectedPatientApts.upcoming.length})
+                        </h3>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => navigate(`/agenda?patientId=${selectedEntity.id}`)}
+                          className="gap-1.5 h-8"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Agendar Sessão
+                        </Button>
+                      </div>
                       {selectedPatientApts.upcoming.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhuma consulta agendada.</p>
                       ) : (
