@@ -214,6 +214,9 @@ model Patient {
   healthHistory    String?       @map("health_history")
   medications      String?
   allergies        String?
+  emotionalPatterns String?      @map("emotional_patterns")
+  triggers         String?
+  defenseMechanisms String?      @map("defense_mechanisms")
   status           String        @default("active") @db.VarChar(20)
   billingMode      String        @default("per_session") @map("billing_mode") @db.VarChar(20)
   monthlyValue     Decimal?      @map("monthly_value") @db.Decimal(10, 2)
