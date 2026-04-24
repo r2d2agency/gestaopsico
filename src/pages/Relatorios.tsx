@@ -42,9 +42,48 @@ export default function Relatorios() {
   const [dateEnd, setDateEnd] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
+  const activeRange = useMemo(() => {
+    const now = new Date();
+    let start: string | undefined = undefined;
+    let end: string | undefined = undefined;
+
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+    if (period === "week") {
+      const s = new Date(now);
+      s.setDate(now.getDate() - now.getDay());
+      const e = new Date(s);
+      e.setDate(s.getDate() + 6);
+      start = fmt(s); end = fmt(e);
+    } else if (period === "month") {
+      start = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+      end = fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    } else if (period === "next_month") {
+      start = fmt(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+      end = fmt(new Date(now.getFullYear(), now.getMonth() + 2, 0));
+    } else if (period === "quarter") {
+      const quarter = Math.floor(now.getMonth() / 3);
+      start = fmt(new Date(now.getFullYear(), quarter * 3, 1));
+      end = fmt(new Date(now.getFullYear(), (quarter + 1) * 3, 0));
+    } else if (period === "year") {
+      start = fmt(new Date(now.getFullYear(), 0, 1));
+      end = fmt(new Date(now.getFullYear(), 11, 31));
+    } else if (period === "custom") {
+      start = dateStart || undefined;
+      end = dateEnd || undefined;
+    }
+    return { start, end };
+  }, [period, dateStart, dateEnd]);
+
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
-  const { data: appointments = [], isLoading: loadingAppts } = useAppointments();
-  const { data: payments = [], isLoading: loadingPayments } = useFinancialList({ startDate: dateStart || undefined, endDate: dateEnd || undefined });
+  const { data: appointments = [], isLoading: loadingAppts } = useAppointments({ 
+    startDate: activeRange.start, 
+    endDate: activeRange.end 
+  });
+  const { data: payments = [], isLoading: loadingPayments } = useFinancialList({ 
+    startDate: activeRange.start, 
+    endDate: activeRange.end 
+  });
   const { data: summary, isLoading: loadingSummary } = useFinancialSummary();
   const { data: dashSummary, isLoading: loadingDash } = useDashboardSummary();
 
