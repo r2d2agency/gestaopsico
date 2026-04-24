@@ -57,7 +57,12 @@ export default function ClinicalDashboard({
                   <motion.div key={p.patientId} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                     className="flex items-center justify-between"
                   >
-                    <span className="text-sm truncate flex-1">{p.patientName}</span>
+                    <button
+                      onClick={() => onSelectPatient?.(p.patientId, p.patientName)}
+                      className="text-sm truncate flex-1 text-left hover:text-primary hover:underline transition-colors font-medium"
+                    >
+                      {p.patientName}
+                    </button>
                     <div className="flex items-center gap-2">
                       <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (p.count / (data.patientFrequency[0]?.count || 1)) * 100)}%` }} />
