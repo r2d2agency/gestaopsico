@@ -49,6 +49,14 @@ export default function Dashboard() {
           Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))
+        ) : isError ? (
+          <div className="col-span-full p-4 bg-destructive/5 border border-destructive/20 rounded-xl flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium text-destructive">Erro ao carregar resumo</p>
+              <p className="text-xs text-muted-foreground">{(error as Error)?.message || "Não foi possível conectar ao servidor"}</p>
+            </div>
+          </div>
         ) : (
           <>
             <StatCard icon={Calendar} label="Consultas Hoje" value={String(todayCount)} change={todayCount > 0 ? `${todayCount} agendada(s)` : "Nenhuma"} changeType={todayCount > 0 ? "positive" : "neutral"} />
