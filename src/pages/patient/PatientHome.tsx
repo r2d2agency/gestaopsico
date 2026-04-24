@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Smile, Frown, Meh, Send, Loader2,
   ClipboardList, Calendar, CreditCard, Heart,
-  Sparkles, Download, X
+  Sparkles, Download, X, ListTodo
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePortalSlug } from "@/hooks/usePortalSlug";
