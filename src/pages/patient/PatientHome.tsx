@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Smile, Frown, Meh, Send, Loader2,
   ClipboardList, Calendar, CreditCard, Heart,
-  Sparkles, Download, X
+  Sparkles, Download, X, ListTodo
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePortalSlug } from "@/hooks/usePortalSlug";
@@ -40,8 +40,8 @@ function getQuickActions(basePath: string) {
   return [
     { to: `${basePath}/humor`, icon: Heart, label: "Humor", desc: "Registrar como se sente", gradient: "from-primary/10 to-primary/5" },
     { to: `${basePath}/testes`, icon: ClipboardList, label: "Testes", desc: "Testes pendentes", gradient: "from-accent to-accent/50" },
+    { to: `${basePath}/tarefas`, icon: ListTodo, label: "Tarefas", desc: "Atividades sugeridas", gradient: "from-indigo-500/10 to-indigo-500/5" },
     { to: `${basePath}/consultas`, icon: Calendar, label: "Consultas", desc: "Próximas sessões", gradient: "from-success/10 to-success/5" },
-    { to: `${basePath}/financeiro`, icon: CreditCard, label: "Financeiro", desc: "Pagamentos", gradient: "from-warning/10 to-warning/5" },
   ];
 }
 
