@@ -19,7 +19,9 @@ import ClinicalMap from "./ClinicalMap";
 
 interface Props {
   patientId: string;
-...
+  patientName: string;
+  onNavigate?: (tab: string) => void;
+}
 
 export default function PatientHub({ patientId, patientName, onNavigate }: Props) {
   // Patient details
