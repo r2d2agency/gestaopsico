@@ -1,5 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+
 const { authMiddleware } = require('../middleware/auth');
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,7 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../db');
 const execFileAsync = promisify(execFile);
 
 router.use(authMiddleware);

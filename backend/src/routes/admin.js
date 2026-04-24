@@ -1,11 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
+
 const { authMiddleware } = require('../middleware/auth');
 const { superadminGuard } = require('../middleware/adminGuard');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // Todas as rotas precisam de auth + superadmin
 router.use(authMiddleware);

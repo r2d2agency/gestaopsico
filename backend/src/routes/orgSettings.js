@@ -1,9 +1,9 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // PUBLIC: GET /api/org-settings/portal/:slug - get org branding by portal slug (no auth)
 router.get('/portal/:slug', async (req, res) => {

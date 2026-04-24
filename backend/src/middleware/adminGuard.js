@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../db');
 
 /**
  * Middleware que verifica se o usuário é superadmin

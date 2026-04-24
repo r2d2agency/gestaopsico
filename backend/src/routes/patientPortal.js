@@ -1,12 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
+
 const fs = require('fs');
 const { authMiddleware, generateToken } = require('../middleware/auth');
 const { getStoredAudioPath, decodeHeaderValue } = require('../utils/messageAudio');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 function canAccessPortalMessage(user, message) {
   if (!user || !message) return false;
