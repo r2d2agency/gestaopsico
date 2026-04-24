@@ -126,11 +126,21 @@ type PipelineFilter = "today" | "week" | "month" | "custom";
 
 export default function Agenda() {
   const routerNavigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const patientIdParam = searchParams.get("patientId");
+  
   const { user } = useAuth();
   const role = user?.role || "professional";
   const isSecretary = role === "secretary";
   const isAdmin = role === "admin" || role === "superadmin";
   const canCreateForOthers = isSecretary || isAdmin;
+
+  useEffect(() => {
+    if (patientIdParam) {
+      setForm(prev => ({ ...prev, patient_id: patientIdParam }));
+      setDialogOpen(true);
+    }
+  }, [patientIdParam]);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
