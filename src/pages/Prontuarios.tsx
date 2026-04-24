@@ -27,6 +27,7 @@ import PatientTimeline from "@/components/records/PatientTimeline";
 import ClinicalDashboard from "@/components/records/ClinicalDashboard";
 import MoodDashboard from "@/components/MoodDashboard";
 import PatientHub from "@/components/records/PatientHub";
+import PremiumClinicalRecord from "@/components/records/PremiumClinicalRecord";
 import PatientInsights from "@/components/records/PatientInsights";
 import PatientFinancial from "@/components/records/PatientFinancial";
 import { LayoutDashboard } from "lucide-react";
