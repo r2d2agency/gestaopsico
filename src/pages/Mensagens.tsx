@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  MessageSquare, Send, ArrowLeft, User, Loader2, Circle, Mic
+  MessageSquare, Send, ArrowLeft, User, Loader2, Circle, Mic, BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ interface Message {
   sender: string;
   type: string;
   content: string;
+  title?: string;
+  isDiary?: boolean;
   fileName?: string;
   mimeType?: string;
   readAt?: string;
@@ -205,13 +207,21 @@ export default function Mensagens() {
                           ? "bg-primary text-primary-foreground rounded-br-md"
                           : "bg-muted text-foreground rounded-bl-md"
                       }`}>
+                        {msg.isDiary && (
+                          <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider opacity-70">
+                            <BookOpen className="w-3 h-3" /> Registro de Diário
+                          </div>
+                        )}
+                        {msg.title && (
+                          <p className="text-xs font-bold mb-1 underline underline-offset-2 decoration-primary/30">{msg.title}</p>
+                        )}
                         {msg.type === "audio" || msg.content?.startsWith("data:audio") || msg.content?.startsWith("data:audo") ? (
                           <div className="flex items-center gap-2">
                             <Mic className="w-4 h-4 shrink-0" />
                             <AudioMessagePlayer source={msg.content} className="max-w-[220px] h-8" />
                           </div>
                         ) : (
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                         )}
                         <div className={`flex items-center gap-1 mt-1 ${
                           msg.sender === "professional" ? "justify-end" : ""
@@ -237,7 +247,7 @@ export default function Mensagens() {
                 <Input
                   value={reply}
                   onChange={e => setReply(e.target.value)}
-                  placeholder="Digite sua resposta..."
+                  placeholder="Digite sua resposta reflexiva..."
                   className="flex-1"
                 />
                 <Button type="submit" size="icon" disabled={!reply.trim() || sendReply.isPending}>
