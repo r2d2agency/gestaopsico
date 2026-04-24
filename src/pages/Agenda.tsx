@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, Video, MapPin, Loader2, Check,
