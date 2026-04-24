@@ -135,19 +135,19 @@ export default function Agenda() {
   const isAdmin = role === "admin" || role === "superadmin";
   const canCreateForOthers = isSecretary || isAdmin;
 
-  useEffect(() => {
-    if (patientIdParam) {
-      setForm(prev => ({ ...prev, patient_id: patientIdParam }));
-      setDialogOpen(true);
-    }
-  }, [patientIdParam]);
-
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [form, setForm] = useState<Partial<Consulta>>({ ...emptyConsulta });
   const [selectedProfessional, setSelectedProfessional] = useState("");
+
+  useEffect(() => {
+    if (patientIdParam) {
+      setForm(prev => ({ ...prev, patient_id: patientIdParam, date: format(new Date(), "yyyy-MM-dd"), time: "08:00" }));
+      setDialogOpen(true);
+    }
+  }, [patientIdParam]);
   const [blockReason, setBlockReason] = useState("");
   const [blockTime, setBlockTime] = useState("");
   const [blockEndTime, setBlockEndTime] = useState("");
