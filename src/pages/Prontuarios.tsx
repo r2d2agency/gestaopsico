@@ -20,7 +20,7 @@ import {
   FileText, Plus, Search, Calendar, User, Edit, Eye, Sparkles, Brain,
   AlertTriangle, TrendingUp, Tag, BarChart3, Clock, ChevronRight, ArrowLeft,
   Users, Heart, Filter, CalendarDays, Trash2, RefreshCw, CheckCircle2, Smile,
-  DollarSign,
+  DollarSign, ClipboardList
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PatientTimeline from "@/components/records/PatientTimeline";
@@ -30,6 +30,7 @@ import PatientHub from "@/components/records/PatientHub";
 import PremiumClinicalRecord from "@/components/records/PremiumClinicalRecord";
 import PatientInsights from "@/components/records/PatientInsights";
 import PatientFinancial from "@/components/records/PatientFinancial";
+import PatientTestsTab from "@/components/records/PatientTestsTab";
 import { LayoutDashboard, Target } from "lucide-react";
 import PatientGoals from "@/components/records/PatientGoals";
 import { useNavigate } from "react-router-dom";
