@@ -100,6 +100,9 @@ function mapPatient(p) {
     charge_enabled: p.chargeEnabled,
     registration_token: p.registrationToken,
     registration_completed: p.registrationCompleted,
+    emotional_patterns: p.emotionalPatterns,
+    triggers: p.triggers,
+    defense_mechanisms: p.defenseMechanisms,
   };
 }
 
@@ -134,6 +137,9 @@ function mapInput(body) {
   if (body.charge_day !== undefined) data.chargeDay = body.charge_day ? parseInt(body.charge_day) : null;
   if (body.charge_time !== undefined) data.chargeTime = body.charge_time;
   if (body.charge_enabled !== undefined) data.chargeEnabled = Boolean(body.charge_enabled);
+  if (body.emotional_patterns !== undefined) data.emotionalPatterns = body.emotional_patterns || null;
+  if (body.triggers !== undefined) data.triggers = body.triggers || null;
+  if (body.defense_mechanisms !== undefined) data.defenseMechanisms = body.defense_mechanisms || null;
   return data;
 }
 

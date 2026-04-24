@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
 import { moodApi } from "@/lib/portalApi";
 import { pacientesApi, type Patient, type Consulta, consultasApi } from "@/lib/api";
@@ -13,12 +13,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import {
   Activity, AlertTriangle, Brain, Calendar, CheckCircle2, ChevronRight,
   Clock, FileText, Heart, Lightbulb, Target, TrendingUp, User, Users,
   Zap, BookOpen, Frown, Meh, Smile, Sparkles, Map, ListTodo, ShieldAlert,
   Flame, Briefcase, Users2, Link2, Search, Plus, Filter, MessageSquare,
-  Lock, History, Info, BarChart3, ArrowRight, Tag, LayoutGrid
+  Lock, History, Info, BarChart3, ArrowRight, Tag, LayoutGrid, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -34,12 +35,40 @@ const MOOD_COLORS = ["", "text-destructive", "text-orange-500", "text-amber-500"
 
 export default function PremiumClinicalRecord({ patientId, patientName }: PremiumClinicalRecordProps) {
   const [activeView, setActiveView] = useState("overview");
+  const queryClient = useQueryClient();
 
   // Data fetching
-  const { data: patient } = useQuery<Patient>({
+  const { data: patient, isLoading: loadingPatient } = useQuery<Patient>({
     queryKey: ["patient", patientId],
     queryFn: () => pacientesApi.get(patientId),
     enabled: !!patientId,
+  });
+
+  const generateHypotheses = useMutation({
+    mutationFn: async () => {
+      const response = await recordsApi.patientAnalysis(patientId);
+      const { analysis } = response;
+      
+      if (!analysis) throw new Error("Não foi possível gerar a análise.");
+
+      // Update patient record with the new insights
+      const updateData: Partial<Patient> = {
+        emotional_patterns: analysis.identifiedPatterns?.join('\n'),
+        triggers: analysis.attentionPoints?.join('\n'), // Using attention points as triggers or similar
+        defense_mechanisms: analysis.patternChanges?.join('\n'),
+      };
+
+      await pacientesApi.update(patientId, updateData);
+      return analysis;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient", patientId] });
+      toast.success("Hipóteses Clínicas geradas com sucesso!");
+      setActiveView("map");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao gerar hipóteses clínicas. Certifique-se de que há pelo menos 2 sessões registradas.");
+    }
   });
 
   const { data: timeline } = useQuery({
@@ -119,8 +148,18 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="h-11 rounded-xl gap-2 border-border/60 hover:bg-muted/50 transition-all">
-            <Brain className="w-4 h-4 text-indigo-500" /> Hipóteses Clínicas
+          <Button 
+            variant="outline" 
+            className="h-11 rounded-xl gap-2 border-border/60 hover:bg-muted/50 transition-all"
+            onClick={() => generateHypotheses.mutate()}
+            disabled={generateHypotheses.isPending}
+          >
+            {generateHypotheses.isPending ? (
+              <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+            ) : (
+              <Brain className="w-4 h-4 text-indigo-500" />
+            )}
+            {generateHypotheses.isPending ? "Gerando..." : "Hipóteses Clínicas"}
           </Button>
           <Button className="h-11 rounded-xl gradient-primary border-0 shadow-lg shadow-primary/20 gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all">
             <Plus className="w-4 h-4" /> Nova Sessão
