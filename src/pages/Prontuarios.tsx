@@ -587,9 +587,19 @@ export default function Prontuarios() {
                   <>
                     {/* Upcoming */}
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-primary" /> Próximas Consultas ({selectedPatientApts.upcoming.length})
-                      </h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" /> Próximas Consultas ({selectedPatientApts.upcoming.length})
+                        </h3>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => navigate(`/agenda?patientId=${selectedEntity.id}`)}
+                          className="gap-1.5 h-8"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Agendar Sessão
+                        </Button>
+                      </div>
                       {selectedPatientApts.upcoming.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhuma consulta agendada.</p>
                       ) : (
