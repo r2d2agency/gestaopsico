@@ -466,60 +466,7 @@ export default function Financeiro() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function AccountRow({
-  account: a, selected, onToggle, onMarkPaid, delay,
-}: {
-  account: Account; selected: boolean; onToggle: () => void; onMarkPaid: () => void; delay: number;
-}) {
-  const sc = statusConfig[a.status] || statusConfig.pending;
-  const open = a.status !== "paid" && a.status !== "cancelled";
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay }}
-      className={`flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors ${selected ? "bg-primary/5" : ""}`}
-    >
-      <Checkbox checked={selected} onCheckedChange={onToggle} disabled={!open} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{a.description}</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground mt-0.5">
-              {a.patient?.name && <span>{a.patient.name}</span>}
-              <span className="flex items-center gap-1">
-                <CalendarClock className="w-3 h-3" />
-                Vence {format(new Date(a.dueDate), "dd 'de' MMM", { locale: ptBR })}
-              </span>
-              {a.paidAt && (
-                <span className="text-success flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" />
-                  Pago {format(new Date(a.paidAt), "dd/MM")}
-                </span>
-              )}
-              {a.paymentMethod && <span className="capitalize">{a.paymentMethod}</span>}
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="font-semibold text-foreground">{fmt(Number(a.value))}</p>
-            <Badge variant="outline" className={`text-[10px] mt-0.5 ${sc.class}`}>{sc.label}</Badge>
-          </div>
-          {open && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-success h-8 px-2"
-              onClick={onMarkPaid}
-              title="Dar baixa"
-            >
-              <CheckCircle className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+      
       {/* New Entry Dialog */}
       <Dialog open={entryDialogOpen} onOpenChange={setEntryDialogOpen}>
         <DialogContent>
@@ -577,6 +524,59 @@ function AccountRow({
         </DialogContent>
       </Dialog>
     </div>
-    </motion.div>
   );
 }
+
+function AccountRow({
+  account: a, selected, onToggle, onMarkPaid, delay,
+}: {
+  account: Account; selected: boolean; onToggle: () => void; onMarkPaid: () => void; delay: number;
+}) {
+  const sc = statusConfig[a.status] || statusConfig.pending;
+  const open = a.status !== "paid" && a.status !== "cancelled";
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay }}
+      className={`flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors ${selected ? "bg-primary/5" : ""}`}
+    >
+      <Checkbox checked={selected} onCheckedChange={onToggle} disabled={!open} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{a.description}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground mt-0.5">
+              {a.patient?.name && <span>{a.patient.name}</span>}
+              <span className="flex items-center gap-1">
+                <CalendarClock className="w-3 h-3" />
+                Vence {format(new Date(a.dueDate), "dd 'de' MMM", { locale: ptBR })}
+              </span>
+              {a.paidAt && (
+                <span className="text-success flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Pago {format(new Date(a.paidAt), "dd/MM")}
+                </span>
+              )}
+              {a.paymentMethod && <span className="capitalize">{a.paymentMethod}</span>}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-semibold text-foreground">{fmt(Number(a.value))}</p>
+            <Badge variant="outline" className={`text-[10px] mt-0.5 ${sc.class}`}>{sc.label}</Badge>
+          </div>
+          {open && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-success h-8 px-2"
+              onClick={onMarkPaid}
+              title="Dar baixa"
+            >
+              <CheckCircle className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
