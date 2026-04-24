@@ -169,14 +169,14 @@ export default function Financeiro() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Wallet}
-          label="A Receber (mês)"
+          label={`A Receber (${PERIODS.find(p => p.value === period)?.label || "mês"})`}
           value={fmt(summary?.pendingReceivable ?? 0)}
           change={summary?.overdueReceivable ? `${fmt(summary.overdueReceivable)} vencido` : ""}
           changeType="negative"
         />
         <StatCard
           icon={CheckCircle}
-          label="Recebido (mês)"
+          label={`Recebido (${PERIODS.find(p => p.value === period)?.label || "mês"})`}
           value={fmt(summary?.receivedAmount ?? 0)}
           change=""
           changeType="positive"
@@ -190,7 +190,7 @@ export default function Financeiro() {
         />
         <StatCard
           icon={AlertCircle}
-          label="A Pagar (mês)"
+          label={`A Pagar (${PERIODS.find(p => p.value === period)?.label || "mês"})`}
           value={fmt(summary?.pendingPayable ?? 0)}
           change=""
           changeType="negative"
