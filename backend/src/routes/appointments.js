@@ -75,9 +75,11 @@ function validateAppointmentPayload(data) {
 // GET /api/consultas
 router.get('/', async (req, res) => {
   try {
-    const { date, status, professional_id, startDate, endDate } = req.query;
+    const { date, status, professional_id, startDate, endDate, patientId, coupleId } = req.query;
     const where = { professionalId: professional_id || req.userId };
     if (status) where.status = status;
+    if (patientId) where.patientId = patientId;
+    if (coupleId) where.coupleId = coupleId;
 
     if (startDate && endDate) {
       where.date = {
