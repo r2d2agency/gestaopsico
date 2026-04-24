@@ -100,7 +100,7 @@ export default function Pacientes() {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepFound, setCepFound] = useState(false);
 
-  const { data: patients = [], isLoading } = usePatients(search || undefined);
+  const { data: patients = [], isLoading, isError, error } = usePatients(search || undefined);
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
   const deletePatient = useDeletePatient();
