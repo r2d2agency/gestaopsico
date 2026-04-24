@@ -52,6 +52,14 @@ export default function HomeworkManager({ patientId }: HomeworkManagerProps) {
     },
   });
 
+  const checkInTask = useMutation({
+    mutationFn: (id: string) => tasksApi.checkIn(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", patientId] });
+      toast.success("Tarefa marcada como concluída!");
+    },
+  });
+
   const handleAddTask = () => {
     if (!newTask.title) return;
     createTask.mutate(newTask);
