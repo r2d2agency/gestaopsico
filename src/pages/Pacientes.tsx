@@ -309,6 +309,15 @@ export default function Pacientes() {
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
         </div>
+      ) : isError ? (
+        <div className="text-center py-12 bg-destructive/5 rounded-xl border border-destructive/20">
+          <XCircle className="w-12 h-12 mx-auto mb-3 text-destructive opacity-50" />
+          <p className="text-lg font-medium text-destructive">Erro ao carregar pacientes</p>
+          <p className="text-sm mt-1 text-muted-foreground">{(error as Error)?.message || "Não foi possível conectar ao servidor"}</p>
+          <Button variant="outline" className="mt-4" onClick={() => qc.invalidateQueries({ queryKey: ["patients"] })}>
+            Tentar novamente
+          </Button>
+        </div>
       ) : patientList.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-lg font-medium">Nenhum paciente encontrado</p>
