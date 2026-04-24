@@ -58,7 +58,7 @@ export default function ClinicalMap({ patient }: Props) {
   return (
     <Card className="border-border/60 overflow-hidden">
       <CardHeader className="pb-3 flex flex-row items-center justify-between bg-muted/30">
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="text-base font-display font-bold flex items-center gap-2">
           <Brain className="w-5 h-5 text-primary" />
           Mapa Clínico Premium
         </CardTitle>
