@@ -506,7 +506,15 @@ export default function Prontuarios() {
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-primary" />
-                                <CardTitle className="text-base">{record.patient?.name || record.couple?.name || "—"}</CardTitle>
+                                <button
+                                  onClick={() => {
+                                    if (record.patientId && record.patient?.name) handleSelectEntity("patient", record.patientId, record.patient.name);
+                                    else if (record.coupleId && record.couple?.name) handleSelectEntity("couple", record.coupleId, record.couple.name);
+                                  }}
+                                  className="text-base font-semibold hover:text-primary transition-colors hover:underline"
+                                >
+                                  {record.patient?.name || record.couple?.name || "—"}
+                                </button>
                               </div>
                               <div className="flex items-center gap-1 flex-wrap">
                                 {record.modality === "test" ? (
