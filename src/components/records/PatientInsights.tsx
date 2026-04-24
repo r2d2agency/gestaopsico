@@ -12,7 +12,7 @@ import { ptBR } from "date-fns/locale";
 import {
   Sparkles, Brain, FileText, Tag, TrendingUp, AlertTriangle,
   Loader2, Copy, ClipboardCheck, CalendarPlus, Send, Lightbulb,
-  Target, MessageSquare, RefreshCw
+  Target, MessageSquare, RefreshCw, BarChart, History, Zap
 } from "lucide-react";
 import { toast } from "sonner";
 
