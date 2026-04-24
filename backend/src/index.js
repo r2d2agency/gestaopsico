@@ -27,6 +27,7 @@ const messagesRoutes = require('./routes/messages');
 const importRoutes = require('./routes/import');
 const telehealthRoutes = require('./routes/telehealth');
 const goalsRoutes = require('./routes/goals');
+const tasksRoutes = require('./routes/tasks');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -81,6 +82,7 @@ app.use('/api/messages', messagesRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/telehealth', telehealthRoutes);
 app.use('/api/goals', goalsRoutes);
+app.use('/api/tasks', tasksRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Psico Gleego API rodando na porta ${PORT}`);
