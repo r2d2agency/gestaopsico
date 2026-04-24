@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, DollarSign, FileText, Heart, Video,
   BarChart3, Settings, LogOut, Sparkles, Bot, Bell, ClipboardList, Shield,
   HelpCircle, MessageSquare, Building2, X, ChevronDown, Megaphone, FileUp,
-  MessagesSquare, Upload,
+  MessagesSquare, Upload, Library,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
