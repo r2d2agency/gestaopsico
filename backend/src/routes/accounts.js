@@ -97,6 +97,9 @@ router.get('/summary', async (req, res) => {
       cashFlow: receivedAmount - paidAmount,
       balance: totalReceivable - totalPayable
     });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao obter resumo financeiro', details: err.message });
+  }
 });
 
 // GET /api/accounts/tab-summary - counts and totals for dashboard tabs
