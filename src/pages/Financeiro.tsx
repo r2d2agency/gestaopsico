@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DollarSign, TrendingUp, AlertCircle, CheckCircle, Filter, Wallet,
-  CalendarClock, Send, ArrowDownToLine, Search, FileText, Clock,
+  CalendarClock, Send, ArrowDownToLine, Search, FileText, Clock, Plus, User,
 } from "lucide-react";
+import PatientSearchSelect from "@/components/PatientSearchSelect";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ export default function Financeiro() {
   const [period, setPeriod] = useState<string>("this_month");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -54,8 +56,9 @@ export default function Financeiro() {
     const p: Record<string, string> = { type: "receivable" };
     if (period !== "all") p.period = period;
     if (statusFilter !== "all") p.status = statusFilter;
+    if (selectedPatientId) p.patientId = selectedPatientId;
     return p;
-  }, [period, statusFilter]);
+  }, [period, statusFilter, selectedPatientId]);
 
   const { data: accountsData, isLoading } = useQuery({
     queryKey: ["accounts", queryParams],
@@ -163,6 +166,9 @@ export default function Financeiro() {
           <h1 className="text-2xl font-display font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground mt-1 text-sm">Gestão de cobranças, baixas e previsão</p>
         </div>
+        <Button className="gradient-primary border-0 shadow-glow" onClick={() => setChargeDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
+        </Button>
       </div>
 
       {/* Summary KPIs */}
@@ -223,7 +229,14 @@ export default function Financeiro() {
               );
             })}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="w-full md:w-[280px]">
+              <PatientSearchSelect 
+                value={selectedPatientId} 
+                onValueChange={setSelectedPatientId}
+                placeholder="Filtrar por paciente..."
+              />
+            </div>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
