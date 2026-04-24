@@ -238,9 +238,26 @@ model Patient {
   userAccounts     User[]        @relation("patientUser")
   portalMessages   PatientPortalMessage[]
   telehealthSessions TelehealthSession[] @relation("telehealthPatient")
+  goals              Goal[]
 
   @@unique([cpf, professionalId])
   @@map("patients")
+}
+
+model Goal {
+  id             String    @id @default(uuid()) @db.Uuid
+  patientId      String    @map("patient_id") @db.Uuid
+  patient        Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  title          String    @db.VarChar(255)
+  description    String?
+  status         String    @default("pending") @db.VarChar(20) // pending, in_progress, completed
+  progress       Int       @default(0)
+  targetDate     DateTime? @map("target_date") @db.Date
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("goals")
 }
 
 model Couple {

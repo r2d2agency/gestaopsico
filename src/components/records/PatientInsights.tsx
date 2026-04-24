@@ -12,7 +12,7 @@ import { ptBR } from "date-fns/locale";
 import {
   Sparkles, Brain, FileText, Tag, TrendingUp, AlertTriangle,
   Loader2, Copy, ClipboardCheck, CalendarPlus, Send, Lightbulb,
-  Target, MessageSquare, RefreshCw
+  Target, MessageSquare, RefreshCw, BarChart, History, Zap
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +31,8 @@ export default function PatientInsights({
 }: PatientInsightsProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("default");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [evolutionAnalysis, setEvolutionAnalysis] = useState<any | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const { data: agents = [] } = useAiAgents();
   const analyzeMutation = useAnalyzeText();
@@ -123,6 +125,23 @@ Seja objetivo, clínico e prático. Lembre-se: este é apoio organizacional, nã
       setAiSummary(result.analysis);
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar resumo");
+    }
+  };
+
+  const handleEvolutionAnalysis = async () => {
+    if (records.length < 2) {
+      toast.error("São necessárias pelo menos 2 sessões para análise evolutiva");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const result = await recordsApi.patientAnalysis(patientId);
+      setEvolutionAnalysis(result.analysis);
+      toast.success("Análise evolutiva concluída!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao analisar evolução");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -294,6 +313,135 @@ Seja objetivo, clínico e prático. Lembre-se: este é apoio organizacional, nã
             <div className="text-center py-6 text-sm text-muted-foreground">
               <ClipboardCheck className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
               Registre pelo menos uma sessão para gerar um resumo.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* AI Evolution Analysis & Trends */}
+      <Card className="border-primary/30">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Tendências e Mudanças Recentes
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">Detecção automática de mudanças emocionais e comportamentais</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleEvolutionAnalysis} 
+            disabled={isAnalyzing || records.length < 2}
+            className="gap-2"
+          >
+            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Analisar Tendências
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!evolutionAnalysis && !isAnalyzing && (
+            <div className="text-center py-6">
+              <BarChart className="w-12 h-12 text-muted-foreground mb-2 mx-auto opacity-20" />
+              <p className="text-sm text-muted-foreground">Clique em "Analisar Tendências" para processar o histórico de sessões.</p>
+            </div>
+          )}
+
+          {isAnalyzing && (
+            <div className="space-y-4 py-6">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm font-medium animate-pulse">A IA está processando {records.length} sessões...</p>
+              </div>
+            </div>
+          )}
+
+          {evolutionAnalysis && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              {/* Emotional Evolution */}
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-2">
+                  <Zap className="w-4 h-4" /> Evolução Emocional Recente
+                </h4>
+                <p className="text-sm text-foreground leading-relaxed">
+                  {evolutionAnalysis.emotionalEvolution || evolutionAnalysis.rawText}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Changes & Patterns */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2">
+                      <RefreshCw className="w-3.5 h-3.5" /> Mudanças de Padrão
+                    </h4>
+                    <ul className="space-y-1.5">
+                      {evolutionAnalysis.patternChanges?.map((change: string, i: number) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                          {change}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2">
+                      <History className="w-3.5 h-3.5" /> Períodos Críticos
+                    </h4>
+                    <ul className="space-y-1.5">
+                      {evolutionAnalysis.criticalPeriods?.map((period: string, i: number) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                          {period}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Attention Points & Themes */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-3.5 h-3.5" /> Pontos de Atenção
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {evolutionAnalysis.attentionPoints?.map((point: string, i: number) => (
+                        <Badge key={i} variant="outline" className="bg-destructive/5 text-destructive border-destructive/20">
+                          {point}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  {evolutionAnalysis.themeFrequency && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2">
+                        <Tag className="w-3.5 h-3.5" /> Tendência de Temas
+                      </h4>
+                      <div className="space-y-2">
+                        {evolutionAnalysis.themeFrequency.slice(0, 4).map((item: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{item.theme}</span>
+                            <Badge variant="outline" className={
+                              item.trend === 'crescente' ? 'text-destructive border-destructive/20 bg-destructive/5' :
+                              item.trend === 'decrescente' ? 'text-success border-success/20 bg-success/5' : ''
+                            }>
+                              {item.trend}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {evolutionAnalysis.overallProgress && (
+                <div className="pt-4 border-t">
+                  <h4 className="text-sm font-bold mb-2">Resumo do Progresso</h4>
+                  <p className="text-sm text-muted-foreground">{evolutionAnalysis.overallProgress}</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
