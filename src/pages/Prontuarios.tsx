@@ -363,7 +363,10 @@ export default function Prontuarios() {
 
             {/* Dashboard summary row */}
             <div className="mb-6">
-              <ClinicalDashboard />
+              <ClinicalDashboard 
+                onSelectPatient={(id, name) => handleSelectEntity("patient", id, name)}
+                onSelectCouple={(id, name) => handleSelectEntity("couple", id, name)}
+              />
             </div>
 
             {/* Cards grid */}
