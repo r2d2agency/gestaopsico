@@ -42,10 +42,10 @@ export default function PatientHub({ patientId, patientName, onNavigate }: Props
     enabled: !!patientId,
   });
 
-  // Appointments
-  const { data: allApts = [] } = useQuery<Consulta[]>({
+  // Appointments for the selected patient
+  const { data: apts = [] } = useQuery<Consulta[]>({
     queryKey: ["patient-appointments-hub", patientId],
-    queryFn: () => consultasApi.list({}),
+    queryFn: () => consultasApi.list({ patientId }),
     enabled: !!patientId,
   });
 
@@ -56,10 +56,8 @@ export default function PatientHub({ patientId, patientName, onNavigate }: Props
     enabled: !!patientId,
   });
 
-  const apts = useMemo(
-    () => allApts.filter((a: any) => a.patientId === patientId || a.patient?.id === patientId || a.patient_id === patientId),
-    [allApts, patientId]
-  );
+  // apts is already filtered now by patientId in the queryFn
+
 
   const stats = useMemo(() => {
     const today = new Date();
