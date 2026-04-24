@@ -395,7 +395,7 @@ export default function Prontuarios() {
           /* =================== DETAIL VIEW (records, evolution, dashboard) =================== */
           <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <Tabs value={detailTab} onValueChange={setDetailTab}>
-              <TabsList className={`grid w-full max-w-4xl ${selectedEntity.type === "patient" ? "grid-cols-7" : "grid-cols-4"}`}>
+              <TabsList className={`grid w-full max-w-4xl ${selectedEntity.type === "patient" ? "grid-cols-8" : "grid-cols-5"}`}>
                 {selectedEntity.type === "patient" && (
                   <TabsTrigger value="overview" className="flex items-center gap-1.5">
                     <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Visão Geral</span>
@@ -403,6 +403,9 @@ export default function Prontuarios() {
                 )}
                 <TabsTrigger value="records" className="flex items-center gap-1.5">
                   <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Sessões</span>
+                </TabsTrigger>
+                <TabsTrigger value="goals" className="flex items-center gap-1.5">
+                  <Target className="w-4 h-4" /> <span className="hidden sm:inline">Objetivos</span>
                 </TabsTrigger>
                 <TabsTrigger value="agenda" className="flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4" /> <span className="hidden sm:inline">Agenda</span>
