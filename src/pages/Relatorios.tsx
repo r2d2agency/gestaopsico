@@ -248,6 +248,7 @@ export default function Relatorios() {
             <SelectContent>
               <SelectItem value="week">Esta Semana</SelectItem>
               <SelectItem value="month">Este Mês</SelectItem>
+              <SelectItem value="next_month">Próximo Mês</SelectItem>
               <SelectItem value="quarter">Trimestre</SelectItem>
               <SelectItem value="year">Este Ano</SelectItem>
               <SelectItem value="custom">Personalizado</SelectItem>
