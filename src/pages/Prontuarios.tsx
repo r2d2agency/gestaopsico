@@ -427,10 +427,9 @@ export default function Prontuarios() {
               {/* Visão Geral - Hub Clínico 360º */}
               {selectedEntity.type === "patient" && (
                 <TabsContent value="overview" className="mt-4">
-                  <PatientHub
+                  <PremiumClinicalRecord
                     patientId={selectedEntity.id}
                     patientName={selectedEntity.name}
-                    onNavigate={setDetailTab}
                   />
                 </TabsContent>
               )}
