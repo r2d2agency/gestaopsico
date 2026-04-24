@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { Home, Calendar, BookOpen, Settings } from "lucide-react";
+import { Home, Calendar, BookOpen, Settings, ListTodo } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { patientPortalApi } from "@/lib/portalApi";
@@ -17,6 +17,7 @@ export default function PatientAppLayout() {
     { to: basePath, icon: Home, label: "Início" },
     { to: `${basePath}/consultas`, icon: Calendar, label: "Agenda" },
     { to: `${basePath}/mensagens`, icon: BookOpen, label: "Diário" },
+    { to: `${basePath}/tarefas`, icon: ListTodo, label: "Tarefas" },
     { to: `${basePath}/configuracoes`, icon: Settings, label: "Config" },
   ];
 
