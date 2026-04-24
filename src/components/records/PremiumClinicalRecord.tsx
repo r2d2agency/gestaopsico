@@ -120,7 +120,7 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
 
         <div className="flex items-center gap-3">
           <Button variant="outline" className="h-11 rounded-xl gap-2 border-border/60 hover:bg-muted/50 transition-all">
-            <Lock className="w-4 h-4 text-amber-500" /> Hipóteses Privadas
+            <Brain className="w-4 h-4 text-indigo-500" /> Hipóteses Clínicas
           </Button>
           <Button className="h-11 rounded-xl gradient-primary border-0 shadow-lg shadow-primary/20 gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all">
             <Plus className="w-4 h-4" /> Nova Sessão
