@@ -730,7 +730,13 @@ export default function Prontuarios() {
                                       {couple.patient1?.name}
                                     </button>
                                     {couple.patient1?.email && <p className="text-xs text-muted-foreground">{couple.patient1.email}</p>}
-...
+                                    {couple.patient1?.phone && <p className="text-xs text-muted-foreground">{couple.patient1.phone}</p>}
+                                  </CardContent>
+                                </Card>
+                                <Card className="border-border/60">
+                                  <CardContent className="pt-4">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <User className="w-4 h-4 text-primary" />
                                       <span className="font-medium text-sm">Paciente 2</span>
                                     </div>
                                     <button
