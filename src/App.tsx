@@ -85,6 +85,7 @@ const App = () => (
               <Route path="/p/:slug/portal/consultas" element={<PatientAppointments />} />
               <Route path="/p/:slug/portal/financeiro" element={<PatientFinancial />} />
               <Route path="/p/:slug/portal/mensagens" element={<PatientMessages />} />
+              <Route path="/p/:slug/portal/tarefas" element={<PatientTasks />} />
               <Route path="/p/:slug/portal/configuracoes" element={<PatientSettings />} />
             </Route>
             {/* App normal (professional) */}
