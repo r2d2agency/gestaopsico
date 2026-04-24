@@ -19,7 +19,8 @@ router.get('/', async (req, res) => {
     });
     res.json(goals);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar objetivos' });
+    console.error('Error fetching goals:', err);
+    res.status(500).json({ error: 'Erro ao listar objetivos', details: err.message });
   }
 });
 
