@@ -64,7 +64,8 @@ router.put('/:id', async (req, res) => {
     });
     res.json(goal);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar objetivo' });
+    console.error('Error updating goal:', err);
+    res.status(500).json({ error: 'Erro ao atualizar objetivo', details: err.message });
   }
 });
 
@@ -76,7 +77,8 @@ router.delete('/:id', async (req, res) => {
     });
     res.json({ message: 'Objetivo excluído' });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao excluir objetivo' });
+    console.error('Error deleting goal:', err);
+    res.status(500).json({ error: 'Erro ao excluir objetivo', details: err.message });
   }
 });
 
