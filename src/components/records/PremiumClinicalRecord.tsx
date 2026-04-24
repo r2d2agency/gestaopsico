@@ -129,7 +129,7 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
       {/* Navigation Tabs Premium */}
       <Tabs value={activeView} onValueChange={setActiveView} className="w-full">
         <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-1 overflow-x-auto no-scrollbar border-b border-border/40 pb-px">
-          <TabTrigger value="overview" icon={LayoutGridIcon} label="Visão Geral" />
+          <TabTrigger value="overview" icon={LayoutGrid} label="Visão Geral" />
           <TabTrigger value="map" icon={Map} label="Mapa Clínico" />
           <TabTrigger value="evolution" icon={TrendingUp} label="Evolução & Objetivos" />
           <TabTrigger value="tasks" icon={ListTodo} label="Tarefas & Vida" />
