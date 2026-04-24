@@ -145,7 +145,53 @@ export default function Financeiro() {
     },
     onError: (e: any) => toast.error(e.message || "Erro"),
   });
-...
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">Financeiro</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Gestão de cobranças, baixas e previsão</p>
+        </div>
+      </div>
+
+      {/* Summary KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={Wallet}
+          label="A Receber (mês)"
+          value={fmt(summary?.pendingReceivable ?? 0)}
+          change={summary?.overdueReceivable ? `${fmt(summary.overdueReceivable)} vencido` : ""}
+          changeType="negative"
+        />
+        <StatCard
+          icon={CheckCircle}
+          label="Recebido (mês)"
+          value={fmt(summary?.receivedAmount ?? 0)}
+          change=""
+          changeType="positive"
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Fluxo de Caixa"
+          value={fmt(summary?.cashFlow ?? 0)}
+          change=""
+          changeType={(summary?.cashFlow ?? 0) >= 0 ? "positive" : "negative"}
+        />
+        <StatCard
+          icon={AlertCircle}
+          label="A Pagar (mês)"
+          value={fmt(summary?.pendingPayable ?? 0)}
+          change=""
+          changeType="negative"
+        />
+      </div>
+
+      {/* Filter bar */}
+      <Card className="border-border/60">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
             {PERIODS.map(p => {
               const stats = tabSummary?.[p.value];
               return (
