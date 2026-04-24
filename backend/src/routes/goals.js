@@ -40,7 +40,8 @@ router.post('/', async (req, res) => {
     });
     res.status(201).json(goal);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar objetivo' });
+    console.error('Error creating goal:', err);
+    res.status(500).json({ error: 'Erro ao criar objetivo', details: err.message });
   }
 });
 
