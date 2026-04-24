@@ -187,8 +187,8 @@ export default function Dashboard() {
               {[
                 { label: "Cadastrar pacientes", description: "Adicione seus primeiros pacientes", to: "/pacientes", icon: Users },
                 { label: "Agendar consultas", description: "Crie sua primeira consulta", to: "/agenda", icon: Calendar },
+                { label: "Definir tarefas", description: "Atividades para pacientes", to: "/pacientes", icon: ListTodo },
                 { label: "Configurar testes", description: "Importe testes validados", to: "/testes", icon: ClipboardList },
-                { label: "Ver financeiro", description: "Controle pagamentos e faturamento", to: "/financeiro", icon: DollarSign },
               ].map((item, i) => (
                 <Link key={i} to={item.to} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
