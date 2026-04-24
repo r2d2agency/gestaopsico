@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recordsApi, type RecordData } from "@/lib/recordsApi";
 import { moodApi } from "@/lib/portalApi";
 import { pacientesApi, type Patient, type Consulta, consultasApi } from "@/lib/api";
@@ -13,12 +13,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import {
   Activity, AlertTriangle, Brain, Calendar, CheckCircle2, ChevronRight,
   Clock, FileText, Heart, Lightbulb, Target, TrendingUp, User, Users,
   Zap, BookOpen, Frown, Meh, Smile, Sparkles, Map, ListTodo, ShieldAlert,
   Flame, Briefcase, Users2, Link2, Search, Plus, Filter, MessageSquare,
-  Lock, History, Info, BarChart3, ArrowRight, Tag, LayoutGrid
+  Lock, History, Info, BarChart3, ArrowRight, Tag, LayoutGrid, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
