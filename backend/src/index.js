@@ -26,6 +26,7 @@ const teamRoutes = require('./routes/team');
 const messagesRoutes = require('./routes/messages');
 const importRoutes = require('./routes/import');
 const telehealthRoutes = require('./routes/telehealth');
+const goalsRoutes = require('./routes/goals');
 
 const prisma = new PrismaClient();
 const app = express();
