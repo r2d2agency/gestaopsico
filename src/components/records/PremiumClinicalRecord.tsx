@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import HomeworkManager from "./HomeworkManager";
+
 
 interface PremiumClinicalRecordProps {
   patientId: string;
@@ -327,18 +329,9 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
             {/* TAREFAS & VIDA */}
             <TabsContent value="tasks" className="space-y-6 mt-0 focus-visible:outline-none">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="border-border/60">
-                  <CardHeader className="flex flex-row items-center justify-between pb-4">
-                    <CardTitle className="text-lg font-display flex items-center gap-2">
-                      <ListTodo className="w-5 h-5 text-indigo-500" /> Tarefas Terapêuticas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <TaskItem title="Diário de Gratidão" adherence={90} status="high" date="Diário" />
-                    <TaskItem title="Caminhada 20min" adherence={40} status="low" date="3x/semana" />
-                    <TaskItem title="Leitura Capítulo 3" adherence={100} status="completed" date="Concluído" />
-                  </CardContent>
-                </Card>
+                <div className="lg:col-span-1">
+                  <HomeworkManager patientId={patientId} />
+                </div>
 
                 <Card className="border-border/60">
                   <CardHeader>

@@ -38,6 +38,8 @@ import PatientMessages from "./pages/patient/PatientMessages";
 import PatientSettings from "./pages/patient/PatientSettings";
 import PatientAppointments from "./pages/patient/PatientAppointments";
 import PatientFinancial from "./pages/patient/PatientFinancial";
+import PatientTasks from "./pages/patient/PatientTasks";
+
 import NotFound from "./pages/NotFound";
 import HelpPage from "./pages/HelpPage";
 import PortalLogin from "./pages/PortalLogin";
@@ -83,6 +85,7 @@ const App = () => (
               <Route path="/p/:slug/portal/consultas" element={<PatientAppointments />} />
               <Route path="/p/:slug/portal/financeiro" element={<PatientFinancial />} />
               <Route path="/p/:slug/portal/mensagens" element={<PatientMessages />} />
+              <Route path="/p/:slug/portal/tarefas" element={<PatientTasks />} />
               <Route path="/p/:slug/portal/configuracoes" element={<PatientSettings />} />
             </Route>
             {/* App normal (professional) */}
