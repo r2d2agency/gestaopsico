@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Users, Calendar, DollarSign, Clock, Plus, ArrowRight, Brain, ClipboardList, Lightbulb, AlertCircle, TrendingUp } from "lucide-react";
+import { Users, Calendar, DollarSign, Clock, Plus, ArrowRight, Brain, ClipboardList, Lightbulb, AlertCircle, TrendingUp, ListTodo } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
