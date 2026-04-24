@@ -15,16 +15,17 @@ import {
   Target, TrendingUp, User, Video, XCircle, Zap, BookOpen, Frown, Meh
 } from "lucide-react";
 import { motion } from "framer-motion";
+import ClinicalMap from "./ClinicalMap";
+
+const MOOD_LABELS = ["", "Muito ruim", "Ruim", "Neutro", "Bom", "Ótimo"];
+const MOOD_ICONS = [null, Frown, Frown, Meh, Smile, Smile];
+const MOOD_COLORS = ["", "text-destructive", "text-orange-500", "text-amber-500", "text-emerald-500", "text-emerald-600"];
 
 interface Props {
   patientId: string;
   patientName: string;
   onNavigate?: (tab: string) => void;
 }
-
-const MOOD_LABELS = ["", "Muito ruim", "Ruim", "Neutro", "Bom", "Ótimo"];
-const MOOD_ICONS = [null, Frown, Frown, Meh, Smile, Smile];
-const MOOD_COLORS = ["", "text-destructive", "text-orange-500", "text-amber-500", "text-emerald-500", "text-emerald-600"];
 
 export default function PatientHub({ patientId, patientName, onNavigate }: Props) {
   // Patient details
@@ -264,6 +265,13 @@ export default function PatientHub({ patientId, patientName, onNavigate }: Props
           </div>
         </Card>
       </motion.div>
+
+      {/* ====== MAPA CLÍNICO PREMIUM ====== */}
+      {patient && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <ClinicalMap patient={patient} />
+        </motion.div>
+      )}
 
       {/* ====== KPI CARDS ====== */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
