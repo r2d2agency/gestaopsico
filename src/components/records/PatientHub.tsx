@@ -15,16 +15,11 @@ import {
   Target, TrendingUp, User, Video, XCircle, Zap, BookOpen, Frown, Meh
 } from "lucide-react";
 import { motion } from "framer-motion";
+import ClinicalMap from "./ClinicalMap";
 
 interface Props {
   patientId: string;
-  patientName: string;
-  onNavigate?: (tab: string) => void;
-}
-
-const MOOD_LABELS = ["", "Muito ruim", "Ruim", "Neutro", "Bom", "Ótimo"];
-const MOOD_ICONS = [null, Frown, Frown, Meh, Smile, Smile];
-const MOOD_COLORS = ["", "text-destructive", "text-orange-500", "text-amber-500", "text-emerald-500", "text-emerald-600"];
+...
 
 export default function PatientHub({ patientId, patientName, onNavigate }: Props) {
   // Patient details
