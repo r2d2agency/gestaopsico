@@ -148,8 +148,18 @@ export default function PremiumClinicalRecord({ patientId, patientName }: Premiu
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="h-11 rounded-xl gap-2 border-border/60 hover:bg-muted/50 transition-all">
-            <Brain className="w-4 h-4 text-indigo-500" /> Hipóteses Clínicas
+          <Button 
+            variant="outline" 
+            className="h-11 rounded-xl gap-2 border-border/60 hover:bg-muted/50 transition-all"
+            onClick={() => generateHypotheses.mutate()}
+            disabled={generateHypotheses.isPending}
+          >
+            {generateHypotheses.isPending ? (
+              <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+            ) : (
+              <Brain className="w-4 h-4 text-indigo-500" />
+            )}
+            {generateHypotheses.isPending ? "Gerando..." : "Hipóteses Clínicas"}
           </Button>
           <Button className="h-11 rounded-xl gradient-primary border-0 shadow-lg shadow-primary/20 gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all">
             <Plus className="w-4 h-4" /> Nova Sessão
