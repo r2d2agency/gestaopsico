@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, DollarSign, FileText, Heart, Video,
   BarChart3, Settings, LogOut, Sparkles, Bot, Bell, ClipboardList, Shield,
   HelpCircle, MessageSquare, Building2, X, ChevronDown, Megaphone, FileUp,
-  MessagesSquare, Upload,
+  MessagesSquare, Upload, Library,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +20,7 @@ const mainNav: NavItem[] = [
   { icon: Users, label: "Pacientes", path: "/pacientes", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Heart, label: "Casais", path: "/casais", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Calendar, label: "Agenda", path: "/agenda", roles: ["admin", "professional", "psychologist", "secretary", "secretary_financial", "superadmin"] },
-  { icon: Video, label: "Consultas", path: "/consultas", roles: ["admin", "professional", "psychologist", "secretary", "secretary_financial", "superadmin"] },
+  { icon: Library, label: "Recursos Terapêuticos", path: "/recursos", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: FileText, label: "Prontuários", path: "/prontuarios", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: Video, label: "Teleatendimento", path: "/teleatendimento", roles: ["admin", "professional", "psychologist", "superadmin"] },
   { icon: DollarSign, label: "Financeiro", path: "/financeiro", roles: ["admin", "professional", "psychologist", "financial", "secretary_financial", "superadmin"] },
