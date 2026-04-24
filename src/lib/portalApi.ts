@@ -62,6 +62,8 @@ export const accountsApi = {
     ),
   summary: (month?: string) =>
     apiRequest<AccountsSummary>(`/accounts/summary${month ? `?month=${month}` : ""}`),
+  tabSummary: () =>
+    apiRequest<Record<string, { count: number; total: number }>>(`/accounts/tab-summary`),
   patientFinancial: (patientId: string) =>
     apiRequest<PatientFinancialView>(`/accounts/patient/${patientId}/financial`),
   bulkPay: (data: { ids: string[]; paymentMethod?: string; paidAt?: string }) =>
