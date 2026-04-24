@@ -35,12 +35,40 @@ const MOOD_COLORS = ["", "text-destructive", "text-orange-500", "text-amber-500"
 
 export default function PremiumClinicalRecord({ patientId, patientName }: PremiumClinicalRecordProps) {
   const [activeView, setActiveView] = useState("overview");
+  const queryClient = useQueryClient();
 
   // Data fetching
-  const { data: patient } = useQuery<Patient>({
+  const { data: patient, isLoading: loadingPatient } = useQuery<Patient>({
     queryKey: ["patient", patientId],
     queryFn: () => pacientesApi.get(patientId),
     enabled: !!patientId,
+  });
+
+  const generateHypotheses = useMutation({
+    mutationFn: async () => {
+      const response = await recordsApi.patientAnalysis(patientId);
+      const { analysis } = response;
+      
+      if (!analysis) throw new Error("Não foi possível gerar a análise.");
+
+      // Update patient record with the new insights
+      const updateData: Partial<Patient> = {
+        emotional_patterns: analysis.identifiedPatterns?.join('\n'),
+        triggers: analysis.attentionPoints?.join('\n'), // Using attention points as triggers or similar
+        defense_mechanisms: analysis.patternChanges?.join('\n'),
+      };
+
+      await pacientesApi.update(patientId, updateData);
+      return analysis;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient", patientId] });
+      toast.success("Hipóteses Clínicas geradas com sucesso!");
+      setActiveView("map");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao gerar hipóteses clínicas. Certifique-se de que há pelo menos 2 sessões registradas.");
+    }
   });
 
   const { data: timeline } = useQuery({
