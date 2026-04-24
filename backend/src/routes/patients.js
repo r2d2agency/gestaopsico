@@ -100,6 +100,9 @@ function mapPatient(p) {
     charge_enabled: p.chargeEnabled,
     registration_token: p.registrationToken,
     registration_completed: p.registrationCompleted,
+    emotional_patterns: p.emotionalPatterns,
+    triggers: p.triggers,
+    defense_mechanisms: p.defenseMechanisms,
   };
 }
 
