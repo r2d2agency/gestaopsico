@@ -183,9 +183,9 @@ export default function PatientGoals({ patientId, patientName }: PatientGoalsPro
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className={`font-semibold text-lg ${goal.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{goal.title}</h3>
-                      <Badge variant={goal.status === 'completed' ? 'success' : goal.status === 'in_progress' ? 'default' : 'secondary'}>
-                        {goal.status === 'completed' ? 'Concluído' : goal.status === 'in_progress' ? 'Em andamento' : 'Pendente'}
-                      </Badge>
+                    <Badge variant={goal.status === 'completed' ? 'outline' : goal.status === 'in_progress' ? 'default' : 'secondary'} className={goal.status === 'completed' ? 'bg-success/10 text-success border-success/20' : ''}>
+                      {goal.status === 'completed' ? 'Concluído' : goal.status === 'in_progress' ? 'Em andamento' : 'Pendente'}
+                    </Badge>
                     </div>
                     {goal.description && <p className="text-sm text-muted-foreground line-clamp-2">{goal.description}</p>}
                     
