@@ -17,7 +17,7 @@ import {
   Clock, FileText, Heart, Lightbulb, Target, TrendingUp, User, Users,
   Zap, BookOpen, Frown, Meh, Smile, Sparkles, Map, ListTodo, ShieldAlert,
   Flame, Briefcase, Users2, Link2, Search, Plus, Filter, MessageSquare,
-  Lock, History, Info, BarChart3, ArrowRight
+  Lock, History, Info, BarChart3, ArrowRight, Tag, LayoutGrid
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
