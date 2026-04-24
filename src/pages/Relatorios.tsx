@@ -42,9 +42,48 @@ export default function Relatorios() {
   const [dateEnd, setDateEnd] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
+  const activeRange = useMemo(() => {
+    const now = new Date();
+    let start: string | undefined = undefined;
+    let end: string | undefined = undefined;
+
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+    if (period === "week") {
+      const s = new Date(now);
+      s.setDate(now.getDate() - now.getDay());
+      const e = new Date(s);
+      e.setDate(s.getDate() + 6);
+      start = fmt(s); end = fmt(e);
+    } else if (period === "month") {
+      start = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+      end = fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    } else if (period === "next_month") {
+      start = fmt(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+      end = fmt(new Date(now.getFullYear(), now.getMonth() + 2, 0));
+    } else if (period === "quarter") {
+      const quarter = Math.floor(now.getMonth() / 3);
+      start = fmt(new Date(now.getFullYear(), quarter * 3, 1));
+      end = fmt(new Date(now.getFullYear(), (quarter + 1) * 3, 0));
+    } else if (period === "year") {
+      start = fmt(new Date(now.getFullYear(), 0, 1));
+      end = fmt(new Date(now.getFullYear(), 11, 31));
+    } else if (period === "custom") {
+      start = dateStart || undefined;
+      end = dateEnd || undefined;
+    }
+    return { start, end };
+  }, [period, dateStart, dateEnd]);
+
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
-  const { data: appointments = [], isLoading: loadingAppts } = useAppointments();
-  const { data: payments = [], isLoading: loadingPayments } = useFinancialList({ startDate: dateStart || undefined, endDate: dateEnd || undefined });
+  const { data: appointments = [], isLoading: loadingAppts } = useAppointments({ 
+    startDate: activeRange.start, 
+    endDate: activeRange.end 
+  });
+  const { data: payments = [], isLoading: loadingPayments } = useFinancialList({ 
+    startDate: activeRange.start, 
+    endDate: activeRange.end 
+  });
   const { data: summary, isLoading: loadingSummary } = useFinancialSummary();
   const { data: dashSummary, isLoading: loadingDash } = useDashboardSummary();
 
@@ -55,28 +94,68 @@ export default function Relatorios() {
 
   // ── Derived metrics ──
   const metrics = useMemo(() => {
+    // ── Date Filtering ──
+    const now = new Date();
+    let startLimit: Date | null = null;
+    let endLimit: Date | null = null;
+
+    if (period === "week") {
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0, 0, 0, 0);
+      startLimit = start;
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      endLimit = end;
+    } else if (period === "month") {
+      startLimit = new Date(now.getFullYear(), now.getMonth(), 1);
+      endLimit = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (period === "next_month") {
+      startLimit = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      endLimit = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59, 999);
+    } else if (period === "quarter") {
+      const quarter = Math.floor(now.getMonth() / 3);
+      startLimit = new Date(now.getFullYear(), quarter * 3, 1);
+      endLimit = new Date(now.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
+    } else if (period === "year") {
+      startLimit = new Date(now.getFullYear(), 0, 1);
+      endLimit = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (period === "custom" && dateStart && dateEnd) {
+      startLimit = new Date(dateStart + "T00:00:00");
+      endLimit = new Date(dateEnd + "T23:59:59");
+    }
+
+    const filterByDate = (dateStr: string | Date | undefined) => {
+      if (!dateStr || !startLimit || !endLimit) return true;
+      const d = new Date(dateStr);
+      return d >= startLimit && d <= endLimit;
+    };
+
+    const filteredAppts = appointments.filter(a => filterByDate(a.date));
+    const filteredPayments = payments.filter(p => filterByDate(p.date));
+
     const activePatients = patients.filter((p) => p.status === "active").length;
     const inactivePatients = patients.filter((p) => p.status === "inactive").length;
     const totalPatients = patients.length;
     const retentionRate = totalPatients > 0 ? Math.round((activePatients / totalPatients) * 100) : 0;
 
-    const completedAppts = appointments.filter((a) => a.status === "completed");
-    const cancelledAppts = appointments.filter((a) => a.status === "cancelled");
-    const scheduledAppts = appointments.filter((a) => a.status === "scheduled");
+    const completedAppts = filteredAppts.filter((a) => a.status === "completed");
+    const cancelledAppts = filteredAppts.filter((a) => a.status === "cancelled");
+    const scheduledAppts = filteredAppts.filter((a) => a.status === "scheduled");
     const attendedAppts = completedAppts.filter((a) => a.attended !== false);
+    
     const attendanceRate = completedAppts.length > 0
       ? Math.round((attendedAppts.length / completedAppts.length) * 100) : 0;
-    const cancelRate = appointments.length > 0
-      ? Math.round((cancelledAppts.length / appointments.length) * 100) : 0;
+    const cancelRate = filteredAppts.length > 0
+      ? Math.round((cancelledAppts.length / filteredAppts.length) * 100) : 0;
 
-    const paidPayments = payments.filter((p) => p.status === "paid");
-    const pendingPayments = payments.filter((p) => p.status === "pending");
-    const overduePayments = payments.filter((p) => p.status === "overdue");
-
-    const totalRevenue = summary?.total_revenue ?? 0;
-    const received = summary?.received ?? 0;
-    const pending = summary?.pending ?? 0;
-    const avgTicket = summary?.average_ticket ?? 0;
+    const paidPayments = filteredPayments.filter((p) => p.status === "paid");
+    
+    const totalRevenue = filteredPayments.reduce((s, p) => s + (p.value || 0), 0);
+    const received = paidPayments.reduce((s, p) => s + (p.value || 0), 0);
+    const pending = filteredPayments.filter(p => p.status === "pending" || p.status === "overdue").reduce((s, p) => s + (p.value || 0), 0);
+    const avgTicket = completedAppts.length > 0 ? totalRevenue / completedAppts.length : 0;
 
     // Revenue by method
     const revenueByMethod: Record<string, number> = {};
@@ -93,8 +172,8 @@ export default function Relatorios() {
     }));
 
     // Appts by type
-    const individualAppts = appointments.filter((a) => a.type === "individual").length;
-    const coupleAppts = appointments.filter((a) => a.type === "couple").length;
+    const individualAppts = filteredAppts.filter((a) => a.type === "individual").length;
+    const coupleAppts = filteredAppts.filter((a) => a.type === "couple").length;
     const apptsByType = [
       { name: "Individual", value: individualAppts },
       { name: "Casal", value: coupleAppts },
@@ -139,7 +218,7 @@ export default function Relatorios() {
 
     // Top patients by sessions
     const sessionsByPatient: Record<string, { name: string; count: number; revenue: number }> = {};
-    appointments.forEach((a) => {
+    filteredAppts.forEach((a) => {
       const pid = a.patient_id || a.patient?.id || "unknown";
       const pname = a.patient?.name || "Sem nome";
       if (!sessionsByPatient[pid]) sessionsByPatient[pid] = { name: pname, count: 0, revenue: 0 };
@@ -152,10 +231,9 @@ export default function Relatorios() {
     const maxSessions = topPatients[0]?.count || 1;
 
     // Forecasting: simple projection
-    const currentMonth = new Date().getMonth();
     const avgMonthlyRevenue = Object.values(monthlyRevenue).length > 0
       ? Object.values(monthlyRevenue).reduce((a, b) => a + b, 0) / Object.values(monthlyRevenue).length
-      : 0;
+      : received;
     const projectedAnnual = avgMonthlyRevenue * 12;
     const avgMonthlyPatients = Object.values(patientsByMonth).length > 0
       ? Object.values(patientsByMonth).reduce((a, b) => a + b, 0) / Object.values(patientsByMonth).length
@@ -166,13 +244,13 @@ export default function Relatorios() {
       completedAppts: completedAppts.length, cancelledAppts: cancelledAppts.length,
       scheduledAppts: scheduledAppts.length, attendanceRate, cancelRate,
       totalRevenue, received, pending, avgTicket,
-      paidCount: paidPayments.length, pendingCount: pendingPayments.length,
-      overdueCount: overduePayments.length,
+      paidCount: paidPayments.length, pendingCount: filteredPayments.filter(p => p.status === "pending").length,
+      overdueCount: filteredPayments.filter(p => p.status === "overdue").length,
       revenueByMethodData, apptsByType, apptsByStatus,
       monthlyData, patientGrowth, topPatients, maxSessions,
       avgMonthlyRevenue, projectedAnnual, avgMonthlyPatients,
     };
-  }, [patients, appointments, payments, summary]);
+  }, [patients, appointments, payments, period, dateStart, dateEnd]);
 
   if (isLoading) {
     return (
@@ -209,6 +287,7 @@ export default function Relatorios() {
             <SelectContent>
               <SelectItem value="week">Esta Semana</SelectItem>
               <SelectItem value="month">Este Mês</SelectItem>
+              <SelectItem value="next_month">Próximo Mês</SelectItem>
               <SelectItem value="quarter">Trimestre</SelectItem>
               <SelectItem value="year">Este Ano</SelectItem>
               <SelectItem value="custom">Personalizado</SelectItem>
