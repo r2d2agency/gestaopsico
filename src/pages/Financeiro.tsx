@@ -119,6 +119,7 @@ export default function Financeiro() {
       toast.success(`${res.count} pagamento(s) baixado(s)`);
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-tab-summary"] });
       setSelected(new Set());
       setPayDialogOpen(false);
     },
@@ -140,67 +141,32 @@ export default function Financeiro() {
       toast.success("Pagamento confirmado");
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-tab-summary"] });
     },
     onError: (e: any) => toast.error(e.message || "Erro"),
   });
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Financeiro</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Gestão de cobranças, baixas e previsão</p>
-        </div>
-      </div>
-
-      {/* Summary KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Wallet}
-          label="A Receber (mês)"
-          value={fmt(summary?.pendingReceivable ?? 0)}
-          change={summary?.overdueReceivable ? `${fmt(summary.overdueReceivable)} vencido` : ""}
-          changeType="negative"
-        />
-        <StatCard
-          icon={CheckCircle}
-          label="Recebido (mês)"
-          value={fmt(summary?.receivedAmount ?? 0)}
-          change=""
-          changeType="positive"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Fluxo de Caixa"
-          value={fmt(summary?.cashFlow ?? 0)}
-          change=""
-          changeType={(summary?.cashFlow ?? 0) >= 0 ? "positive" : "negative"}
-        />
-        <StatCard
-          icon={AlertCircle}
-          label="A Pagar (mês)"
-          value={fmt(summary?.pendingPayable ?? 0)}
-          change=""
-          changeType="negative"
-        />
-      </div>
-
-      {/* Filter bar */}
-      <Card className="border-border/60">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {PERIODS.map(p => (
-              <Button
-                key={p.value}
-                size="sm"
-                variant={period === p.value ? "default" : "outline"}
-                onClick={() => setPeriod(p.value)}
-                className={period === p.value ? "gradient-primary border-0" : ""}
-              >
-                {p.label}
-              </Button>
-            ))}
+...
+            {PERIODS.map(p => {
+              const stats = tabSummary?.[p.value];
+              return (
+                <Button
+                  key={p.value}
+                  size="sm"
+                  variant={period === p.value ? "default" : "outline"}
+                  onClick={() => setPeriod(p.value)}
+                  className={`h-auto py-1.5 px-3 flex flex-col items-center gap-0.5 min-w-[100px] ${
+                    period === p.value ? "gradient-primary border-0" : "hover:bg-accent/50"
+                  }`}
+                >
+                  <span className="text-xs font-medium">{p.label}</span>
+                  {stats && (
+                    <span className={`text-[10px] ${period === p.value ? "text-white/80" : "text-muted-foreground"}`}>
+                      {stats.count} · {fmt(stats.total)}
+                    </span>
+                  )}
+                </Button>
+              );
+            })}
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
