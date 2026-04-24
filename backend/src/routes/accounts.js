@@ -97,8 +97,75 @@ router.get('/summary', async (req, res) => {
       cashFlow: receivedAmount - paidAmount,
       balance: totalReceivable - totalPayable
     });
+});
+
+// GET /api/accounts/tab-summary - counts and totals for dashboard tabs
+router.get('/tab-summary', async (req, res) => {
+  try {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+
+    const periods = {
+      this_month: { gte: new Date(y, m, 1), lte: new Date(y, m + 1, 0, 23, 59, 59) },
+      next_month: { gte: new Date(y, m + 1, 1), lte: new Date(y, m + 2, 0, 23, 59, 59) },
+      last_month: { gte: new Date(y, m - 1, 1), lte: new Date(y, m, 0, 23, 59, 59) },
+    };
+
+    const results = {};
+
+    // For each period
+    for (const [key, range] of Object.entries(periods)) {
+      const summary = await prisma.account.aggregate({
+        where: {
+          professionalId: req.userId,
+          type: 'receivable',
+          dueDate: range
+        },
+        _count: { id: true },
+        _sum: { value: true }
+      });
+      results[key] = { count: summary._count.id, total: Number(summary._sum.value || 0) };
+    }
+
+    // For 'open' (pending + overdue)
+    const openSummary = await prisma.account.aggregate({
+      where: {
+        professionalId: req.userId,
+        type: 'receivable',
+        status: { in: ['pending', 'overdue'] }
+      },
+      _count: { id: true },
+      _sum: { value: true }
+    });
+    results['open'] = { count: openSummary._count.id, total: Number(openSummary._sum.value || 0) };
+
+    // For 'overdue'
+    const overdueSummary = await prisma.account.aggregate({
+      where: {
+        professionalId: req.userId,
+        type: 'receivable',
+        status: 'overdue'
+      },
+      _count: { id: true },
+      _sum: { value: true }
+    });
+    results['overdue'] = { count: overdueSummary._count.id, total: Number(overdueSummary._sum.value || 0) };
+
+    // For 'all'
+    const allSummary = await prisma.account.aggregate({
+      where: {
+        professionalId: req.userId,
+        type: 'receivable'
+      },
+      _count: { id: true },
+      _sum: { value: true }
+    });
+    results['all'] = { count: allSummary._count.id, total: Number(allSummary._sum.value || 0) };
+
+    res.json(results);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao calcular resumo' });
+    res.status(500).json({ error: 'Erro ao calcular resumo das abas', details: err.message });
   }
 });
 
