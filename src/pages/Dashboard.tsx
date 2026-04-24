@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function Dashboard() {
-  const { data: summary, isLoading } = useDashboardSummary();
+  const { data: summary, isLoading, isError, error } = useDashboardSummary();
 
   const todayAppointments = summary?.today_schedule?.map((c: any) => ({
     time: c.time,
