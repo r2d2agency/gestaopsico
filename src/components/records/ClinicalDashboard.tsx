@@ -7,7 +7,15 @@ import { ptBR } from "date-fns/locale";
 import { Users, FileText, AlertTriangle, Tag, TrendingUp, BarChart3, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function ClinicalDashboard({ patientId }: { patientId?: string } = {}) {
+export default function ClinicalDashboard({ 
+  patientId, 
+  onSelectPatient, 
+  onSelectCouple 
+}: { 
+  patientId?: string;
+  onSelectPatient?: (id: string, name: string) => void;
+  onSelectCouple?: (id: string, name: string) => void;
+} = {}) {
   const { data, isLoading } = useQuery({
     queryKey: ["clinical-dashboard", patientId],
     queryFn: () => recordsApi.clinicalDashboard(patientId),
@@ -49,7 +57,12 @@ export default function ClinicalDashboard({ patientId }: { patientId?: string } 
                   <motion.div key={p.patientId} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                     className="flex items-center justify-between"
                   >
-                    <span className="text-sm truncate flex-1">{p.patientName}</span>
+                    <button
+                      onClick={() => onSelectPatient?.(p.patientId, p.patientName)}
+                      className="text-sm truncate flex-1 text-left hover:text-primary hover:underline transition-colors font-medium"
+                    >
+                      {p.patientName}
+                    </button>
                     <div className="flex items-center gap-2">
                       <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (p.count / (data.patientFrequency[0]?.count || 1)) * 100)}%` }} />
@@ -99,7 +112,15 @@ export default function ClinicalDashboard({ patientId }: { patientId?: string } 
                   className="flex items-center justify-between py-2 border-b last:border-0"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-sm font-medium truncate">{r.patient?.name || "—"}</span>
+                    <button
+                      onClick={() => {
+                        if (r.patientId && r.patient?.name) onSelectPatient?.(r.patientId, r.patient.name);
+                        else if (r.coupleId && r.couple?.name) onSelectCouple?.(r.coupleId, r.couple.name);
+                      }}
+                      className="text-sm font-medium truncate text-left hover:text-primary transition-colors hover:underline"
+                    >
+                      {r.patient?.name || r.couple?.name || "—"}
+                    </button>
                     {(!r.complaint && !r.keyPoints && !r.content) && (
                       <Badge variant="destructive" className="text-[10px]">Incompleto</Badge>
                     )}

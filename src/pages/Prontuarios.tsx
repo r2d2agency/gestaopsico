@@ -363,7 +363,10 @@ export default function Prontuarios() {
 
             {/* Dashboard summary row */}
             <div className="mb-6">
-              <ClinicalDashboard />
+              <ClinicalDashboard 
+                onSelectPatient={(id, name) => handleSelectEntity("patient", id, name)}
+                onSelectCouple={(id, name) => handleSelectEntity("couple", id, name)}
+              />
             </div>
 
             {/* Cards grid */}
@@ -503,7 +506,15 @@ export default function Prontuarios() {
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-primary" />
-                                <CardTitle className="text-base">{record.patient?.name || record.couple?.name || "—"}</CardTitle>
+                                <button
+                                  onClick={() => {
+                                    if (record.patientId && record.patient?.name) handleSelectEntity("patient", record.patientId, record.patient.name);
+                                    else if (record.coupleId && record.couple?.name) handleSelectEntity("couple", record.coupleId, record.couple.name);
+                                  }}
+                                  className="text-base font-semibold hover:text-primary transition-colors hover:underline"
+                                >
+                                  {record.patient?.name || record.couple?.name || "—"}
+                                </button>
                               </div>
                               <div className="flex items-center gap-1 flex-wrap">
                                 {record.modality === "test" ? (
@@ -712,7 +723,12 @@ export default function Prontuarios() {
                                       <User className="w-4 h-4 text-primary" />
                                       <span className="font-medium text-sm">Paciente 1</span>
                                     </div>
-                                    <p className="text-foreground font-semibold">{couple.patient1?.name}</p>
+                                    <button
+                                      onClick={() => couple.patient1?.id && handleSelectEntity("patient", couple.patient1.id, couple.patient1.name)}
+                                      className="text-foreground font-semibold hover:text-primary transition-colors hover:underline text-left"
+                                    >
+                                      {couple.patient1?.name}
+                                    </button>
                                     {couple.patient1?.email && <p className="text-xs text-muted-foreground">{couple.patient1.email}</p>}
                                     {couple.patient1?.phone && <p className="text-xs text-muted-foreground">{couple.patient1.phone}</p>}
                                   </CardContent>
@@ -723,7 +739,12 @@ export default function Prontuarios() {
                                       <User className="w-4 h-4 text-primary" />
                                       <span className="font-medium text-sm">Paciente 2</span>
                                     </div>
-                                    <p className="text-foreground font-semibold">{couple.patient2?.name}</p>
+                                    <button
+                                      onClick={() => couple.patient2?.id && handleSelectEntity("patient", couple.patient2.id, couple.patient2.name)}
+                                      className="text-foreground font-semibold hover:text-primary transition-colors hover:underline text-left"
+                                    >
+                                      {couple.patient2?.name}
+                                    </button>
                                     {couple.patient2?.email && <p className="text-xs text-muted-foreground">{couple.patient2.email}</p>}
                                     {couple.patient2?.phone && <p className="text-xs text-muted-foreground">{couple.patient2.phone}</p>}
                                   </CardContent>
