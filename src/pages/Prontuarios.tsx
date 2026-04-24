@@ -539,6 +539,20 @@ export default function Prontuarios() {
                 )}
               </TabsContent>
 
+              {/* Goals tab */}
+              <TabsContent value="goals" className="mt-4">
+                {selectedEntity.type === "patient" ? (
+                  <PatientGoals patientId={selectedEntity.id} patientName={selectedEntity.name} />
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <Target className="w-12 h-12 text-muted-foreground mb-4" />
+                      <h3 className="font-semibold text-foreground">Objetivos disponíveis para pacientes individuais</h3>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
               {/* Agenda tab */}
               <TabsContent value="agenda" className="space-y-6 mt-4">
                 {selectedEntity.type !== "patient" ? (
