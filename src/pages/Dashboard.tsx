@@ -59,6 +59,64 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Clinical Intelligence Section (Premium Feature) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <Card className="border-primary/20 bg-primary/5 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Brain className="w-24 h-24" />
+          </div>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Lightbulb className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">Insights Clínicos (IA)</CardTitle>
+                <CardDescription className="text-xs">Baseado no humor e registros recentes dos pacientes</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-background/60 border border-border shadow-sm">
+                <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Alerta de Recaída</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">3 pacientes registraram queda abrupta no humor nos últimos 2 dias.</p>
+                  <Button variant="link" size="sm" className="p-0 h-auto text-xs font-semibold mt-1" asChild>
+                    <Link to="/pacientes">Ver detalhes</Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-background/60 border border-border shadow-sm">
+                <TrendingUp className="w-5 h-5 text-success shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Evolução Positiva</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">O grupo de "Ansiedade" apresentou melhora de 15% após os exercícios de TCC.</p>
+                  <Button variant="link" size="sm" className="p-0 h-auto text-xs font-semibold mt-1" asChild>
+                    <Link to="/relatorios">Ver análise</Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-background/60 border border-border shadow-sm">
+                <Brain className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Sugestão de Recurso</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pacientes com "Insônia" podem se beneficiar do novo guia de Higiene do Sono.</p>
+                  <Button variant="link" size="sm" className="p-0 h-auto text-xs font-semibold mt-1" asChild>
+                    <Link to="/assistente-ia">Gerar recomendação</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Schedule + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <motion.div
