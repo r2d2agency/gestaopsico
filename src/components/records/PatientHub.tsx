@@ -266,6 +266,13 @@ export default function PatientHub({ patientId, patientName, onNavigate }: Props
         </Card>
       </motion.div>
 
+      {/* ====== MAPA CLÍNICO PREMIUM ====== */}
+      {patient && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <ClinicalMap patient={patient} />
+        </motion.div>
+      )}
+
       {/* ====== KPI CARDS ====== */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard icon={CheckCircle2} label="Sessões" value={stats.totalSessions} accent="primary" />
