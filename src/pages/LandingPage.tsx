@@ -38,6 +38,7 @@ import {
   Mic,
   ShieldCheck,
   Trash2,
+  Megaphone,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -77,12 +78,12 @@ const plans = [
     desc: "Para quem quer crescer",
     features: [
       "Pacientes ilimitados",
-      "Apoio de IA no prontuário",
+      "Assistente IA (Gemini, GPT-4, Claude)",
+      "Análise de textos e arquivos com IA",
       "App do paciente com sua marca",
-      "Testes + monitoramento de humor",
-      "Terapia de casal",
+      "Campanhas de WhatsApp (Retorno/Niver)",
+      "Terapia de casal dedicada",
       "Financeiro completo + cobranças",
-      "Suporte prioritário",
     ],
     secretaryFeatures: [
       "Secretária IA no WhatsApp",
@@ -532,8 +533,8 @@ export default function LandingPage() {
                 <span className="text-primary">transcrição automática</span>
               </h2>
               <p className="text-muted-foreground mt-4 text-lg">
-                Realize suas sessões no Google Meet ou Zoom enquanto o sistema captura o áudio, 
-                transcreve e organiza tudo direto no prontuário do paciente.
+                Realize suas sessões no Google Meet ou Zoom enquanto o sistema captura o áudio (sistema + microfone), 
+                transcreve e organiza tudo com ajuda de agentes especialistas (Gemini, Claude ou OpenAI).
               </p>
               <div className="mt-8 space-y-3">
                 {[
@@ -590,10 +591,11 @@ export default function LandingPage() {
               { icon: Calendar, title: "Agenda inteligente", desc: "Organize sessões com confirmação automática e lembretes.", color: "bg-primary/10 text-primary" },
               { icon: Video, title: "Teleatendimento", desc: "Sessões online com captura de áudio, transcrição e prontuário automático.", color: "bg-destructive/10 text-destructive" },
               { icon: Bot, title: "Secretária com IA", desc: "Atendimento 24h no WhatsApp para seus pacientes.", color: "bg-success/10 text-success" },
+              { icon: Sparkles, title: "Assistente IA", desc: "Use Gemini, GPT-4 ou Claude para analisar sessões e documentos.", color: "bg-lavender/10 text-lavender" },
+              { icon: Megaphone, title: "Campanhas WhatsApp", desc: "Envie mensagens de retorno e aniversários em massa.", color: "bg-orange-500/10 text-orange-500" },
               { icon: Smartphone, title: "App do paciente", desc: "App instalável com a marca do seu consultório.", color: "bg-lavender/10 text-lavender" },
-              { icon: FileText, title: "Prontuário organizado", desc: "Registro estruturado com apoio de IA.", color: "bg-warm/10 text-warm" },
               { icon: ClipboardList, title: "Testes psicológicos", desc: "Modelos prontos e customizáveis, com envio ao paciente.", color: "bg-rose/10 text-rose" },
-              { icon: Heart, title: "Individual e casal", desc: "Prontuário e testes adaptados para cada modalidade.", color: "bg-primary/10 text-primary" },
+              { icon: Heart, title: "Terapia de Casal", desc: "Gestão dedicada para prontuários e evolução de casais.", color: "bg-primary/10 text-primary" },
               { icon: DollarSign, title: "Controle financeiro", desc: "Cobranças, fluxo de caixa e relatórios em PDF.", color: "bg-success/10 text-success" },
             ].map((f, i) => (
               <motion.div
