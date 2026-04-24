@@ -72,6 +72,9 @@ export default function Relatorios() {
     } else if (period === "month") {
       startLimit = new Date(now.getFullYear(), now.getMonth(), 1);
       endLimit = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (period === "next_month") {
+      startLimit = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      endLimit = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59, 999);
     } else if (period === "quarter") {
       const quarter = Math.floor(now.getMonth() / 3);
       startLimit = new Date(now.getFullYear(), quarter * 3, 1);
