@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Music, Video, BookOpen, ExternalLink, Download } from "lucide-react";
+import { Plus, Search, FileText, Music, Video, BookOpen, ExternalLink, Download, Trash2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -15,20 +15,46 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { resourcesApi, TherapeuticResource } from "@/lib/resourcesApi";
+import { useAuth } from "@/contexts/AuthContext";
 
-const INITIAL_RESOURCES = [
-  { id: 1, title: "Guia de Higiene do Sono", type: "PDF", category: "Bem-estar", icon: FileText },
-  { id: 2, title: "Meditação Guiada: Ansiedade", type: "Audio", category: "Meditação", icon: Music },
-  { id: 3, title: "Vídeo: Entendendo a TCC", type: "Video", category: "Educacional", icon: Video },
-  { id: 4, title: "Diário de Gratidão", type: "Template", category: "Exercício", icon: BookOpen },
-];
+const ICON_MAP: Record<string, any> = {
+  PDF: FileText,
+  Audio: Music,
+  Video: Video,
+  Template: BookOpen,
+};
 
 export default function RecursosPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [resources, setResources] = useState(INITIAL_RESOURCES);
+  const [resources, setResources] = useState<TherapeuticResource[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newResource, setNewResource] = useState({ title: "", category: "", type: "PDF" });
+
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async () => {
+    try {
+      setIsLoading(true);
+      const data = await resourcesApi.list();
+      setResources(data);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os recursos.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredResources = resources.filter(resource =>
     resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -43,7 +69,25 @@ export default function RecursosPage() {
     });
   };
 
-  const handleAddResource = () => {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este recurso?")) return;
+    try {
+      await resourcesApi.delete(id);
+      setResources(prev => prev.filter(r => r.id !== id));
+      toast({
+        title: "Sucesso",
+        description: "Recurso removido com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o recurso.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddResource = async () => {
     if (!newResource.title || !newResource.category) {
       toast({
         title: "Erro",
@@ -53,28 +97,25 @@ export default function RecursosPage() {
       return;
     }
 
-    const iconMap: Record<string, any> = {
-      PDF: FileText,
-      Audio: Music,
-      Video: Video,
-      Template: BookOpen,
-    };
-
-    const resourceToAdd = {
-      id: resources.length + 1,
-      title: newResource.title,
-      category: newResource.category,
-      type: newResource.type,
-      icon: iconMap[newResource.type] || FileText,
-    };
-
-    setResources([resourceToAdd, ...resources]);
-    setIsAddDialogOpen(false);
-    setNewResource({ title: "", category: "", type: "PDF" });
-    toast({
-      title: "Sucesso",
-      description: "Novo recurso adicionado com sucesso!",
-    });
+    try {
+      setIsSubmitting(true);
+      const created = await resourcesApi.create(newResource);
+      setResources([created, ...resources]);
+      setIsAddDialogOpen(false);
+      setNewResource({ title: "", category: "", type: "PDF" });
+      toast({
+        title: "Sucesso",
+        description: "Novo recurso adicionado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o recurso.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -136,7 +177,10 @@ export default function RecursosPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddResource}>Salvar Recurso</Button>
+              <Button onClick={handleAddResource} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Salvar Recurso
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -154,42 +198,64 @@ export default function RecursosPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {filteredResources.map((resource) => (
-          <Card key={resource.id} className="group hover:border-primary/50 transition-colors shadow-sm">
-            <CardHeader className="pb-2">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                <resource.icon className="w-5 h-5 text-primary" />
-              </div>
-              <CardTitle className="text-base font-semibold">{resource.title}</CardTitle>
-              <CardDescription className="text-xs">{resource.category} • {resource.type}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-2 text-xs"
-                  onClick={() => handleAction("Visualizar", resource.title)}
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" /> Ver
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-2 text-xs"
-                  onClick={() => handleAction("Baixar", resource.title)}
-                >
-                  <Download className="w-3 h-3 mr-1" /> Baixar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      {filteredResources.length === 0 && (
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredResources.map((resource) => {
+            const Icon = ICON_MAP[resource.type] || FileText;
+            return (
+              <Card key={resource.id} className="group hover:border-primary/50 transition-colors shadow-sm relative">
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base font-semibold">{resource.title}</CardTitle>
+                  <CardDescription className="text-xs">{resource.category} • {resource.type}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-xs"
+                        onClick={() => handleAction("Visualizar", resource.title)}
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" /> Ver
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-xs"
+                        onClick={() => handleAction("Baixar", resource.title)}
+                      >
+                        <Download className="w-3 h-3 mr-1" /> Baixar
+                      </Button>
+                    </div>
+                    {resource.professionalId === user?.id && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(resource.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      
+      {!isLoading && filteredResources.length === 0 && (
         <div className="text-center py-10 text-muted-foreground">
-          Nenhum recurso encontrado para "{searchTerm}".
+          {searchTerm ? `Nenhum recurso encontrado para "${searchTerm}".` : "Nenhum recurso disponível no momento."}
         </div>
       )}
     </div>

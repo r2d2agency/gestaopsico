@@ -7,6 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model TherapeuticResource {
+  id             String   @id @default(uuid()) @db.Uuid
+  professionalId String?  @map("professional_id") @db.Uuid
+  professional   User?    @relation("userResources", fields: [professionalId], references: [id])
+  title          String   @db.VarChar(255)
+  description    String?
+  category       String   @db.VarChar(100)
+  type           String   @db.VarChar(50) // PDF, Audio, Video, Template, etc.
+  fileUrl        String?  @map("file_url")
+  externalUrl    String?  @map("external_url")
+  isGlobal       Boolean  @default(false) @map("is_global")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("therapeutic_resources")
+}
+
 model Plan {
   id               String         @id @default(uuid()) @db.Uuid
   name             String         @db.VarChar(100)
