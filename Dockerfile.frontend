@@ -9,8 +9,21 @@ FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Instala ferramentas básicas para debug dentro do container se necessário
-RUN apk add --no-cache curl
+# Instala ferramentas básicas para debug e o script de inicialização
+RUN apk add --no-cache curl iputils
+
+# Script para detectar o backend e iniciar o Nginx
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'for host in whats-agente_psicogest-backend whats-agente_psicogest-api whats-agente-psicogest-backend whats-agente-psicogest-api backend api localhost 127.0.0.1; do' >> /entrypoint.sh && \
+    echo '  echo "Testando host: $host"' >> /entrypoint.sh && \
+    echo '  if ping -c 1 -W 1 $host > /dev/null 2>&1; then' >> /entrypoint.sh && \
+    echo '    echo "Backend encontrado em: $host"' >> /entrypoint.sh && \
+    echo '    sed -i "s/BACKEND_SERVICE_PLACEHOLDER/$host/g" /etc/nginx/conf.d/default.conf' >> /entrypoint.sh && \
+    echo '    break' >> /entrypoint.sh && \
+    echo '  fi' >> /entrypoint.sh && \
+    echo 'done' >> /entrypoint.sh && \
+    echo 'nginx -g "daemon off;"' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/entrypoint.sh"]
