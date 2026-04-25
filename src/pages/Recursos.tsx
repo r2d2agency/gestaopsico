@@ -177,7 +177,10 @@ export default function RecursosPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddResource}>Salvar Recurso</Button>
+              <Button onClick={handleAddResource} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Salvar Recurso
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -195,42 +198,64 @@ export default function RecursosPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {filteredResources.map((resource) => (
-          <Card key={resource.id} className="group hover:border-primary/50 transition-colors shadow-sm">
-            <CardHeader className="pb-2">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                <resource.icon className="w-5 h-5 text-primary" />
-              </div>
-              <CardTitle className="text-base font-semibold">{resource.title}</CardTitle>
-              <CardDescription className="text-xs">{resource.category} • {resource.type}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-2 text-xs"
-                  onClick={() => handleAction("Visualizar", resource.title)}
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" /> Ver
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-2 text-xs"
-                  onClick={() => handleAction("Baixar", resource.title)}
-                >
-                  <Download className="w-3 h-3 mr-1" /> Baixar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      {filteredResources.length === 0 && (
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredResources.map((resource) => {
+            const Icon = ICON_MAP[resource.type] || FileText;
+            return (
+              <Card key={resource.id} className="group hover:border-primary/50 transition-colors shadow-sm relative">
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base font-semibold">{resource.title}</CardTitle>
+                  <CardDescription className="text-xs">{resource.category} • {resource.type}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-xs"
+                        onClick={() => handleAction("Visualizar", resource.title)}
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" /> Ver
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-xs"
+                        onClick={() => handleAction("Baixar", resource.title)}
+                      >
+                        <Download className="w-3 h-3 mr-1" /> Baixar
+                      </Button>
+                    </div>
+                    {resource.professionalId === user?.id && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(resource.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      
+      {!isLoading && filteredResources.length === 0 && (
         <div className="text-center py-10 text-muted-foreground">
-          Nenhum recurso encontrado para "{searchTerm}".
+          {searchTerm ? `Nenhum recurso encontrado para "${searchTerm}".` : "Nenhum recurso disponível no momento."}
         </div>
       )}
     </div>
