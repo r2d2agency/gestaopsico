@@ -32,11 +32,16 @@ const tasksRoutes = require('./routes/tasks');
 const prisma = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3001;
-console.log('--- DEBUG INFO ---');
+
+console.log('=== BACKEND STARTUP DEBUG ===');
+console.log('Time:', new Date().toISOString());
 console.log('PORT:', PORT);
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('DATABASE_URL is set:', !!process.env.DATABASE_URL);
-console.log('------------------');
+if (process.env.DATABASE_URL) {
+  console.log('DATABASE_URL starts with:', process.env.DATABASE_URL.split(':')[0]);
+}
+console.log('==============================');
 
 const allowedOrigins = (process.env.FRONTEND_URL || '*').split(',').map(s => s.trim());
 app.use(cors({
