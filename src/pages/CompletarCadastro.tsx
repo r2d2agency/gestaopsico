@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
-const API = import.meta.env.VITE_API_URL || 
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+const API = (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
     ? "http://localhost:3001/api" 
     : "/api");
 
