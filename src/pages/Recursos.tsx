@@ -27,10 +27,34 @@ const ICON_MAP: Record<string, any> = {
 
 export default function RecursosPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [resources, setResources] = useState(INITIAL_RESOURCES);
+  const [resources, setResources] = useState<TherapeuticResource[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newResource, setNewResource] = useState({ title: "", category: "", type: "PDF" });
+
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async () => {
+    try {
+      setIsLoading(true);
+      const data = await resourcesApi.list();
+      setResources(data);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os recursos.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredResources = resources.filter(resource =>
     resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -45,7 +69,25 @@ export default function RecursosPage() {
     });
   };
 
-  const handleAddResource = () => {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este recurso?")) return;
+    try {
+      await resourcesApi.delete(id);
+      setResources(prev => prev.filter(r => r.id !== id));
+      toast({
+        title: "Sucesso",
+        description: "Recurso removido com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o recurso.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddResource = async () => {
     if (!newResource.title || !newResource.category) {
       toast({
         title: "Erro",
@@ -55,28 +97,25 @@ export default function RecursosPage() {
       return;
     }
 
-    const iconMap: Record<string, any> = {
-      PDF: FileText,
-      Audio: Music,
-      Video: Video,
-      Template: BookOpen,
-    };
-
-    const resourceToAdd = {
-      id: resources.length + 1,
-      title: newResource.title,
-      category: newResource.category,
-      type: newResource.type,
-      icon: iconMap[newResource.type] || FileText,
-    };
-
-    setResources([resourceToAdd, ...resources]);
-    setIsAddDialogOpen(false);
-    setNewResource({ title: "", category: "", type: "PDF" });
-    toast({
-      title: "Sucesso",
-      description: "Novo recurso adicionado com sucesso!",
-    });
+    try {
+      setIsSubmitting(true);
+      const created = await resourcesApi.create(newResource);
+      setResources([created, ...resources]);
+      setIsAddDialogOpen(false);
+      setNewResource({ title: "", category: "", type: "PDF" });
+      toast({
+        title: "Sucesso",
+        description: "Novo recurso adicionado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o recurso.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
