@@ -145,6 +145,7 @@ model User {
   patientPortalMessages PatientPortalMessage[] @relation("portalMessageProfessional")
   telehealthSessions    TelehealthSession[]    @relation("telehealthProfessional")
   importBatches         ImportBatch[]
+  therapeuticResources  TherapeuticResource[] @relation("userResources")
 
   @@map("users")
 }
