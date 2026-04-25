@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Music, Video, BookOpen, ExternalLink, Download } from "lucide-react";
+import { Plus, Search, FileText, Music, Video, BookOpen, ExternalLink, Download, Trash2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -15,13 +15,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { resourcesApi, TherapeuticResource } from "@/lib/resourcesApi";
+import { useAuth } from "@/contexts/AuthContext";
 
-const INITIAL_RESOURCES = [
-  { id: 1, title: "Guia de Higiene do Sono", type: "PDF", category: "Bem-estar", icon: FileText },
-  { id: 2, title: "Meditação Guiada: Ansiedade", type: "Audio", category: "Meditação", icon: Music },
-  { id: 3, title: "Vídeo: Entendendo a TCC", type: "Video", category: "Educacional", icon: Video },
-  { id: 4, title: "Diário de Gratidão", type: "Template", category: "Exercício", icon: BookOpen },
-];
+const ICON_MAP: Record<string, any> = {
+  PDF: FileText,
+  Audio: Music,
+  Video: Video,
+  Template: BookOpen,
+};
 
 export default function RecursosPage() {
   const { toast } = useToast();
