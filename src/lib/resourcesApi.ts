@@ -18,6 +18,8 @@ export const resourcesApi = {
   list: () => apiRequest<TherapeuticResource[]>("/recursos"),
   create: (data: Partial<TherapeuticResource>) => 
     apiRequest<TherapeuticResource>("/recursos", { method: "POST", body: data }),
+  generate: (data: { prompt: string; category?: string; type?: string }) =>
+    apiRequest<TherapeuticResource>("/recursos/generate", { method: "POST", body: data }),
   delete: (id: string) => 
     apiRequest(`/recursos/${id}`, { method: "DELETE" }),
 };
