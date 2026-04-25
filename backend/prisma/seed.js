@@ -26,6 +26,32 @@ async function seed() {
     data: { name, email, passwordHash, role: 'superadmin', status: 'active' }
   });
   console.log(`✅ Superadmin criado: ${email} / ${password}`);
+  
+  // Seed de recursos globais
+  const globalResources = [
+    {
+      title: 'Manual de Relaxamento Progressivo',
+      description: 'Um guia passo a passo para técnicas de relaxamento muscular progressivo de Jacobson.',
+      category: 'Ansiedade',
+      type: 'Template',
+      isGlobal: true
+    },
+    {
+      title: 'Questionário de Autoconhecimento',
+      description: 'Série de perguntas para auxiliar o paciente na primeira fase da terapia.',
+      category: 'Geral',
+      type: 'Template',
+      isGlobal: true
+    }
+  ];
+
+  for (const res of globalResources) {
+    const exists = await prisma.therapeuticResource.findFirst({ where: { title: res.title, isGlobal: true } });
+    if (!exists) {
+      await prisma.therapeuticResource.create({ data: res });
+      console.log(`✅ Recurso global criado: ${res.title}`);
+    }
+  }
 }
 
 seed()

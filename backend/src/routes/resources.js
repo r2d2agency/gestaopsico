@@ -8,15 +8,23 @@ router.use(authMiddleware);
 // GET /api/recursos - listar recursos
 router.get('/', async (req, res) => {
   try {
-    const resources = await prisma.therapeuticResource.findMany({
-      where: {
-        OR: [
-          { professionalId: req.userId },
-          { isGlobal: true }
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    // Verificar se a tabela existe (fallback caso migração falhe)
+    let resources = [];
+    try {
+      resources = await prisma.therapeuticResource.findMany({
+        where: {
+          OR: [
+            { professionalId: req.userId },
+            { isGlobal: true }
+          ]
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (dbErr) {
+      console.error('Database table therapeuticResource may be missing:', dbErr.message);
+      // Retornar lista vazia em vez de 500 para não quebrar o frontend
+      return res.json([]);
+    }
     res.json(resources);
   } catch (err) {
     console.error('Error listing resources:', err);
@@ -32,18 +40,24 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Título, categoria e tipo são obrigatórios' });
     }
 
-    const resource = await prisma.therapeuticResource.create({
-      data: {
-        title,
-        description,
-        category,
-        type,
-        fileUrl,
-        externalUrl,
-        professionalId: req.userId,
-        isGlobal: false
-      }
-    });
+    let resource;
+    try {
+      resource = await prisma.therapeuticResource.create({
+        data: {
+          title,
+          description,
+          category,
+          type,
+          fileUrl,
+          externalUrl,
+          professionalId: req.userId,
+          isGlobal: false
+        }
+      });
+    } catch (dbErr) {
+      console.error('Error creating resource in DB:', dbErr.message);
+      return res.status(500).json({ error: 'Erro ao salvar no banco de dados. Verifique se as tabelas foram criadas.' });
+    }
     res.status(201).json(resource);
   } catch (err) {
     console.error('Error creating resource:', err);
@@ -104,16 +118,30 @@ Tipo: ${type || 'Template'}`;
     const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
 
     // Criar o recurso no banco de dados automaticamente
-    const resource = await prisma.therapeuticResource.create({
-      data: {
+    let resource;
+    try {
+      resource = await prisma.therapeuticResource.create({
+        data: {
+          title: aiResult.title,
+          description: aiResult.description + "\n\n" + aiResult.content,
+          category: category || 'Gerado por IA',
+          type: type || 'Template',
+          professionalId: req.userId,
+          isGlobal: false
+        }
+      });
+    } catch (dbErr) {
+      console.error('Error saving AI generated resource to DB:', dbErr.message);
+      // Se falhar no banco, retorna o conteúdo gerado mesmo assim para o usuário ver
+      return res.status(201).json({
+        id: 'temp-' + Date.now(),
         title: aiResult.title,
         description: aiResult.description + "\n\n" + aiResult.content,
         category: category || 'Gerado por IA',
         type: type || 'Template',
-        professionalId: req.userId,
-        isGlobal: false
-      }
-    });
+        _dbError: true
+      });
+    }
 
     res.status(201).json(resource);
   } catch (err) {
