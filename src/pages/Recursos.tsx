@@ -158,7 +158,6 @@ export default function RecursosPage() {
 
   return (
     <div className="space-y-6">
-    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Recursos Terapêuticos</h1>
@@ -218,58 +217,59 @@ export default function RecursosPage() {
                 <Plus className="w-4 h-4" /> Adicionar Recurso
               </Button>
             </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Recurso</DialogTitle>
-              <DialogDescription>
-                Preencha as informações do material que deseja disponibilizar na biblioteca.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Título</Label>
-                <Input 
-                  id="title" 
-                  value={newResource.title}
-                  onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                  placeholder="Ex: Guia de Meditação" 
-                />
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Recurso</DialogTitle>
+                <DialogDescription>
+                  Preencha as informações do material que deseja disponibilizar na biblioteca.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Título</Label>
+                  <Input 
+                    id="title" 
+                    value={newResource.title}
+                    onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
+                    placeholder="Ex: Guia de Meditação" 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Categoria</Label>
+                  <Input 
+                    id="category" 
+                    value={newResource.category}
+                    onChange={(e) => setNewResource({ ...newResource, category: e.target.value })}
+                    placeholder="Ex: Meditação, Ansiedade, Bem-estar" 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="type">Tipo de Material</Label>
+                  <Select 
+                    value={newResource.type} 
+                    onValueChange={(value) => setNewResource({ ...newResource, type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PDF">Documento (PDF)</SelectItem>
+                      <SelectItem value="Audio">Áudio (MP3)</SelectItem>
+                      <SelectItem value="Video">Vídeo</SelectItem>
+                      <SelectItem value="Template">Template / Exercício</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Categoria</Label>
-                <Input 
-                  id="category" 
-                  value={newResource.category}
-                  onChange={(e) => setNewResource({ ...newResource, category: e.target.value })}
-                  placeholder="Ex: Meditação, Ansiedade, Bem-estar" 
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="type">Tipo de Material</Label>
-                <Select 
-                  value={newResource.type} 
-                  onValueChange={(value) => setNewResource({ ...newResource, type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PDF">Documento (PDF)</SelectItem>
-                    <SelectItem value="Audio">Áudio (MP3)</SelectItem>
-                    <SelectItem value="Video">Vídeo</SelectItem>
-                    <SelectItem value="Template">Template / Exercício</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleAddResource} disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Salvar Recurso
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button onClick={handleAddResource} disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Salvar Recurso
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 max-w-md">
