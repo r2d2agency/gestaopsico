@@ -9,8 +9,26 @@ FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Instala ferramentas básicas para debug dentro do container se necessário
-RUN apk add --no-cache curl
+# Instala ferramentas básicas para debug e o script de inicialização
+RUN apk add --no-cache curl iputils
+
+# Script para detectar o backend e iniciar o Nginx
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'for host in whats-agente_psicogest-backend whats-agente_psicogest-api whats-agente-psicogest-backend whats-agente-psicogest-api backend api localhost 127.0.0.1; do' >> /entrypoint.sh && \
+    echo '  echo "Testando host: $host na porta 3001..."' >> /entrypoint.sh && \
+    echo '  if nc -z -w 2 $host 3001; then' >> /entrypoint.sh && \
+    echo '    echo "Backend encontrado e acessível em: $host:3001"' >> /entrypoint.sh && \
+    echo '    sed -i "s/BACKEND_SERVICE_PLACEHOLDER/$host/g" /etc/nginx/conf.d/default.conf' >> /entrypoint.sh && \
+    echo '    BACKEND_FOUND=true' >> /entrypoint.sh && \
+    echo '    break' >> /entrypoint.sh && \
+    echo '  fi' >> /entrypoint.sh && \
+    echo 'done' >> /entrypoint.sh && \
+    echo 'if [ "$BACKEND_FOUND" != "true" ]; then' >> /entrypoint.sh && \
+    echo '  echo "AVISO: Nenhum backend detectado. Usando valor padrão."' >> /entrypoint.sh && \
+    echo '  sed -i "s/BACKEND_SERVICE_PLACEHOLDER/whats-agente_psicogest-backend/g" /etc/nginx/conf.d/default.conf' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo 'nginx -g "daemon off;"' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/entrypoint.sh"]
