@@ -1,6 +1,8 @@
-// API Configuration for Easypanel Backend
-// Set VITE_API_URL in your .env file pointing to your Easypanel backend
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+// API Configuration
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+    ? "http://localhost:3001/api" 
+    : "/api");
 
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
