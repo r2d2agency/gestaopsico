@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Music, Video, BookOpen, ExternalLink, Download, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, FileText, Music, Video, BookOpen, ExternalLink, Download, Trash2, Loader2, Wand2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,8 +32,11 @@ export default function RecursosPage() {
   const [resources, setResources] = useState<TherapeuticResource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newResource, setNewResource] = useState({ title: "", category: "", type: "PDF" });
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [selectedAiCategory, setSelectedAiCategory] = useState("");
 
   useEffect(() => {
     fetchResources();
@@ -118,6 +121,41 @@ export default function RecursosPage() {
     }
   };
 
+  const handleGenerateResource = async () => {
+    if (!aiPrompt) {
+      toast({
+        title: "Erro",
+        description: "Descreva o que você quer que a IA gere.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const created = await resourcesApi.generate({ 
+        prompt: aiPrompt, 
+        category: selectedAiCategory,
+        type: "Template"
+      });
+      setResources([created, ...resources]);
+      setIsGenerateDialogOpen(false);
+      setAiPrompt("");
+      toast({
+        title: "Sucesso!",
+        description: "Recurso terapêutico gerado e salvo pela IA.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro na geração",
+        description: "Não foi possível gerar o recurso com IA. Verifique se você configurou uma chave de API nas configurações de IA.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -126,12 +164,59 @@ export default function RecursosPage() {
           <p className="text-muted-foreground">Biblioteca de materiais para compartilhar com seus pacientes.</p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="shrink-0 gap-2">
-              <Plus className="w-4 h-4" /> Adicionar Recurso
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shrink-0 gap-2 border-primary text-primary hover:bg-primary/10">
+                <Wand2 className="w-4 h-4" /> Sugestões com IA
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Gerar Recurso com IA
+                </DialogTitle>
+                <DialogDescription>
+                  Descreva o material que você precisa (ex: "Exercício de respiração para pânico" ou "Guia de higiene do sono") e a IA criará o conteúdo para você.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="prompt">O que você precisa?</Label>
+                  <textarea 
+                    id="prompt" 
+                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Ex: Crie um guia passo a passo de meditação mindfulness de 5 minutos para iniciantes com foco em ansiedade."
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="aiCategory">Categoria (Opcional)</Label>
+                  <Input 
+                    id="aiCategory" 
+                    placeholder="Ex: Ansiedade, Meditação" 
+                    value={selectedAiCategory}
+                    onChange={(e) => setSelectedAiCategory(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleGenerateResource} disabled={isSubmitting} className="w-full gap-2">
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  Gerar e Salvar na Biblioteca
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="shrink-0 gap-2">
+                <Plus className="w-4 h-4" /> Adicionar Recurso
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Adicionar Novo Recurso</DialogTitle>
