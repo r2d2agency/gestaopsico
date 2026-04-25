@@ -4,7 +4,7 @@
   "description": "Backend API para plataforma SaaS de psicólogos e médicos",
   "main": "src/index.js",
   "scripts": {
-    "start": "npx prisma migrate deploy && node prisma/seed.js && node src/index.js",
+    "start": "echo 'Iniciando migrações...' && (npx prisma migrate deploy || echo 'Aviso: Falha na migração') && echo 'Iniciando seeds...' && (node prisma/seed.js || echo 'Aviso: Falha no seed') && echo 'Iniciando servidor...' && node src/index.js",
     "dev": "npx prisma migrate deploy && node prisma/seed.js && node --watch src/index.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
