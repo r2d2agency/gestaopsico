@@ -28,6 +28,7 @@ const importRoutes = require('./routes/import');
 const telehealthRoutes = require('./routes/telehealth');
 const goalsRoutes = require('./routes/goals');
 const tasksRoutes = require('./routes/tasks');
+const resourcesRoutes = require('./routes/resources');
 
 const prisma = require('./db');
 const app = express();
