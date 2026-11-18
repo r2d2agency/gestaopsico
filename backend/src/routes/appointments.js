@@ -1,11 +1,42 @@
 const express = require('express');
 
 const { authMiddleware } = require('../middleware/auth');
+const { loadAccess, requireScope } = require('../middleware/access');
+const { canAccessScope, scopedWhere } = require('../permissions');
+const { resolveProfessionalId } = require('../services/accessService');
+const { logAudit } = require('../services/auditService');
+const { notifyUsers } = require('../services/notificationService');
 
 const router = express.Router();
 const prisma = require('../db');
 
 router.use(authMiddleware);
+router.use(loadAccess);
+
+function dataRequestProfessionalId(body = {}) {
+  return body.professionalId ?? body.professional_id ?? null;
+}
+
+function recordScope(req, fallback = 'private') {
+  return req.body?.scope === 'clinic' || req.query?.scope === 'clinic' ? 'clinic' : fallback;
+}
+
+async function resolveProfessionalFilter(context, requestedId, req) {
+  const requested = requestedId || req.query?.professionalId || req.body?.professionalId || context.userId;
+  return resolveProfessionalId(context, requested, 'agenda:read');
+}
+
+function appointmentBaseWhere(context, professionalId, scope) {
+  if (scope === 'private') {
+    return professionalId === context.userId || ['admin', 'superadmin'].includes(context.accountRole)
+      ? { professionalId }
+      : null;
+  }
+  const where = scopedWhere(context, 'agenda:read', 'clinic', {}, { clinicOrganizationFilter: false });
+  if (!where) return null;
+  if (!context.organizationId) return null;
+  return { ...where, professional: { organizationId: context.organizationId } };
+}
 
 function normalizeAppointmentInput(body = {}, fallbackProfessionalId) {
   const raw = Object.fromEntries(
@@ -117,10 +148,14 @@ function generateRecurringDates(startDate, frequency, durationMonths) {
 }
 
 // GET /api/consultas
-router.get('/', async (req, res) => {
+router.get('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { date, status, professional_id, startDate, endDate, patientId, coupleId } = req.query;
-    const where = { professionalId: professional_id || req.userId };
+    const scope = recordScope(req, 'private');
+    const professionalId = await resolveProfessionalId(req.access, professional_id, 'agenda:read');
+    if (!professionalId) return res.status(403).json({ error: 'Profissional fora da organização ou sem permissão' });
+    const where = appointmentBaseWhere(req.access, professionalId, scope);
+    if (!where) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     if (status) where.status = status;
     if (patientId) where.patientId = patientId;
     if (coupleId) where.coupleId = coupleId;
@@ -152,7 +187,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const appointment = await prisma.appointment.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
+      include: {
+        professional: { select: { id: true, organizationId: true } },
+      },
+    });
+    if (!appointment) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const allowed = appointment.scope === 'private'
+      ? appointment.professionalId === req.access.userId || ['admin', 'superadmin'].includes(req.access.accountRole)
+      : canAccessScope(req.access, 'agenda:read', appointment.scope)
+        && (!req.access.organizationId || appointment.professional.organizationId === req.access.organizationId);
+    if (!allowed) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const fullAppointment = await prisma.appointment.findFirst({
+      where: { id: req.params.id },
       include: {
         patient: true,
         couple: { include: { patient1: true, patient2: true } },
@@ -160,17 +207,22 @@ router.get('/:id', async (req, res) => {
         transcriptions: true
       }
     });
-    if (!appointment) return res.status(404).json({ error: 'Consulta não encontrada' });
-    res.json(appointment);
+    if (!fullAppointment) return res.status(404).json({ error: 'Consulta não encontrada' });
+    res.json(fullAppointment);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar consulta' });
   }
 });
 
 // POST /api/consultas
-router.post('/', async (req, res) => {
+router.post('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
-    const data = normalizeAppointmentInput(req.body, req.userId);
+    const scope = recordScope(req, 'private');
+    const professionalId = await resolveProfessionalId(req.access, req.body?.professionalId || req.body?.professional_id, 'agenda:manage');
+    if (!professionalId) return res.status(403).json({ error: 'Profissional fora da organização ou sem permissão' });
+    const data = normalizeAppointmentInput(req.body, professionalId);
+    data.professionalId = professionalId;
+    data.scope = scope;
     const validationError = validateAppointmentPayload(data);
     if (validationError) {
       return res.status(400).json({ error: validationError });
@@ -242,6 +294,17 @@ router.post('/', async (req, res) => {
         couple: { select: { id: true, name: true } }
       }
     });
+    await logAudit(req, 'appointment.created', 'Appointment', appointment.id, {
+      scope: appointment.scope,
+      professionalId: appointment.professionalId,
+      patientId: appointment.patientId,
+    });
+    if (scope === 'clinic') {
+      await notifyUsers(req.access.organizationId, [appointment.professionalId], 'agenda.created', 'Nova consulta da clínica', `Agendamento ${appointment.date?.toISOString?.().slice(0, 10) || ''} ${appointment.time || ''}`.trim(), {
+        appointmentId: appointment.id,
+        scope: 'clinic',
+      });
+    }
     res.status(201).json(appointment);
   } catch (err) {
     console.error('Erro ao criar consulta:', err);
@@ -252,26 +315,42 @@ router.post('/', async (req, res) => {
 // PUT /api/consultas/:id
 router.put('/:id', async (req, res) => {
   try {
-    const data = normalizeAppointmentInput(req.body, req.userId);
-    const validationError = validateAppointmentPayload({ ...data, type: data.type || 'individual' });
+    const existing = await prisma.appointment.findFirst({
+      where: { id: req.params.id },
+      include: { professional: { select: { organizationId: true } } },
+    });
+    if (!existing) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const allowed = existing.scope === 'private'
+      ? existing.professionalId === req.access.userId || ['admin', 'superadmin'].includes(req.access.accountRole)
+      : canAccessScope(req.access, 'agenda:manage', existing.scope)
+        && (!req.access.organizationId || existing.professional.organizationId === req.access.organizationId);
+    if (!allowed) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const professionalId = await resolveProfessionalId(req.access, dataRequestProfessionalId(req.body), 'agenda:manage');
+    if (!professionalId) return res.status(403).json({ error: 'Profissional fora da organização ou sem permissão' });
+    const data = normalizeAppointmentInput(req.body, existing.professionalId);
+    delete data.professionalId;
+    if (req.body?.scope && req.body.scope !== existing.scope) {
+      return res.status(400).json({ error: 'O escopo de uma consulta não pode ser alterado' });
+    }
+    const validationError = validateAppointmentPayload({ ...data, professionalId: existing.professionalId, type: data.type || 'individual' });
     if (validationError && validationError !== 'Paciente é obrigatório') {
       return res.status(400).json({ error: validationError });
     }
 
     // Check conflict (excluding current appointment)
     if (data.date && data.time && data.duration) {
-      const conflicts = await findConflicts(data.professionalId || req.userId, data.date, data.time, data.duration, req.params.id);
+      const conflicts = await findConflicts(existing.professionalId, data.date, data.time, data.duration, req.params.id);
       if (conflicts.length > 0) {
-        return res.status(409).json({ 
-          error: 'Conflito de agenda', 
+        return res.status(409).json({
+          error: 'Conflito de agenda',
           details: 'Já existe um agendamento para este horário.',
-          conflicts 
+          conflicts
         });
       }
     }
 
     const appointment = await prisma.appointment.updateMany({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
       data
     });
     if (appointment.count === 0) return res.status(404).json({ error: 'Consulta não encontrada' });
@@ -289,14 +368,29 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+async function assertAppointmentOwnership(context, id, capability) {
+  const appointment = await prisma.appointment.findFirst({
+    where: { id },
+    include: { professional: { select: { organizationId: true } } },
+  });
+  if (!appointment) return null;
+  const allowed = appointment.scope === 'private'
+    ? appointment.professionalId === context.userId || ['admin', 'superadmin'].includes(context.accountRole)
+    : canAccessScope(context, capability || 'agenda:manage', appointment.scope)
+      && (!context.organizationId || appointment.professional.organizationId === context.organizationId);
+  return allowed ? appointment : null;
+}
+
 // POST /api/consultas/:id/cancel
 router.post('/:id/cancel', async (req, res) => {
   try {
+    const existing = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
+    if (!existing) return res.status(404).json({ error: 'Consulta não encontrada' });
     const appointment = await prisma.appointment.updateMany({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
       data: { status: 'cancelled' }
     });
-    if (appointment.count === 0) return res.status(404).json({ error: 'Consulta não encontrada' });
+    await logAudit(req, 'appointment.cancelled', 'Appointment', req.params.id, { scope: existing.scope });
     res.json({ message: 'Consulta cancelada' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao cancelar consulta' });
@@ -304,7 +398,7 @@ router.post('/:id/cancel', async (req, res) => {
 });
 
 // Helper: create receivable for an attended session (skip if monthly or already exists)
-async function ensureReceivableForAppointment(apt, userId) {
+async function ensureReceivableForAppointment(apt, professionalId) {
   if (!apt.patientId || !apt.patient) return null;
   const patient = apt.patient;
   // Monthly billing: don't generate per-session charge
@@ -313,7 +407,7 @@ async function ensureReceivableForAppointment(apt, userId) {
   // Check if a receivable already exists for this appointment (avoid duplicates)
   const existing = await prisma.account.findFirst({
     where: {
-      professionalId: userId,
+      professionalId,
       patientId: apt.patientId,
       type: 'receivable',
       notes: { contains: `appointment_id:${apt.id}` },
@@ -328,7 +422,9 @@ async function ensureReceivableForAppointment(apt, userId) {
 
   return prisma.account.create({
     data: {
-      professionalId: userId,
+      professionalId,
+      organizationId: apt.organizationId || undefined,
+      scope: apt.scope || 'private',
       type: 'receivable',
                     description: `Sessão - ${patient.name} - ${new Date(apt.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`,
                     value,
@@ -342,10 +438,10 @@ async function ensureReceivableForAppointment(apt, userId) {
 }
 
 // Internal: cancel any auto-receivable linked to this appointment
-async function removeReceivableForAppointment(appointmentId, userId) {
+async function removeReceivableForAppointment(appointmentId, professionalId) {
   await prisma.account.deleteMany({
     where: {
-      professionalId: userId,
+      professionalId,
       type: 'receivable',
       status: { not: 'paid' },
       notes: { contains: `appointment_id:${appointmentId}` },
@@ -359,18 +455,20 @@ router.ensureReceivableForAppointment = ensureReceivableForAppointment;
 // POST /api/consultas/:id/attend - mark attendance and auto-create receivable
 router.post('/:id/attend', async (req, res) => {
   try {
-    const apt = await prisma.appointment.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
-      include: { patient: true }
-    });
+    const apt = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
     if (!apt) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const fullApt = await prisma.appointment.findFirst({
+      where: { id: req.params.id },
+      include: { patient: true },
+    });
 
     await prisma.appointment.update({
       where: { id: req.params.id },
       data: { attended: true, status: 'completed' }
     });
 
-    const account = await ensureReceivableForAppointment(apt, req.userId);
+    const account = await ensureReceivableForAppointment(fullApt, fullApt.professionalId);
+    await logAudit(req, 'appointment.attended', 'Appointment', req.params.id, { scope: fullApt.scope });
     res.json({
       message: account
         ? 'Comparecimento registrado e cobrança gerada'
@@ -386,10 +484,7 @@ router.post('/:id/attend', async (req, res) => {
 router.post('/:id/miss', async (req, res) => {
   try {
     const charge = req.body?.charge !== false; // default true
-    const apt = await prisma.appointment.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
-      include: { patient: true }
-    });
+    const apt = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
     if (!apt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
     await prisma.appointment.update({
@@ -402,10 +497,12 @@ router.post('/:id/miss', async (req, res) => {
 
     let account = null;
     if (charge) {
-      account = await ensureReceivableForAppointment(apt, req.userId);
+      const fullApt = await prisma.appointment.findFirst({ where: { id: req.params.id }, include: { patient: true } });
+      account = await ensureReceivableForAppointment(fullApt, fullApt.professionalId);
     } else {
-      await removeReceivableForAppointment(apt.id, req.userId);
+      await removeReceivableForAppointment(apt.id, apt.professionalId);
     }
+    await logAudit(req, 'appointment.missed', 'Appointment', req.params.id, { scope: apt.scope, charge });
 
     res.json({
       message: charge ? 'Falta registrada com cobrança' : 'Falta registrada sem cobrança',
@@ -419,15 +516,13 @@ router.post('/:id/miss', async (req, res) => {
 // POST /api/consultas/:id/reset-status - back to scheduled / pending
 router.post('/:id/reset-status', async (req, res) => {
   try {
-    const apt = await prisma.appointment.findFirst({
-      where: { id: req.params.id, professionalId: req.userId }
-    });
+    const apt = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
     if (!apt) return res.status(404).json({ error: 'Consulta não encontrada' });
     await prisma.appointment.update({
       where: { id: apt.id },
       data: { attended: false, status: 'scheduled' },
     });
-    await removeReceivableForAppointment(apt.id, req.userId);
+    await removeReceivableForAppointment(apt.id, apt.professionalId);
     res.json({ message: 'Status revertido' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao reverter status', details: err.message });
@@ -436,9 +531,14 @@ router.post('/:id/reset-status', async (req, res) => {
 
 // GET /api/consultas/sessions-by-patient?month=YYYY-MM
 // Returns patients grouped with their sessions in the month + status
-router.get('/sessions-by-patient/list', async (req, res) => {
+router.get('/sessions-by-patient/list', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { month } = req.query;
+    const scope = recordScope(req, 'private');
+    const professionalId = await resolveProfessionalId(req.access, req.query?.professionalId || req.query?.professional_id, 'agenda:read');
+    if (!professionalId) return res.status(403).json({ error: 'Profissional fora da organização ou sem permissão' });
+    const scopeWhere = appointmentBaseWhere(req.access, professionalId, scope);
+    if (!scopeWhere) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     const now = new Date();
     const [y, m] = month
       ? month.split('-').map(Number)
@@ -448,7 +548,7 @@ router.get('/sessions-by-patient/list', async (req, res) => {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        professionalId: req.userId,
+        ...scopeWhere,
         date: { gte: start, lte: end },
         type: { not: 'blocked' },
       },
@@ -464,7 +564,7 @@ router.get('/sessions-by-patient/list', async (req, res) => {
     const accounts = apptIds.length
       ? await prisma.account.findMany({
           where: {
-            professionalId: req.userId,
+            professionalId,
             type: 'receivable',
             OR: apptIds.map(id => ({ notes: { contains: `appointment_id:${id}` } })),
           },
@@ -533,10 +633,8 @@ router.get('/sessions-by-patient/list', async (req, res) => {
 // POST /api/consultas/:id/approve - approve a pending_approval appointment
 router.post('/:id/approve', async (req, res) => {
   try {
-    const apt = await prisma.appointment.findFirst({
-      where: { id: req.params.id, professionalId: req.userId, status: 'pending_approval' }
-    });
-    if (!apt) return res.status(404).json({ error: 'Consulta não encontrada ou já aprovada' });
+    const apt = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
+    if (!apt || apt.status !== 'pending_approval') return res.status(404).json({ error: 'Consulta não encontrada ou já aprovada' });
     const updated = await prisma.appointment.update({
       where: { id: apt.id },
       data: { status: 'scheduled' }
@@ -550,10 +648,10 @@ router.post('/:id/approve', async (req, res) => {
 // POST /api/consultas/:id/reject - reject a pending_approval appointment
 router.post('/:id/reject', async (req, res) => {
   try {
-    const apt = await prisma.appointment.findFirst({
-      where: { id: req.params.id, professionalId: req.userId, status: 'pending_approval' }
-    });
+    const apt = await prisma.appointment.findFirst({ where: { id: req.params.id } });
     if (!apt) return res.status(404).json({ error: 'Consulta não encontrada' });
+    const owned = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
+    if (!owned || apt.status !== 'pending_approval') return res.status(404).json({ error: 'Consulta não encontrada' });
     const updated = await prisma.appointment.update({
       where: { id: apt.id },
       data: { status: 'cancelled', notes: (apt.notes ? apt.notes + ' | ' : '') + 'Rejeitado pelo profissional' }

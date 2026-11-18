@@ -1,17 +1,35 @@
 const express = require('express');
 
 const { authMiddleware } = require('../middleware/auth');
+const { loadAccess, requireScope } = require('../middleware/access');
+const { canAccessScope } = require('../permissions');
+const { logAudit } = require('../services/auditService');
 
 const router = express.Router();
 const prisma = require('../db');
 
 router.use(authMiddleware);
+router.use(loadAccess);
+
+function accountScopeWhere(context, scope) {
+  if (!canAccessScope(context, 'finance:read', scope)) return null;
+  if (scope === 'private') {
+    return ['admin', 'superadmin', 'financial'].includes(context.accountRole)
+      ? { professional: { organizationId: context.organizationId } }
+      : { professionalId: context.userId };
+  }
+  if (!context.organizationId) return null;
+  return { organizationId: context.organizationId };
+}
 
 // GET /api/accounts - list accounts (contas a pagar/receber) with rich filters
-router.get('/', async (req, res) => {
+router.get('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { type, status, category, startDate, endDate, period, patientId, page = 1, limit = 200 } = req.query;
-    const where = { professionalId: req.userId };
+    const scope = req.query?.scope === 'clinic' ? 'clinic' : 'private';
+    const ownership = accountScopeWhere(req.access, scope);
+    if (!ownership) return res.status(403).json({ error: 'Sem permissão para este escopo' });
+    const where = { ...ownership, scope };
 
     if (type) where.type = type;
     if (status) where.status = status;
@@ -64,9 +82,12 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/accounts/summary - financial summary
-router.get('/summary', async (req, res) => {
+router.get('/summary', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { month } = req.query;
+    const scope = req.query?.scope === 'clinic' ? 'clinic' : 'private';
+    const ownership = accountScopeWhere(req.access, scope);
+    if (!ownership) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     const now = new Date();
     const year = month ? parseInt(month.split('-')[0]) : now.getFullYear();
     const mon = month ? parseInt(month.split('-')[1]) - 1 : now.getMonth();
@@ -75,7 +96,8 @@ router.get('/summary', async (req, res) => {
 
     const accounts = await prisma.account.findMany({
       where: {
-        professionalId: req.userId,
+        ...ownership,
+        scope,
         dueDate: { gte: start, lte: end }
       }
     });
@@ -108,8 +130,12 @@ router.get('/summary', async (req, res) => {
 });
 
 // GET /api/accounts/tab-summary - counts and totals for dashboard tabs
-router.get('/tab-summary', async (req, res) => {
+router.get('/tab-summary', requireScope('private', 'clinic'), async (req, res) => {
   try {
+    const scope = req.query?.scope === 'clinic' ? 'clinic' : 'private';
+    const ownership = accountScopeWhere(req.access, scope);
+    if (!ownership) return res.status(403).json({ error: 'Sem permissão para este escopo' });
+    const scopedReceivable = { ...ownership, scope, type: 'receivable' };
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
@@ -126,8 +152,7 @@ router.get('/tab-summary', async (req, res) => {
     for (const [key, range] of Object.entries(periods)) {
       const summary = await prisma.account.aggregate({
         where: {
-          professionalId: req.userId,
-          type: 'receivable',
+          ...scopedReceivable,
           dueDate: range
         },
         _count: { id: true },
@@ -139,8 +164,7 @@ router.get('/tab-summary', async (req, res) => {
     // For 'open' (pending + overdue)
     const openSummary = await prisma.account.aggregate({
       where: {
-        professionalId: req.userId,
-        type: 'receivable',
+        ...scopedReceivable,
         status: { in: ['pending', 'overdue'] }
       },
       _count: { id: true },
@@ -151,8 +175,7 @@ router.get('/tab-summary', async (req, res) => {
     // For 'overdue'
     const overdueSummary = await prisma.account.aggregate({
       where: {
-        professionalId: req.userId,
-        type: 'receivable',
+        ...scopedReceivable,
         status: 'overdue'
       },
       _count: { id: true },
@@ -163,8 +186,7 @@ router.get('/tab-summary', async (req, res) => {
     // For 'all'
     const allSummary = await prisma.account.aggregate({
       where: {
-        professionalId: req.userId,
-        type: 'receivable'
+        ...scopedReceivable
       },
       _count: { id: true },
       _sum: { value: true }
@@ -179,37 +201,44 @@ router.get('/tab-summary', async (req, res) => {
 
 // GET /api/accounts/patient/:patientId/financial - patient financial view
 // Returns sessions attended + payments + balance (acumulado)
-router.get('/patient/:patientId/financial', async (req, res) => {
+router.get('/patient/:patientId/financial', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { patientId } = req.params;
+    const scope = req.query?.scope === 'clinic' ? 'clinic' : 'private';
+    if (!canAccessScope(req.access, 'finance:read', scope)) {
+      return res.status(403).json({ error: 'Sem permissão para este escopo' });
+    }
 
     const patient = await prisma.patient.findFirst({
-      where: { id: patientId, professionalId: req.userId },
+      where: { id: patientId, scope },
       select: {
-        id: true, name: true,
+        id: true, name: true, scope: true, professionalId: true,
+        professional: { select: { organizationId: true } },
         sessionValue: true, monthlyValue: true, billingMode: true,
       }
     });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
+    if (scope === 'private' && patient.professionalId !== req.access.userId && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)) {
+      return res.status(404).json({ error: 'Paciente não encontrado' });
+    }
+    if (scope === 'clinic' && (!req.access.organizationId || patient.professional.organizationId !== req.access.organizationId)) {
+      return res.status(404).json({ error: 'Paciente não encontrado' });
+    }
 
     // All attended sessions
     const sessions = await prisma.appointment.findMany({
-      where: {
-        professionalId: req.userId,
-        patientId,
-        attended: true,
-      },
+      where: scope === 'private'
+        ? { professionalId: patient.professionalId, patientId, scope, attended: true }
+        : { patientId, scope, attended: true, professional: { organizationId: req.access.organizationId } },
       orderBy: { date: 'desc' },
       select: { id: true, date: true, time: true, duration: true, value: true, type: true, status: true }
     });
 
     // All accounts (receivable) for this patient
     const accounts = await prisma.account.findMany({
-      where: {
-        professionalId: req.userId,
-        patientId,
-        type: 'receivable',
-      },
+      where: scope === 'private' && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)
+        ? { professionalId: patient.professionalId, patientId, scope, type: 'receivable' }
+        : { patientId, scope, type: 'receivable', organizationId: req.access.organizationId || undefined },
       orderBy: { dueDate: 'desc' },
     });
 
@@ -287,11 +316,27 @@ router.post('/bulk-pay', async (req, res) => {
     if (!Array.isArray(ids) || !ids.length) {
       return res.status(400).json({ error: 'IDs são obrigatórios' });
     }
+    if (!canAccessScope(req.access, 'finance:manage', 'private') && !canAccessScope(req.access, 'finance:manage', 'clinic')) {
+      return res.status(403).json({ error: 'Sem permissão para esta ação' });
+    }
+    const scope = req.body?.scope === 'clinic' ? 'clinic' : 'private';
+    const accessible = await prisma.account.findMany({
+      where: {
+        id: { in: ids },
+        scope,
+        ...(scope === 'private' && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)
+          ? { professionalId: req.access.userId }
+          : { organizationId: req.access.organizationId || undefined }),
+      },
+      select: { id: true },
+    });
+    if (!accessible.length) return res.status(404).json({ error: 'Contas não encontradas' });
     const date = paidAt ? new Date(paidAt) : new Date();
     const result = await prisma.account.updateMany({
-      where: { id: { in: ids }, professionalId: req.userId },
+      where: { id: { in: accessible.map((a) => a.id) } },
       data: { status: 'paid', paidAt: date, ...(paymentMethod ? { paymentMethod } : {}) }
     });
+    await logAudit(req, 'account.bulk_paid', 'Account', null, { count: result.count, scope });
     res.json({ message: 'Pagamentos registrados', count: result.count });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao dar baixa nos pagamentos', details: err.message });
@@ -306,8 +351,19 @@ router.post('/bulk-charge', async (req, res) => {
       return res.status(400).json({ error: 'IDs são obrigatórios' });
     }
 
+    const scope = req.body?.scope === 'clinic' ? 'clinic' : 'private';
+    if (!canAccessScope(req.access, 'finance:manage', scope)) {
+      return res.status(403).json({ error: 'Sem permissão para esta ação' });
+    }
     const accounts = await prisma.account.findMany({
-      where: { id: { in: ids }, professionalId: req.userId, type: 'receivable' },
+      where: {
+        id: { in: ids },
+        scope,
+        type: 'receivable',
+        ...(scope === 'private' && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)
+          ? { professionalId: req.access.userId }
+          : { organizationId: req.access.organizationId || undefined }),
+      },
       include: { patient: { select: { id: true, name: true, phone: true, email: true } } }
     });
     if (!accounts.length) return res.status(404).json({ error: 'Contas não encontradas' });
@@ -341,16 +397,22 @@ router.post('/bulk-charge', async (req, res) => {
 });
 
 // POST /api/accounts
-router.post('/', async (req, res) => {
+router.post('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { type, description, value, dueDate, category, patientId, paymentMethod, notes, recurrence } = req.body;
     if (!type || !description || !value || !dueDate) {
       return res.status(400).json({ error: 'Tipo, descrição, valor e vencimento são obrigatórios' });
     }
+    const scope = req.body?.scope === 'clinic' ? 'clinic' : 'private';
+    if (!canAccessScope(req.access, 'finance:manage', scope)) {
+      return res.status(403).json({ error: 'Escopo não permitido para este usuário' });
+    }
 
     const account = await prisma.account.create({
       data: {
-        professionalId: req.userId,
+        professionalId: req.body?.professionalId || req.access.userId,
+        organizationId: req.access.organizationId,
+        scope,
         type,
         description,
         value: parseFloat(value),
@@ -374,9 +436,18 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const existing = await prisma.account.findFirst({
-      where: { id: req.params.id, professionalId: req.userId }
+      where: { id: req.params.id }
     });
     if (!existing) return res.status(404).json({ error: 'Conta não encontrada' });
+    if (!canAccessScope(req.access, 'finance:manage', existing.scope || 'private')) {
+      return res.status(403).json({ error: 'Sem permissão para esta conta' });
+    }
+    if ((existing.scope || 'private') === 'private' && existing.professionalId !== req.access.userId && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)) {
+      return res.status(404).json({ error: 'Conta não encontrada' });
+    }
+    if ((existing.scope || 'private') === 'clinic' && (!req.access.organizationId || existing.organizationId !== req.access.organizationId)) {
+      return res.status(404).json({ error: 'Conta não encontrada' });
+    }
 
     const data = {};
     const { description, value, dueDate, status, category, paymentMethod, notes, paidAt } = req.body;
@@ -395,6 +466,7 @@ router.put('/:id', async (req, res) => {
       data,
       include: { patient: { select: { id: true, name: true } } }
     });
+    await logAudit(req, 'account.updated', 'Account', account.id, { scope: account.scope, status: account.status });
 
     res.json(account);
   } catch (err) {
@@ -405,9 +477,21 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/accounts/:id
 router.delete('/:id', async (req, res) => {
   try {
+    const existing = await prisma.account.findFirst({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Conta não encontrada' });
+    if (!canAccessScope(req.access, 'finance:manage', existing.scope || 'private')) {
+      return res.status(403).json({ error: 'Sem permissão para esta conta' });
+    }
+    if ((existing.scope || 'private') === 'private' && existing.professionalId !== req.access.userId && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)) {
+      return res.status(404).json({ error: 'Conta não encontrada' });
+    }
+    if ((existing.scope || 'private') === 'clinic' && (!req.access.organizationId || existing.organizationId !== req.access.organizationId)) {
+      return res.status(404).json({ error: 'Conta não encontrada' });
+    }
     await prisma.account.deleteMany({
-      where: { id: req.params.id, professionalId: req.userId }
+      where: { id: req.params.id }
     });
+    await logAudit(req, 'account.deleted', 'Account', existing.id, { scope: existing.scope });
     res.json({ message: 'Conta removida' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao remover conta' });

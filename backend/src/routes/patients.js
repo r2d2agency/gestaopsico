@@ -1,9 +1,34 @@
 const express = require('express');
 
 const { authMiddleware } = require('../middleware/auth');
+const { loadAccess, requireScope } = require('../middleware/access');
+const { canAccessScope } = require('../permissions');
+const { resolveProfessionalId } = require('../services/accessService');
+const { logAudit } = require('../services/auditService');
 
 const router = express.Router();
 const prisma = require('../db');
+
+function requestedScope(req, fallback = 'private') {
+  return req.query?.scope === 'clinic' || req.body?.scope === 'clinic' || req.params?.scope === 'clinic' ? 'clinic' : fallback;
+}
+
+async function assertPatientOwnership(context, id, capability = 'patient:read') {
+  const patient = await prisma.patient.findFirst({
+    where: { id },
+    include: { professional: { select: { id: true, organizationId: true } } },
+  });
+  if (!patient) return null;
+  if (patient.scope === 'private') {
+    if (patient.professionalId === context.userId) return patient;
+    if (['admin', 'superadmin'].includes(context.accountRole)) return patient;
+    return null;
+  }
+  if (!canAccessScope(context, capability, patient.scope)) return null;
+  if (context.organizationId && patient.professional.organizationId !== context.organizationId) return null;
+  if (context.role === 'professional' && patient.professionalId !== context.userId && capability !== 'patient:read') return null;
+  return patient;
+}
 
 // PUBLIC: GET /api/pacientes/registration/:token
 router.get('/registration/:token', async (req, res) => {
@@ -61,6 +86,7 @@ router.put('/registration/:token', async (req, res) => {
 });
 
 router.use(authMiddleware);
+router.use(loadAccess);
 
 // Helper: map camelCase Prisma output to snake_case for frontend
 function mapPatient(p) {
@@ -165,7 +191,7 @@ function isValidCPF(cpf) {
 }
 
 // GET /api/pacientes
-router.get('/', async (req, res) => {
+router.get('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { search, status } = req.query;
 
@@ -173,22 +199,23 @@ router.get('/', async (req, res) => {
       return res.status(401).json({ error: 'Não autorizado' });
     }
 
-    // Fetch user to determine role and org
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-      select: { role: true, organizationId: true }
-    });
+    const scope = requestedScope(req, 'private');
+    if (!canAccessScope(req.access, 'patient:read', scope)) {
+      return res.status(403).json({ error: 'Escopo não permitido para este usuário' });
+    }
 
-    const where = {};
+    const where = { scope };
 
-    // Role-based filtering — everyone only sees patients from their own organization
-    if (user && ['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user.role)) {
-      if (user.organizationId) {
-        where.professional = { organizationId: user.organizationId };
+    if (scope === 'private' && ['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(req.access.accountRole)) {
+      if (req.access.organizationId) {
+        where.professional = { organizationId: req.access.organizationId };
       }
+    } else if (scope === 'private') {
+      where.professionalId = req.access.userId;
+    } else if (!req.access.organizationId) {
+      return res.status(403).json({ error: 'Organização não encontrada' });
     } else {
-      // professional sees only their own patients (or if user not found, they see nothing)
-      where.professionalId = req.userId;
+      where.professional = { organizationId: req.access.organizationId };
     }
 
     if (status) where.status = status;
@@ -224,19 +251,11 @@ router.get('/', async (req, res) => {
 // GET /api/pacientes/:id
 router.get('/:id', async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
-    const whereClause = { id: req.params.id };
-    // Restrict by organization for all admin-level roles, by professional for others
-    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
-      if (user.organizationId) {
-        whereClause.professional = { organizationId: user.organizationId };
-      }
-    } else {
-      whereClause.professionalId = req.userId;
-    }
+    const owned = await assertPatientOwnership(req.access, req.params.id, 'patient:read');
+    if (!owned) return res.status(404).json({ error: 'Paciente não encontrado' });
     const patient = await prisma.patient.findFirst({
-      where: whereClause,
-      include: { 
+      where: { id: req.params.id },
+      include: {
         appointments: { orderBy: { date: 'desc' }, take: 10 },
         eventParticipations: { include: { event: true } }
       }
@@ -284,19 +303,25 @@ router.get('/validate-cpf/:cpf', async (req, res) => {
 });
 
 // POST /api/pacientes
-router.post('/', async (req, res) => {
+router.post('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
+    const scope = requestedScope(req, 'private');
+    if (!canAccessScope(req.access, 'patient:manage', scope)) {
+      return res.status(403).json({ error: 'Escopo não permitido para este usuário' });
+    }
     const data = mapInput(req.body);
-    // Admin can assign to a specific professional; otherwise defaults to self
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } });
-    if (req.body.professional_id && ['superadmin', 'admin', 'secretary', 'secretary_financial'].includes(user?.role)) {
-      data.professionalId = req.body.professional_id;
+    data.scope = scope;
+    if (req.body.professional_id) {
+      const professionalId = await resolveProfessionalId(req.access, req.body.professional_id, 'patient:manage');
+      if (!professionalId) return res.status(403).json({ error: 'Profissional fora da organização ou sem permissão' });
+      data.professionalId = professionalId;
     } else {
-      data.professionalId = req.userId;
+      data.professionalId = req.access.userId;
     }
     if (!data.name) return res.status(400).json({ error: 'Nome é obrigatório' });
     if (data.cpf && !isValidCPF(data.cpf)) return res.status(400).json({ error: 'CPF inválido' });
     const patient = await prisma.patient.create({ data });
+    await logAudit(req, 'patient.created', 'Patient', patient.id, { scope: patient.scope, professionalId: patient.professionalId });
     res.status(201).json(mapPatient(patient));
   } catch (err) {
     if (err.code === 'P2002' && (err.meta?.target?.includes('cpf') || err.meta?.target?.includes('patients_cpf_professional_id_key'))) {
@@ -310,19 +335,10 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const data = mapInput(req.body);
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
-    const whereClause = { id: req.params.id };
-    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
-      if (user.organizationId) {
-        whereClause.professional = { organizationId: user.organizationId };
-      }
-    } else {
-      whereClause.professionalId = req.userId;
-    }
-    // Verify patient exists within scope
-    const existing = await prisma.patient.findFirst({ where: whereClause });
+    const existing = await assertPatientOwnership(req.access, req.params.id, 'patient:manage');
     if (!existing) return res.status(404).json({ error: 'Paciente não encontrado' });
     const updated = await prisma.patient.update({ where: { id: existing.id }, data });
+    await logAudit(req, 'patient.updated', 'Patient', existing.id, { scope: existing.scope });
     res.json(mapPatient(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar paciente' });
@@ -332,18 +348,10 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/pacientes/:id
 router.delete('/:id', async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
-    const whereClause = { id: req.params.id };
-    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
-      if (user.organizationId) {
-        whereClause.professional = { organizationId: user.organizationId };
-      }
-    } else {
-      whereClause.professionalId = req.userId;
-    }
-    const existing = await prisma.patient.findFirst({ where: whereClause });
+    const existing = await assertPatientOwnership(req.access, req.params.id, 'patient:manage');
     if (!existing) return res.status(404).json({ error: 'Paciente não encontrado' });
     await prisma.patient.delete({ where: { id: existing.id } });
+    await logAudit(req, 'patient.deleted', 'Patient', existing.id, { scope: existing.scope });
     res.json({ message: 'Paciente removido' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao remover paciente' });
@@ -354,14 +362,9 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/registration-link', async (req, res) => {
   try {
     const crypto = require('crypto');
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, organizationId: true } });
-    const whereClause = { id: req.params.id };
-    if (['superadmin', 'admin', 'secretary', 'financial', 'secretary_financial'].includes(user?.role)) {
-      if (user.organizationId) whereClause.professional = { organizationId: user.organizationId };
-    } else {
-      whereClause.professionalId = req.userId;
-    }
-    const patient = await prisma.patient.findFirst({ where: whereClause, include: { professional: { select: { organizationId: true, organization: { select: { portalSlug: true } } } } } });
+    const owned = await assertPatientOwnership(req.access, req.params.id, 'patient:manage');
+    if (!owned) return res.status(404).json({ error: 'Paciente não encontrado' });
+    const patient = await prisma.patient.findFirst({ where: { id: req.params.id }, include: { professional: { select: { organizationId: true, organization: { select: { portalSlug: true } } } } } });
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
     const token = crypto.randomBytes(4).toString('hex');

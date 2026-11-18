@@ -1,17 +1,38 @@
 const express = require('express');
 
 const { authMiddleware } = require('../middleware/auth');
+const { loadAccess, requireScope } = require('../middleware/access');
+const { canAccessScope } = require('../permissions');
+const { canAccessRecord } = require('../services/accessService');
+const { logAudit } = require('../services/auditService');
 
 const router = express.Router();
 const prisma = require('../db');
 
 router.use(authMiddleware);
+router.use(loadAccess);
+
+function recordScope(req, fallback = 'private') {
+  return req.query?.scope === 'clinic' || req.body?.scope === 'clinic' ? 'clinic' : fallback;
+}
+
+function recordWhere(context, scope) {
+  if (!canAccessScope(context, 'record:read', scope)) return null;
+  if (scope === 'private') {
+    return context.role === 'admin' || context.role === 'superadmin'
+      ? { scope, professional: { organizationId: context.organizationId } }
+      : { scope, professionalId: context.userId };
+  }
+  return { scope, professional: { organizationId: context.organizationId } };
+}
 
 // GET /api/prontuarios
-router.get('/', async (req, res) => {
+router.get('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { patientId, coupleId } = req.query;
-    const where = { professionalId: req.userId };
+    const scope = recordScope(req, 'private');
+    const where = recordWhere(req.access, scope);
+    if (!where) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     if (patientId) where.patientId = patientId;
     if (coupleId) where.coupleId = coupleId;
 
@@ -32,10 +53,13 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/prontuarios/patient-timeline/:patientId
-router.get('/patient-timeline/:patientId', async (req, res) => {
+router.get('/patient-timeline/:patientId', requireScope('private', 'clinic'), async (req, res) => {
   try {
+    const scope = recordScope(req, 'private');
+    const where = recordWhere(req.access, scope);
+    if (!where) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     const records = await prisma.record.findMany({
-      where: { patientId: req.params.patientId, professionalId: req.userId },
+      where: { ...where, patientId: req.params.patientId },
       include: {
         appointment: { select: { id: true, date: true, time: true, type: true, mode: true } }
       },
@@ -63,32 +87,36 @@ router.get('/patient-timeline/:patientId', async (req, res) => {
 });
 
 // GET /api/prontuarios/clinical-dashboard
-router.get('/clinical-dashboard', async (req, res) => {
+router.get('/clinical-dashboard', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { patientId } = req.query;
+    const scope = recordScope(req, 'private');
+    const scoped = recordWhere(req.access, scope);
+    if (!scoped) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const recordWhere = { professionalId: req.userId };
-    if (patientId) recordWhere.patientId = patientId;
+    const scopedRecordWhere = { ...scoped };
+    if (patientId) scopedRecordWhere.patientId = patientId;
+
+    const patientWhere = { ...scoped, status: 'active' };
+    if (patientId) patientWhere.id = patientId;
 
     const [totalPatients, recentRecords, allRecords, patientsWithRecords] = await Promise.all([
-      patientId
-        ? prisma.patient.count({ where: { id: patientId, professionalId: req.userId, status: 'active' } })
-        : prisma.patient.count({ where: { professionalId: req.userId, status: 'active' } }),
+      prisma.patient.count({ where: patientWhere }),
       prisma.record.findMany({
-        where: { ...recordWhere, date: { gte: thirtyDaysAgo } },
+        where: { ...scopedRecordWhere, date: { gte: thirtyDaysAgo } },
         include: { patient: { select: { id: true, name: true } } },
         orderBy: { date: 'desc' },
         take: 10,
       }),
       prisma.record.findMany({
-        where: recordWhere,
+        where: scopedRecordWhere,
         select: { id: true, patientId: true, content: true, complaint: true, keyPoints: true, themes: true, date: true },
       }),
       prisma.record.groupBy({
         by: ['patientId'],
-        where: { ...recordWhere, patientId: { not: null } },
+        where: { ...scopedRecordWhere, patientId: { not: null } },
         _count: { id: true },
         orderBy: { _count: { id: 'desc' } },
         take: 10,
@@ -137,11 +165,18 @@ router.get('/clinical-dashboard', async (req, res) => {
 // GET /api/prontuarios/:id
 router.get('/:id', async (req, res) => {
   try {
+    const allowed = await canAccessRecord(req.access, req.params.id, 'record:read');
+    if (!allowed) return res.status(404).json({ error: 'Prontuário não encontrado' });
     const record = await prisma.record.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
       include: { patient: true, couple: true, appointment: true }
     });
     if (!record) return res.status(404).json({ error: 'Prontuário não encontrado' });
+    await logAudit(req, 'record.read', 'Record', record.id, {
+      scope: record.scope,
+      patientId: record.patientId,
+      appointmentId: record.appointmentId,
+    });
     res.json(record);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar prontuário' });
@@ -149,11 +184,20 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/prontuarios
-router.post('/', async (req, res) => {
+router.post('/', requireScope('private', 'clinic'), async (req, res) => {
   try {
-    const data = { ...req.body, professionalId: req.userId };
+    if (!canAccessScope(req.access, 'record:write', recordScope(req, 'private'))) {
+      return res.status(403).json({ error: 'Escopo não permitido para este usuário' });
+    }
+    const data = { ...req.body, professionalId: req.access.userId, scope: recordScope(req, 'private') };
+    delete data.organizationId;
     if (data.date) data.date = new Date(data.date);
     const record = await prisma.record.create({ data });
+    await logAudit(req, 'record.created', 'Record', record.id, {
+      scope: record.scope,
+      patientId: record.patientId,
+      appointmentId: record.appointmentId,
+    });
     res.status(201).json(record);
   } catch (err) {
     console.error(err);
@@ -164,15 +208,18 @@ router.post('/', async (req, res) => {
 // PUT /api/prontuarios/:id
 router.put('/:id', async (req, res) => {
   try {
+    const allowed = await canAccessRecord(req.access, req.params.id, 'record:write');
+    if (!allowed) return res.status(404).json({ error: 'Prontuário não encontrado' });
     const updateData = { ...req.body };
     if (updateData.date) updateData.date = new Date(updateData.date);
     updateData.updatedAt = new Date();
 
     const record = await prisma.record.updateMany({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
       data: updateData
     });
     if (record.count === 0) return res.status(404).json({ error: 'Prontuário não encontrado' });
+    await logAudit(req, 'record.updated', 'Record', req.params.id, { scope: allowed.scope });
     const updated = await prisma.record.findUnique({ where: { id: req.params.id } });
     res.json(updated);
   } catch (err) {
@@ -184,8 +231,10 @@ router.put('/:id', async (req, res) => {
 // POST /api/prontuarios/:id/organize-ai - Organize with AI
 router.post('/:id/organize-ai', async (req, res) => {
   try {
+    const allowed = await canAccessRecord(req.access, req.params.id, 'record:write');
+    if (!allowed) return res.status(404).json({ error: 'Prontuário não encontrado' });
     const record = await prisma.record.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
       include: { patient: { select: { name: true } } }
     });
     if (!record) return res.status(404).json({ error: 'Prontuário não encontrado' });
@@ -259,8 +308,10 @@ Mantenha linguagem neutra, profissional e objetiva. Preserve o conteúdo origina
 // POST /api/prontuarios/:id/clinical-support - Generate clinical support
 router.post('/:id/clinical-support', async (req, res) => {
   try {
+    const allowed = await canAccessRecord(req.access, req.params.id, 'record:write');
+    if (!allowed) return res.status(404).json({ error: 'Prontuário não encontrado' });
     const record = await prisma.record.findFirst({
-      where: { id: req.params.id, professionalId: req.userId },
+      where: { id: req.params.id },
       include: { patient: { select: { id: true, name: true } } }
     });
     if (!record) return res.status(404).json({ error: 'Prontuário não encontrado' });
@@ -270,7 +321,7 @@ router.post('/:id/clinical-support', async (req, res) => {
 
     // Get previous records for this patient for evolution analysis
     const previousRecords = record.patientId ? await prisma.record.findMany({
-      where: { patientId: record.patientId, professionalId: req.userId, date: { lt: record.date } },
+      where: { patientId: record.patientId, scope: record.scope, professionalId: record.scope === 'private' ? record.professionalId : undefined, date: { lt: record.date } },
       orderBy: { date: 'desc' },
       take: 5,
       select: { date: true, content: true, complaint: true, keyPoints: true, themes: true, evolution: true }
@@ -321,10 +372,13 @@ Responda em formato organizado e conciso. Sempre deixe claro que são sugestões
 });
 
 // POST /api/prontuarios/patient-analysis/:patientId - AI analysis of patient evolution
-router.post('/patient-analysis/:patientId', async (req, res) => {
+router.post('/patient-analysis/:patientId', requireScope('private', 'clinic'), async (req, res) => {
   try {
+    const scope = recordScope(req, 'private');
+    const scoped = recordWhere(req.access, scope);
+    if (!scoped) return res.status(403).json({ error: 'Sem permissão para este escopo' });
     const records = await prisma.record.findMany({
-      where: { patientId: req.params.patientId, professionalId: req.userId },
+      where: { ...scoped, patientId: req.params.patientId },
       orderBy: { date: 'asc' },
       select: { date: true, content: true, complaint: true, keyPoints: true, clinicalObservations: true, evolution: true, themes: true, interventions: true }
     });

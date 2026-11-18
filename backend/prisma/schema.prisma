@@ -65,12 +65,20 @@ model Organization {
   logo          String?
   trialEndsAt   DateTime?             @map("trial_ends_at")
   suspendedAt   DateTime?             @map("suspended_at")
+  mode          String                @default("individual") @db.VarChar(20)
   createdAt     DateTime              @default(now()) @map("created_at")
   updatedAt     DateTime              @updatedAt @map("updated_at")
   users         User[]
   subscriptions Subscription[]
   providerKeys  AiProviderKey[]
   settings      OrganizationSetting?
+  clinicMembers ClinicMember[]
+  patientClinicLinks PatientClinicLink[]
+  compensationAgreements CompensationAgreement[]
+  payoutRuns    PayoutRun[]
+  invoices      Invoice[]
+  auditEvents   AuditEvent[]
+  notifications Notification[]
 
   @@map("organizations")
 }
@@ -146,6 +154,18 @@ model User {
   telehealthSessions    TelehealthSession[]    @relation("telehealthProfessional")
   importBatches         ImportBatch[]
   therapeuticResources  TherapeuticResource[] @relation("userResources")
+  clinicMemberships     ClinicMember[]        @relation("clinicMemberUser")
+  supervisedClinicMembers ClinicMember[]      @relation("clinicMemberSupervisor")
+  createdClinicMembers  ClinicMember[]        @relation("clinicMemberCreatedBy")
+  clinicPatientLinks    PatientClinicLink[]   @relation("patientLinkProfessional")
+  createdPatientLinks   PatientClinicLink[]   @relation("patientLinkCreatedBy")
+  compensationAgreements CompensationAgreement[] @relation("compensationProfessional")
+  createdCompensationAgreements CompensationAgreement[] @relation("compensationCreatedBy")
+  payoutItems           PayoutItem[]          @relation("payoutProfessional")
+  approvedPayoutRuns    PayoutRun[]           @relation("payoutApprover")
+  paidPayoutRuns        PayoutRun[]           @relation("payoutPayer")
+  auditEvents           AuditEvent[]          @relation("auditActor")
+  notifications         Notification[]        @relation("notificationUser")
 
   @@map("users")
 }
@@ -263,9 +283,14 @@ model Patient {
   tasks              Task[]
   tags               String[]      @default([])
   isMentorado        Boolean       @default(false) @map("is_mentorado")
+  scope              String        @default("private") @db.VarChar(20)
   eventParticipations EventParticipation[]
+  clinicLinks        PatientClinicLink[]
+  invoices           Invoice[]
+  payoutItems        PayoutItem[]
 
   @@unique([cpf, professionalId])
+  @@index([scope])
   @@map("patients")
 }
 
@@ -329,7 +354,12 @@ model Appointment {
   transcriptions Transcription[]
   payments       Payment[]
   telehealthSessions TelehealthSession[]
+  scope          String         @default("private") @db.VarChar(20)
+  payoutItems    PayoutItem[]
+  invoices       Invoice[]
 
+  @@index([scope])
+  @@index([professionalId, scope, date])
   @@map("appointments")
 }
 
@@ -361,7 +391,10 @@ model Record {
   updatedAt            DateTime?    @default(now()) @map("updated_at")
   testAssignments      TestAssignment[]
   telehealthSessions   TelehealthSession[]
+  scope                String       @default("private") @db.VarChar(20)
 
+  @@index([scope])
+  @@index([professionalId, scope, date])
   @@map("records")
 }
 
@@ -386,8 +419,10 @@ model Payment {
   method        String?      @db.VarChar(20)
   status        String       @default("pending") @db.VarChar(20)
   paidAt        DateTime?    @map("paid_at")
+  scope         String       @default("private") @db.VarChar(20)
   createdAt     DateTime     @default(now()) @map("created_at")
 
+  @@index([scope])
   @@map("payments")
 }
 
@@ -410,8 +445,11 @@ model Account {
   recurrence     String?  @db.VarChar(20)
   importBatchId  String?  @map("import_batch_id") @db.Uuid
   importBatch    ImportBatch? @relation(fields: [importBatchId], references: [id])
+  scope          String   @default("private") @db.VarChar(20)
   createdAt      DateTime @default(now()) @map("created_at")
 
+  @@index([scope])
+  @@index([organizationId, scope, dueDate])
   @@map("accounts")
 }
 
@@ -537,6 +575,191 @@ model PatientPortalMessage {
   @@index([patientId, createdAt])
   @@index([professionalId, createdAt])
   @@map("patient_portal_messages")
+}
+
+model ClinicMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id") @db.Uuid
+  user           User         @relation("clinicMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @db.VarChar(40)
+  scope          String       @default("clinic") @db.VarChar(20)
+  status         String       @default("active") @db.VarChar(20)
+  permissions    String[]     @default([])
+  supervisorId   String?      @map("supervisor_id") @db.Uuid
+  supervisor     User?        @relation("clinicMemberSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
+  createdBy      String?      @map("created_by") @db.Uuid
+  creator        User?        @relation("clinicMemberCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  joinedAt       DateTime     @default(now()) @map("joined_at")
+  endedAt        DateTime?    @map("ended_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, status])
+  @@index([supervisorId])
+  @@map("clinic_members")
+}
+
+model PatientClinicLink {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String       @map("patient_id") @db.Uuid
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professionalId String       @map("professional_id") @db.Uuid
+  professional   User         @relation("patientLinkProfessional", fields: [professionalId], references: [id])
+  relationType   String       @default("owner") @map("relation_type") @db.VarChar(20)
+  isPrimary      Boolean      @default(false) @map("is_primary")
+  validFrom      DateTime     @default(now()) @map("valid_from")
+  validUntil     DateTime?    @map("valid_until")
+  createdBy      String?      @map("created_by") @db.Uuid
+  creator        User?        @relation("patientLinkCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([organizationId, patientId, professionalId])
+  @@index([organizationId, patientId])
+  @@index([organizationId, professionalId])
+  @@map("patient_clinic_links")
+}
+
+model CompensationAgreement {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  professionalId String       @map("professional_id") @db.Uuid
+  professional   User         @relation("compensationProfessional", fields: [professionalId], references: [id])
+  ruleType       String       @map("rule_type") @db.VarChar(20)
+  fixedAmount    Decimal?     @map("fixed_amount") @db.Decimal(10, 2)
+  percentage     Decimal?     @db.Decimal(5, 2)
+  effectiveFrom  DateTime     @map("effective_from") @db.Date
+  effectiveUntil DateTime?    @map("effective_until") @db.Date
+  isActive       Boolean      @default(true) @map("is_active")
+  notes          String?
+  createdBy      String?      @map("created_by") @db.Uuid
+  creator        User?        @relation("compensationCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([organizationId, professionalId, effectiveFrom])
+  @@map("compensation_agreements")
+}
+
+model PayoutRun {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  month          DateTime     @db.Date
+  status         String       @default("draft") @db.VarChar(20)
+  grossTotal     Decimal      @default(0) @map("gross_total") @db.Decimal(12, 2)
+  deductionTotal Decimal      @default(0) @map("deduction_total") @db.Decimal(12, 2)
+  netTotal       Decimal      @default(0) @map("net_total") @db.Decimal(12, 2)
+  generatedAt    DateTime     @default(now()) @map("generated_at")
+  reviewedAt     DateTime?    @map("reviewed_at")
+  approvedAt     DateTime?    @map("approved_at")
+  paidAt         DateTime?    @map("paid_at")
+  approvedById   String?      @map("approved_by_id") @db.Uuid
+  approvedBy     User?        @relation("payoutApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  paidById       String?      @map("paid_by_id") @db.Uuid
+  paidBy         User?        @relation("payoutPayer", fields: [paidById], references: [id], onDelete: SetNull)
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  items          PayoutItem[]
+
+  @@unique([organizationId, month])
+  @@map("payout_runs")
+}
+
+model PayoutItem {
+  id             String       @id @default(uuid()) @db.Uuid
+  runId          String       @map("run_id") @db.Uuid
+  run            PayoutRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  organizationId String       @map("organization_id") @db.Uuid
+  professionalId String       @map("professional_id") @db.Uuid
+  professional   User         @relation("payoutProfessional", fields: [professionalId], references: [id])
+  appointmentId  String       @map("appointment_id") @db.Uuid
+  appointment    Appointment  @relation(fields: [appointmentId], references: [id])
+  patientId      String?      @map("patient_id") @db.Uuid
+  patient        Patient?     @relation(fields: [patientId], references: [id])
+  sessionDate    DateTime     @map("session_date") @db.Date
+  chargedAmount  Decimal      @map("charged_amount") @db.Decimal(10, 2)
+  agreementId    String?      @map("agreement_id") @db.Uuid
+  ruleType       String       @map("rule_type") @db.VarChar(20)
+  fixedAmount    Decimal?     @map("fixed_amount") @db.Decimal(10, 2)
+  percentage     Decimal?     @db.Decimal(5, 2)
+  grossAmount    Decimal      @map("gross_amount") @db.Decimal(10, 2)
+  deductionAmount Decimal     @default(0) @map("deduction_amount") @db.Decimal(10, 2)
+  netAmount      Decimal      @map("net_amount") @db.Decimal(10, 2)
+  status         String       @default("pending") @db.VarChar(20)
+  adjustmentReason String?    @map("adjustment_reason")
+  paidAt         DateTime?    @map("paid_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([runId, appointmentId])
+  @@index([organizationId, professionalId])
+  @@map("payout_items")
+}
+
+model Invoice {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String       @map("patient_id") @db.Uuid
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  appointmentId  String?      @map("appointment_id") @db.Uuid
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id])
+  number         String?      @db.VarChar(50)
+  status         String       @default("pending") @db.VarChar(20)
+  amount         Decimal      @db.Decimal(10, 2)
+  taxAmount      Decimal      @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  issuedAt       DateTime?    @map("issued_at")
+  externalId     String?      @map("external_id") @db.VarChar(100)
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@map("invoices")
+}
+
+model AuditEvent {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String?      @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actorId        String?      @map("actor_id") @db.Uuid
+  actor          User?        @relation("auditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action         String       @db.VarChar(80)
+  entityType     String       @map("entity_type") @db.VarChar(50)
+  entityId       String?      @map("entity_id") @db.Uuid
+  details        Json?
+  ipAddress      String?      @map("ip_address") @db.VarChar(45)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_events")
+}
+
+model Notification {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String?      @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String       @map("user_id") @db.Uuid
+  user           User         @relation("notificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  type           String       @db.VarChar(50)
+  title          String       @db.VarChar(255)
+  body           String?
+  data           Json?
+  readAt         DateTime?    @map("read_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([userId, readAt])
+  @@index([organizationId, createdAt])
+  @@map("notifications")
 }
 
 model SystemSetting {

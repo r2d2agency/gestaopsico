@@ -19,6 +19,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { orgSettingsApi, type OrgSettings } from "@/lib/portalApi";
 import { apiRequest } from "@/lib/api";
+import { clinicApi } from "@/lib/clinicApi";
 import { useAuth } from "@/contexts/AuthContext";
 export default function Configuracoes() {
   const { user } = useAuth();
@@ -83,6 +84,62 @@ export default function Configuracoes() {
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
+
+  const { data: clinicStatus } = useQuery({
+    queryKey: ["clinic-status"],
+    queryFn: () => clinicApi.status(),
+    enabled: isProfessional,
+  });
+
+  const activateClinic = useMutation({
+    mutationFn: (mode: "clinic" | "hybrid") => clinicApi.activate(mode),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinic-status"] });
+      qc.invalidateQueries({ queryKey: ["clinic-members"] });
+      toast({ title: "Modo Clínica ativado!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const { data: clinicMembers } = useQuery({
+    queryKey: ["clinic-members"],
+    queryFn: () => clinicApi.listMembers(),
+    enabled: Boolean(isProfessional && clinicStatus?.organization && clinicStatus.organization.mode !== "individual"),
+  });
+
+  const [clinicMemberDialogOpen, setClinicMemberDialogOpen] = useState(false);
+  const [clinicMemberForm, setClinicMemberForm] = useState({ userId: "", role: "professional", supervisorId: "" });
+
+  const saveClinicMember = useMutation({
+    mutationFn: () => clinicApi.saveMember({
+      userId: clinicMemberForm.userId,
+      role: clinicMemberForm.role,
+      supervisorId: clinicMemberForm.supervisorId || null,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinic-members"] });
+      qc.invalidateQueries({ queryKey: ["clinic-status"] });
+      toast({ title: "Vínculo clínico salvo!" });
+      setClinicMemberDialogOpen(false);
+      setClinicMemberForm({ userId: "", role: "professional", supervisorId: "" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const updateClinicMemberStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "active" | "suspended" | "ended" }) =>
+      clinicApi.updateMemberStatus(id, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinic-members"] });
+      toast({ title: "Vínculo atualizado!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const clinicRoleLabels: Record<string, string> = {
+    admin: "Admin", professional: "Psicólogo(a)", secretary: "Secretária",
+    financial: "Financeiro", supervisor: "Supervisor(a)",
+  };
 
   const set = (field: keyof OrgSettings, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -548,6 +605,121 @@ export default function Configuracoes() {
               </Button>
             </CardContent>
           </Card>
+        </motion.div>
+      )}
+
+      {isProfessional && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-primary" /> Modo Clínica</CardTitle>
+                  <CardDescription>Ative a operação clínica sem misturar dados particulares</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => activateClinic.mutate("clinic")} disabled={activateClinic.isPending || clinicStatus?.organization?.mode === "clinic"}>
+                    Ativar clínica
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => activateClinic.mutate("hybrid")} disabled={activateClinic.isPending || clinicStatus?.organization?.mode === "hybrid"}>
+                    Ativar híbrido
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Modo atual: <Badge variant="outline">{clinicStatus?.organization?.mode || "individual"}</Badge>
+                {clinicStatus?.membership ? ` · vínculo ${clinicRoleLabels[clinicStatus.membership.role] || clinicStatus.membership.role}` : " · sem vínculo clínico ativo"}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {isProfessional && Boolean(clinicStatus?.organization && clinicStatus.organization.mode !== "individual") && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Vínculos da clínica</CardTitle>
+                  <CardDescription>Defina papel, supervisor e situação de cada profissional na operação clínica</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setClinicMemberDialogOpen(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />Novo vínculo
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!clinicMembers?.length ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhum vínculo clínico ativo</p>
+              ) : (
+                <div className="space-y-2">
+                  {clinicMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{member.user?.name || member.userId}</p>
+                          <Badge variant="outline" className="text-xs">{clinicRoleLabels[member.role] || member.role}</Badge>
+                          <Badge variant={member.status === "active" ? "default" : "secondary"} className="text-xs">{member.status}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{member.user?.email}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => updateClinicMemberStatus.mutate({ id: member.id, status: member.status === "active" ? "suspended" : "active" })}>
+                          {member.status === "active" ? <PowerOff className="w-4 h-4 text-destructive" /> : <Power className="w-4 h-4 text-green-600" />}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => updateClinicMemberStatus.mutate({ id: member.id, status: "ended" })}>
+                          Encerrar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog open={clinicMemberDialogOpen} onOpenChange={setClinicMemberDialogOpen}>
+            <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
+              <DialogHeader>
+                <DialogTitle>Novo vínculo clínico</DialogTitle>
+                <DialogDescription>Selecione um usuário existente da equipe e defina o papel na clínica</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-2">
+                <div>
+                  <Label>Usuário (ID da equipe) *</Label>
+                  <Input value={clinicMemberForm.userId} onChange={(e) => setClinicMemberForm({ ...clinicMemberForm, userId: e.target.value })} placeholder="ID do usuário já cadastrado na equipe" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Papel *</Label>
+                    <Select value={clinicMemberForm.role} onValueChange={(v) => setClinicMemberForm({ ...clinicMemberForm, role: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Psicólogo(a)</SelectItem>
+                        <SelectItem value="secretary">Secretária</SelectItem>
+                        <SelectItem value="financial">Financeiro</SelectItem>
+                        <SelectItem value="supervisor">Supervisor(a)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Supervisor (ID, opcional)</Label>
+                    <Input value={clinicMemberForm.supervisorId} onChange={(e) => setClinicMemberForm({ ...clinicMemberForm, supervisorId: e.target.value })} placeholder="ID do supervisor" />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setClinicMemberDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={() => saveClinicMember.mutate()} disabled={saveClinicMember.isPending || !clinicMemberForm.userId}>
+                  {saveClinicMember.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Salvar vínculo
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </motion.div>
       )}
 

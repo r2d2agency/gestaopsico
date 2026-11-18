@@ -1,21 +1,41 @@
 const express = require('express');
 
 const { authMiddleware } = require('../middleware/auth');
+const { loadAccess, requireScope } = require('../middleware/access');
+const { canAccessScope } = require('../permissions');
 
 const router = express.Router();
 const prisma = require('../db');
 
 router.use(authMiddleware);
+router.use(loadAccess);
+
+function invoiceScope(req) {
+  return req.query?.scope === 'clinic' || req.body?.scope === 'clinic' ? 'clinic' : 'private';
+}
 
 // GET /api/invoices/patient-sessions/:patientId - get attended sessions for a patient in a period
-router.get('/patient-sessions/:patientId', async (req, res) => {
+router.get('/patient-sessions/:patientId', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { startDate, endDate, unbilledOnly } = req.query;
-    const where = {
-      professionalId: req.userId,
+    const scope = invoiceScope(req);
+    if (!canAccessScope(req.access, 'finance:read', scope)) {
+      return res.status(403).json({ error: 'Sem permissão para este escopo' });
+    }
+    const where = scope === 'private' ? {
       patientId: req.params.patientId,
+      scope,
       attended: true,
-      status: 'completed'
+      status: 'completed',
+      ...(canAccessScope(req.access, 'finance:read', scope) && ['admin', 'superadmin', 'financial'].includes(req.access.accountRole)
+        ? {}
+        : { professionalId: req.access.userId }),
+    } : {
+      patientId: req.params.patientId,
+      scope,
+      attended: true,
+      status: 'completed',
+      professional: { organizationId: req.access.organizationId },
     };
 
     if (startDate || endDate) {
@@ -35,7 +55,7 @@ router.get('/patient-sessions/:patientId', async (req, res) => {
     let result = sessions;
     if (unbilledOnly === 'true') {
       const accountNotes = await prisma.account.findMany({
-        where: { professionalId: req.userId, patientId: req.params.patientId },
+        where: scope === 'private' ? { professionalId: req.access.userId, patientId: req.params.patientId, scope } : { patientId: req.params.patientId, scope, organizationId: req.access.organizationId },
         select: { notes: true }
       });
       const billedSessionIds = new Set();
@@ -55,15 +75,21 @@ router.get('/patient-sessions/:patientId', async (req, res) => {
 });
 
 // POST /api/invoices/generate - group sessions into an invoice (account receivable)
-router.post('/generate', async (req, res) => {
+router.post('/generate', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { patientId, sessionIds, description, dueDate, paymentMethod } = req.body;
     if (!patientId || !sessionIds || !sessionIds.length) {
       return res.status(400).json({ error: 'patientId e sessionIds são obrigatórios' });
     }
+    const scope = invoiceScope(req);
+    if (!canAccessScope(req.access, 'finance:manage', scope)) {
+      return res.status(403).json({ error: 'Sem permissão para esta ação' });
+    }
 
     const sessions = await prisma.appointment.findMany({
-      where: { id: { in: sessionIds }, professionalId: req.userId, patientId },
+      where: scope === 'private'
+        ? { id: { in: sessionIds }, patientId, scope, professionalId: req.access.userId }
+        : { id: { in: sessionIds }, patientId, scope, professional: { organizationId: req.access.organizationId } },
       include: { patient: { select: { name: true, sessionValue: true } } },
       orderBy: { date: 'asc' }
     });
@@ -77,7 +103,9 @@ router.post('/generate', async (req, res) => {
 
     const account = await prisma.account.create({
       data: {
-        professionalId: req.userId,
+        professionalId: sessions[0].professionalId,
+        organizationId: req.access.organizationId,
+        scope,
         type: 'receivable',
         description: description || `Fatura - ${sessions[0].patient?.name} (${sessions.length} sessões)`,
         value: totalValue,
@@ -108,9 +136,16 @@ router.post('/generate', async (req, res) => {
 });
 
 // GET /api/invoices/monthly-report - monthly revenue, future revenue, expenses
-router.get('/monthly-report', async (req, res) => {
+router.get('/monthly-report', requireScope('private', 'clinic'), async (req, res) => {
   try {
     const { month } = req.query; // YYYY-MM
+    const scope = invoiceScope(req);
+    if (!canAccessScope(req.access, 'finance:read', scope)) {
+      return res.status(403).json({ error: 'Sem permissão para este escopo' });
+    }
+    const privateOwner = scope === 'private' && !['admin', 'superadmin', 'financial'].includes(req.access.accountRole)
+      ? { professionalId: req.access.userId }
+      : { organizationId: req.access.organizationId || undefined };
     const now = new Date();
     const year = month ? parseInt(month.split('-')[0]) : now.getFullYear();
     const mon = month ? parseInt(month.split('-')[1]) - 1 : now.getMonth();
@@ -119,7 +154,7 @@ router.get('/monthly-report', async (req, res) => {
 
     // Current month accounts
     const accounts = await prisma.account.findMany({
-      where: { professionalId: req.userId, dueDate: { gte: start, lte: end } },
+      where: { ...privateOwner, scope, dueDate: { gte: start, lte: end } },
       include: { patient: { select: { id: true, name: true } } }
     });
 
@@ -127,13 +162,14 @@ router.get('/monthly-report', async (req, res) => {
     const futureStart = new Date(year, mon + 1, 1);
     const futureEnd = new Date(year, mon + 4, 0);
     const futureAccounts = await prisma.account.findMany({
-      where: { professionalId: req.userId, dueDate: { gte: futureStart, lte: futureEnd } }
+      where: { ...privateOwner, scope, dueDate: { gte: futureStart, lte: futureEnd } }
     });
 
     // Sessions this month (attended)
     const sessions = await prisma.appointment.findMany({
       where: {
-        professionalId: req.userId,
+        ...privateOwner,
+        scope,
         date: { gte: start, lte: end },
         attended: true,
         status: 'completed'

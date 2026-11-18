@@ -30,6 +30,10 @@ const goalsRoutes = require('./routes/goals');
 const tasksRoutes = require('./routes/tasks');
 const resourcesRoutes = require('./routes/resources');
 const eventsRoutes = require('./routes/events');
+const notificationsRoutes = require('./routes/notifications');
+const clinicRoutes = require('./routes/clinic');
+const payoutsRoutes = require('./routes/payouts');
+const auditRoutes = require('./routes/audit');
 
 const prisma = require('./db');
 const app = express();
@@ -97,6 +101,10 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/recursos', resourcesRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/clinic', clinicRoutes);
+app.use('/api/payouts', payoutsRoutes);
+app.use('/api/audit', auditRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Psico Gleego API rodando na porta ${PORT}`);

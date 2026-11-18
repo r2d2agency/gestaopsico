@@ -1,11 +1,14 @@
 const express = require('express');
 
 const { authMiddleware } = require('../middleware/auth');
+const { loadAccess } = require('../middleware/access');
+const { hasPermission } = require('../permissions');
 
 const router = express.Router();
 const prisma = require('../db');
 
 router.use(authMiddleware);
+router.use(loadAccess);
 
 async function getRequesterContext(userId) {
   return prisma.user.findUnique({
@@ -18,17 +21,17 @@ function canAccessMessages(role) {
   return ['professional', 'psychologist', 'admin', 'superadmin', 'secretary', 'financial', 'secretary_financial'].includes(role);
 }
 
-function buildMessageWhere(user) {
-  if (!user) return null;
-  if (user.role === 'superadmin') return {};
-  if (['admin', 'secretary', 'financial', 'secretary_financial'].includes(user.role) && user.organizationId) {
+function buildMessageWhere(context) {
+  if (!context) return null;
+  if (context.accountRole === 'superadmin') return {};
+  if (['admin', 'secretary', 'financial', 'secretary_financial'].includes(context.accountRole) && context.organizationId) {
     return {
       professional: {
-        organizationId: user.organizationId,
+        organizationId: context.organizationId,
       },
     };
   }
-  return { professionalId: user.id };
+  return { professionalId: context.userId };
 }
 
 function getMessagePreview(message) {
@@ -37,15 +40,15 @@ function getMessagePreview(message) {
   return message.content;
 }
 
-async function resolveConversationProfessionalId(patientId, user) {
+async function resolveConversationProfessionalId(patientId, context) {
   const patient = await prisma.patient.findFirst({
     where: {
       id: patientId,
-      ...(user.role === 'superadmin'
+      ...(context.accountRole === 'superadmin'
         ? {}
-        : ['admin', 'secretary', 'financial', 'secretary_financial'].includes(user.role) && user.organizationId
-          ? { professional: { organizationId: user.organizationId } }
-          : { professionalId: user.id }),
+        : ['admin', 'secretary', 'financial', 'secretary_financial'].includes(context.accountRole) && context.organizationId
+          ? { professional: { organizationId: context.organizationId } }
+          : { professionalId: context.userId }),
     },
     select: { id: true, professionalId: true },
   });
@@ -55,13 +58,12 @@ async function resolveConversationProfessionalId(patientId, user) {
 
 router.get('/', async (req, res) => {
   try {
-    const user = await getRequesterContext(req.userId);
-    if (!user || !canAccessMessages(user.role)) {
+    if (!req.access || !canAccessMessages(req.access.accountRole)) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
     const messages = await prisma.patientPortalMessage.findMany({
-      where: buildMessageWhere(user),
+      where: buildMessageWhere(req.access),
       include: {
         patient: { select: { id: true, name: true } },
       },
@@ -96,14 +98,13 @@ router.get('/', async (req, res) => {
 
 router.get('/unread-count', async (req, res) => {
   try {
-    const user = await getRequesterContext(req.userId);
-    if (!user || !canAccessMessages(user.role)) {
+    if (!req.access || !canAccessMessages(req.access.accountRole)) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
     const count = await prisma.patientPortalMessage.count({
       where: {
-        ...buildMessageWhere(user),
+        ...buildMessageWhere(req.access),
         sender: 'patient',
         readAt: null,
       },
@@ -117,12 +118,11 @@ router.get('/unread-count', async (req, res) => {
 
 router.get('/:patientId', async (req, res) => {
   try {
-    const user = await getRequesterContext(req.userId);
-    if (!user || !canAccessMessages(user.role)) {
+    if (!req.access || !canAccessMessages(req.access.accountRole)) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const patient = await resolveConversationProfessionalId(req.params.patientId, user);
+    const patient = await resolveConversationProfessionalId(req.params.patientId, req.access);
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
     const messages = await prisma.patientPortalMessage.findMany({
@@ -141,8 +141,7 @@ router.get('/:patientId', async (req, res) => {
 
 router.post('/:patientId', async (req, res) => {
   try {
-    const user = await getRequesterContext(req.userId);
-    if (!user || !canAccessMessages(user.role)) {
+    if (!req.access || !canAccessMessages(req.access.accountRole)) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
@@ -151,7 +150,7 @@ router.post('/:patientId', async (req, res) => {
       return res.status(400).json({ error: 'type e content são obrigatórios' });
     }
 
-    const patient = await resolveConversationProfessionalId(req.params.patientId, user);
+    const patient = await resolveConversationProfessionalId(req.params.patientId, req.access);
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
     const message = await prisma.patientPortalMessage.create({
@@ -175,12 +174,11 @@ router.post('/:patientId', async (req, res) => {
 
 router.patch('/:patientId/read', async (req, res) => {
   try {
-    const user = await getRequesterContext(req.userId);
-    if (!user || !canAccessMessages(user.role)) {
+    if (!req.access || !canAccessMessages(req.access.accountRole)) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const patient = await resolveConversationProfessionalId(req.params.patientId, user);
+    const patient = await resolveConversationProfessionalId(req.params.patientId, req.access);
     if (!patient) return res.status(404).json({ error: 'Paciente não encontrado' });
 
     await prisma.patientPortalMessage.updateMany({

@@ -51,6 +51,9 @@ import Teleatendimento from "./pages/Teleatendimento";
 import CompletarCadastro from "./pages/CompletarCadastro";
 import ImportacaoDados from "./pages/ImportacaoDados";
 import RecursosPage from "./pages/Recursos";
+import Clinica from "./pages/Clinica";
+import Repasses from "./pages/Repasses";
+import Auditoria from "./pages/Auditoria";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +108,9 @@ const App = () => (
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/recursos" element={<RecursosPage />} />
               <Route path="/prontuarios" element={<Prontuarios />} />
+              <Route path="/clinica" element={<Clinica />} />
+              <Route path="/repasses" element={<Repasses />} />
+              <Route path="/auditoria" element={<Auditoria />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/teleatendimento" element={<Teleatendimento />} />
               <Route path="/configuracoes" element={<Configuracoes />} />

@@ -2,13 +2,16 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 
 const { authMiddleware } = require('../middleware/auth');
-const { professionalGuard } = require('../middleware/adminGuard');
+const { loadAccess } = require('../middleware/access');
+const { requireCapability } = require('../middleware/access');
+const { logAudit } = require('../services/auditService');
 
 const router = express.Router();
 const prisma = require('../db');
 
 router.use(authMiddleware);
-router.use(professionalGuard);
+router.use(loadAccess);
+router.use(requireCapability('team:manage'));
 
 // GET /api/team - list users in the same organization
 router.get('/', async (req, res) => {
@@ -90,11 +93,17 @@ router.patch('/:id/status', async (req, res) => {
     if (!['active', 'inactive'].includes(status)) {
       return res.status(400).json({ error: 'Status inválido' });
     }
+    const existing = await prisma.user.findFirst({
+      where: { id: req.params.id, organizationId: req.access.organizationId },
+      select: { id: true },
+    });
+    if (!existing) return res.status(404).json({ error: 'Usuário não encontrado' });
     const user = await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: existing.id },
       data: { status },
       select: { id: true, name: true, email: true, role: true, status: true }
     });
+    await logAudit(req, 'team.status_changed', 'User', user.id, { status });
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao alterar status', details: err.message });
