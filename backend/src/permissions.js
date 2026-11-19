@@ -19,7 +19,7 @@ const CAPABILITIES = {
   'agenda:read': [...CLINIC_ROLES, 'superadmin'],
   'agenda:manage': AGENDA_MANAGE_ROLES,
   'patient:read': [...CLINIC_ROLES, 'superadmin'],
-  'patient:manage': [...OWNER_ROLES, 'secretary', 'professional'],
+  'patient:manage': [...OWNER_ROLES, 'secretary', 'professional', 'supervisor'],
   'record:read': CLINICAL_READ_ROLES,
   'record:write': CLINICAL_WRITE_ROLES,
   'finance:read': [...OWNER_ROLES, 'financial', 'professional', 'superadmin'],
