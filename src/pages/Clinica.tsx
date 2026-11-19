@@ -37,6 +37,16 @@ export default function Clinica() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const createMembership = useMutation({
+    mutationFn: () => clinicApi.createMyMembership(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinic-status"] });
+      qc.invalidateQueries({ queryKey: ["clinic-members"] });
+      toast({ title: "Vínculo clínico criado!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const saveMember = useMutation({
     mutationFn: () => clinicApi.saveMember({ userId: form.userId, role: form.role, supervisorId: form.supervisorId || null }),
     onSuccess: () => {
@@ -76,6 +86,11 @@ export default function Clinica() {
           <div className="flex items-center gap-3">
             <Button size="sm" variant="outline" onClick={() => activate.mutate("clinic")} disabled={!status?.canActivateClinic}>Clínica</Button>
             <Button size="sm" variant="outline" onClick={() => activate.mutate("hybrid")} disabled={!status?.canActivateClinic}>Híbrido</Button>
+            {status?.organization && status.organization.mode !== "individual" && !status?.membership ? (
+              <Button size="sm" onClick={() => createMembership.mutate()} disabled={createMembership.isPending || !status?.canActivateClinic}>
+                Criar meu vínculo clínico
+              </Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>

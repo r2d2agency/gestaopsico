@@ -82,6 +82,45 @@ router.post('/activate', requireCapability('clinic:manage'), async (req, res) =>
   }
 });
 
+// POST /api/clinic/my-membership - cria o vínculo do administrador quando o
+// modo já foi ativado diretamente pelo superadmin.
+router.post('/my-membership', requireCapability('clinic:manage'), async (req, res) => {
+  try {
+    if (!req.access.organizationId) return res.status(400).json({ error: 'Organização não encontrada' });
+    if (!['admin', 'superadmin'].includes(req.access.accountRole)) {
+      return res.status(403).json({ error: 'Somente administradores podem criar seu vínculo clínico' });
+    }
+    if (req.access.mode === 'individual') {
+      return res.status(400).json({ error: 'Ative o modo clínica antes de criar o vínculo' });
+    }
+    if (!req.access.canActivateClinic) {
+      return res.status(403).json({ error: 'O plano contratado não habilita o modo clínica' });
+    }
+
+    const member = await prisma.clinicMember.upsert({
+      where: {
+        organizationId_userId: {
+          organizationId: req.access.organizationId,
+          userId: req.access.userId,
+        },
+      },
+      create: {
+        organizationId: req.access.organizationId,
+        userId: req.access.userId,
+        role: req.access.accountRole === 'superadmin' ? 'admin' : req.access.accountRole,
+        status: 'active',
+        createdBy: req.access.userId,
+      },
+      update: { status: 'active', endedAt: null },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    await logAudit(req, 'clinic.member_updated', 'ClinicMember', member.id, { selfService: true });
+    res.status(201).json(member);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao criar vínculo clínico', details: err.message });
+  }
+});
+
 // GET /api/clinic/members
 router.get('/members', requireClinicMember, async (req, res) => {
   try {

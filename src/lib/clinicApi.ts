@@ -27,6 +27,7 @@ export interface ClinicMember {
 export const clinicApi = {
   status: () => apiRequest<ClinicStatus>("/clinic/status"),
   activate: (mode: "clinic" | "hybrid") => apiRequest("/clinic/activate", { method: "POST", body: { mode } }),
+  createMyMembership: () => apiRequest<ClinicMember>("/clinic/my-membership", { method: "POST" }),
   listMembers: () => apiRequest<ClinicMember[]>("/clinic/members"),
   saveMember: (data: { userId: string; role: string; supervisorId?: string | null; permissions?: string[] }) =>
     apiRequest<ClinicMember>("/clinic/members", { method: "POST", body: data }),

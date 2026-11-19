@@ -101,6 +101,16 @@ export default function Configuracoes() {
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
+  const createClinicMembership = useMutation({
+    mutationFn: () => clinicApi.createMyMembership(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinic-status"] });
+      qc.invalidateQueries({ queryKey: ["clinic-members"] });
+      toast({ title: "Vínculo clínico criado!" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const { data: clinicMembers } = useQuery({
     queryKey: ["clinic-members"],
     queryFn: () => clinicApi.listMembers(),
@@ -652,6 +662,14 @@ export default function Configuracoes() {
               </div>
             </CardHeader>
             <CardContent>
+              {!clinicStatus?.membership ? (
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-dashed p-3">
+                  <p className="text-sm text-muted-foreground">Você ainda não possui vínculo clínico ativo.</p>
+                  <Button size="sm" onClick={() => createClinicMembership.mutate()} disabled={createClinicMembership.isPending || !clinicStatus?.canActivateClinic}>
+                    Criar meu vínculo clínico
+                  </Button>
+                </div>
+              ) : null}
               {!clinicMembers?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-6">Nenhum vínculo clínico ativo</p>
               ) : (
