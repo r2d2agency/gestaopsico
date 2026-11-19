@@ -1,9 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const { authMiddleware } = require('../middleware/auth');
 const { superadminGuard } = require('../middleware/adminGuard');
+const { logAudit } = require('../services/auditService');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const router = express.Router();
 const prisma = require('../db');
 
@@ -80,13 +83,49 @@ router.post('/organizations', async (req, res) => {
 router.patch('/organizations/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const data = req.body;
-    delete data.id;
-    delete data.createdAt;
+    const {
+      name, slug, type, plan, planId, email, phone, cnpj, address,
+      maxUsers, status, mode, portalSlug,
+    } = req.body || {};
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (slug !== undefined) data.slug = slug;
+    if (type !== undefined) data.type = type;
+    if (plan !== undefined) data.plan = plan;
+    if (planId !== undefined) data.planId = planId || null;
+    if (email !== undefined) data.email = email || null;
+    if (phone !== undefined) data.phone = phone || null;
+    if (cnpj !== undefined) data.cnpj = cnpj || null;
+    if (address !== undefined) data.address = address || null;
+    if (maxUsers !== undefined) data.maxUsers = Number(maxUsers);
+    if (status !== undefined) {
+      if (!['active', 'inactive', 'suspended'].includes(status)) {
+        return res.status(400).json({ error: 'Status inválido' });
+      }
+      data.status = status;
+      data.suspendedAt = status === 'suspended' ? new Date() : null;
+    }
+    if (mode !== undefined) {
+      if (!['individual', 'clinic', 'hybrid'].includes(mode)) {
+        return res.status(400).json({ error: 'Modo inválido' });
+      }
+      data.mode = mode;
+    }
+    if (portalSlug !== undefined) {
+      const settings = await prisma.organizationSetting.findUnique({ where: { organizationId: id } });
+      if (settings) {
+        await prisma.organizationSetting.update({
+          where: { organizationId: id },
+          data: { portalSlug: portalSlug || null },
+        });
+      }
+    }
 
     const org = await prisma.organization.update({ where: { id }, data });
+    await logAudit(req, 'admin.organization_updated', 'Organization', org.id, Object.keys(data));
     res.json(org);
   } catch (err) {
+    if (err.code === 'P2002') return res.status(400).json({ error: 'Slug já está em uso' });
     res.status(500).json({ error: 'Erro ao atualizar organização', details: err.message });
   }
 });
@@ -257,6 +296,53 @@ router.patch('/users/:id/role', async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao alterar perfil', details: err.message });
+  }
+});
+
+// PATCH /api/admin/users/:id/password - redefine a senha de qualquer usuário
+router.patch('/users/:id/password', async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres' });
+    }
+    const target = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, name: true, email: true, role: true },
+    });
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { passwordHash: await bcrypt.hash(String(password), 10) },
+    });
+    await logAudit(req, 'admin.user_password_reset', 'User', target.id, { email: target.email });
+    res.json({ message: 'Senha redefinida com sucesso', user: target });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao redefinir senha', details: err.message });
+  }
+});
+
+// POST /api/admin/users/:id/assist - acesso temporário à conta do cliente
+router.post('/users/:id/assist', async (req, res) => {
+  try {
+    const target = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, name: true, email: true, role: true, status: true },
+    });
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (target.role === 'superadmin') {
+      return res.status(403).json({ error: 'Não é possível acessar outra conta superadmin' });
+    }
+
+    const token = jwt.sign({ userId: target.id }, JWT_SECRET, { expiresIn: '15m' });
+    await logAudit(req, 'admin.assisted_access', 'User', target.id, {
+      email: target.email,
+      reason: req.body?.reason || 'Ajuste administrativo',
+    });
+    res.json({ token, user: target, expiresIn: '15m' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar acesso assistido', details: err.message });
   }
 });
 

@@ -61,10 +61,10 @@ export const adminApi = {
     ),
   createOrganization: (data: Partial<Organization>) =>
     apiRequest<Organization>("/admin/organizations", { method: "POST", body: data }),
-  updateOrganization: (id: string, data: Partial<Organization>) =>
-    apiRequest<Organization>(`/admin/organizations/${id}`, { method: "PATCH", body: data }),
   toggleOrgStatus: (id: string, status: string) =>
     apiRequest<Organization>(`/admin/organizations/${id}/status`, { method: "PATCH", body: { status } }),
+  updateOrganization: (id: string, data: Partial<Organization> & { planId?: string | null; mode?: string }) =>
+    apiRequest<Organization>(`/admin/organizations/${id}`, { method: "PATCH", body: data }),
 
   // Usuários
   listUsers: (params?: Record<string, string>) =>
@@ -77,6 +77,10 @@ export const adminApi = {
     apiRequest<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: { status } }),
   changeUserRole: (id: string, role: string) =>
     apiRequest<AdminUser>(`/admin/users/${id}/role`, { method: "PATCH", body: { role } }),
+  resetUserPassword: (id: string, password: string) =>
+    apiRequest<{ message: string }>(`/admin/users/${id}/password`, { method: "PATCH", body: { password } }),
+  assistedAccess: (id: string, reason: string) =>
+    apiRequest<{ token: string; user: AdminUser }>(`/admin/users/${id}/assist`, { method: "POST", body: { reason } }),
 
   // Métricas
   getMetrics: () => apiRequest<AdminMetrics>("/admin/metrics"),
