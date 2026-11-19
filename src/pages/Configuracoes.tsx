@@ -647,6 +647,11 @@ export default function Configuracoes() {
                 Modo atual: <Badge variant="outline">{clinicStatus?.organization?.mode || "individual"}</Badge>
                 {clinicStatus?.membership ? ` · vínculo ${clinicRoleLabels[clinicStatus.membership.role] || clinicStatus.membership.role}` : " · sem vínculo clínico ativo"}
               </p>
+              {!clinicStatus?.canActivateClinic && (
+                <p className="mt-2 text-sm text-amber-600">
+                  O plano desta organização não habilita o modo clínica. Peça ao superadmin para ativar o módulo no plano contratado.
+                </p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -670,7 +675,7 @@ export default function Configuracoes() {
               {!clinicStatus?.membership ? (
                 <div className="mb-4 flex items-center justify-between rounded-lg border border-dashed p-3">
                   <p className="text-sm text-muted-foreground">Você ainda não possui vínculo clínico ativo.</p>
-                  <Button size="sm" onClick={() => createClinicMembership.mutate()} disabled={createClinicMembership.isPending || !clinicStatus?.canActivateClinic}>
+                  <Button size="sm" onClick={() => createClinicMembership.mutate()} disabled={createClinicMembership.isPending}>
                     Criar meu vínculo clínico
                   </Button>
                 </div>

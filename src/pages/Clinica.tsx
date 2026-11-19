@@ -88,13 +88,16 @@ export default function Clinica() {
             </Badge>
           </div>
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="outline" onClick={() => activate.mutate("clinic")} disabled={!status?.canActivateClinic}>Clínica</Button>
-            <Button size="sm" variant="outline" onClick={() => activate.mutate("hybrid")} disabled={!status?.canActivateClinic}>Híbrido</Button>
+            <Button size="sm" variant="outline" onClick={() => activate.mutate("clinic")} disabled={!status || !status.canActivateClinic}>Clínica</Button>
+            <Button size="sm" variant="outline" onClick={() => activate.mutate("hybrid")} disabled={!status || !status.canActivateClinic}>Híbrido</Button>
             {status?.organization && status.organization.mode !== "individual" && !status?.membership ? (
-              <Button size="sm" onClick={() => createMembership.mutate()} disabled={createMembership.isPending || !status?.canActivateClinic}>
+              <Button size="sm" onClick={() => createMembership.mutate()} disabled={createMembership.isPending}>
                 Criar meu vínculo clínico
               </Button>
             ) : null}
+            {!status?.canActivateClinic && (
+              <span className="text-xs text-muted-foreground">Plano sem modo clínica</span>
+            )}
           </div>
         </CardContent>
       </Card>

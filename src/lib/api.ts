@@ -40,6 +40,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
     const error = await response.json().catch(() => ({ message: "Erro desconhecido" }));
     const errObj: any = new Error(error.message || error.error || `Erro ${response.status}`);
     errObj.details = error.details;
+    errObj.status = response.status;
     throw errObj;
   }
 

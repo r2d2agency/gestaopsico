@@ -9,6 +9,7 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
     "prisma:seed": "node prisma/seed.js",
+    "prisma:migrate-clinic-tenants": "node prisma/migrate-clinic-tenants.js",
     "test": "node --test tests"
   },
   "dependencies": {

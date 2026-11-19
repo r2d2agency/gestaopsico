@@ -269,6 +269,13 @@ export default function AdminUsers() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                    <span
+                      className="cursor-pointer font-mono hover:text-primary"
+                      title="Clique para copiar o ID do usuário"
+                      onClick={() => navigator.clipboard?.writeText(user.id)}
+                    >
+                      ID: {user.id}
+                    </span>
                     <span>{user.email}</span>
                     {user.crp && (
                       <>
