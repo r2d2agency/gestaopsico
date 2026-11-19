@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, CreditCard, Check, Edit, Trash2, Users, Brain, MessageSquare,
+  Plus, CreditCard, Check, Edit, Trash2, Users, Brain, MessageSquare, Building2,
   ToggleLeft, ToggleRight, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import { plansApi, type Plan } from "@/lib/plansApi";
 const emptyPlan: Partial<Plan> = {
   name: "", slug: "", description: "", price: 0, priceWithAi: 0,
   maxPatients: 10, maxUsers: 1, maxPsychologists: 1, trialDays: 7,
-  hasAiSecretary: false, hasWhatsapp: false, isRecommended: false, isActive: true, features: [],
+  hasAiSecretary: false, hasWhatsapp: false, hasClinicMode: false, isRecommended: false, isActive: true, features: [],
 };
 
 export default function AdminPlans() {
@@ -165,6 +165,10 @@ export default function AdminPlans() {
                   <Switch checked={form.hasWhatsapp} onCheckedChange={v => set("hasWhatsapp", v)} />
                 </div>
                 <div className="flex items-center justify-between">
+                  <Label>Modo Clínica</Label>
+                  <Switch checked={form.hasClinicMode} onCheckedChange={v => set("hasClinicMode", v)} />
+                </div>
+                <div className="flex items-center justify-between">
                   <Label>Destacar como Recomendado</Label>
                   <Switch checked={form.isRecommended} onCheckedChange={v => set("isRecommended", v)} />
                 </div>
@@ -253,6 +257,7 @@ export default function AdminPlans() {
                 <span>Trial: {plan.trialDays} dias</span>
                 {plan.hasAiSecretary && <Badge variant="outline" className="text-[10px]"><Brain className="w-3 h-3 mr-1" />IA</Badge>}
                 {plan.hasWhatsapp && <Badge variant="outline" className="text-[10px]"><MessageSquare className="w-3 h-3 mr-1" />WhatsApp</Badge>}
+                {plan.hasClinicMode && <Badge variant="outline" className="text-[10px]"><Building2 className="w-3 h-3 mr-1" />Clínica</Badge>}
               </div>
 
               <ul className="space-y-1.5 mb-4">

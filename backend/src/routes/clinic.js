@@ -20,10 +20,17 @@ router.get('/status', async (req, res) => {
   try {
     const organization = req.access.organizationId ? await prisma.organization.findUnique({
       where: { id: req.access.organizationId },
-      select: { id: true, name: true, mode: true, status: true },
+      select: {
+        id: true,
+        name: true,
+        mode: true,
+        status: true,
+        planRef: { select: { id: true, name: true, slug: true, hasClinicMode: true } },
+      },
     }) : null;
     res.json({
       organization,
+      canActivateClinic: req.access.canActivateClinic === true,
       membership: req.access.hasActiveClinicMember ? {
         role: req.access.role,
         permissions: req.access.permissions,
@@ -42,6 +49,9 @@ router.post('/activate', requireCapability('clinic:manage'), async (req, res) =>
     if (!req.access.organizationId) return res.status(400).json({ error: 'Organização não encontrada' });
     if (!['admin', 'superadmin'].includes(req.access.accountRole)) {
       return res.status(403).json({ error: 'Somente administradores podem ativar o modo clínico' });
+    }
+    if (!req.access.canActivateClinic) {
+      return res.status(403).json({ error: 'O plano contratado não habilita o modo clínica' });
     }
     const mode = req.body?.mode === 'clinic' ? 'clinic' : 'hybrid';
     const organization = await prisma.organization.update({

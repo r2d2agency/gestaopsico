@@ -5,21 +5,26 @@ Documento de apoio à Etapa 8 do roteiro
 
 ## Ativação
 
-1. Confirmar que a migração `20260331000000_add_clinic_mode` foi aplicada.
-2. Confirmar que todos os dados antigos estão com `Organization.mode = individual`
+1. Confirmar que as migrações `20260331000000_add_clinic_mode` e
+   `20260331100000_add_plan_clinic_mode` foram aplicadas.
+2. Como superadmin, editar somente o plano que deve habilitar o recurso e
+   ativar `Modo Clínica` (`Plan.hasClinicMode = true`). Planos sem esse recurso
+   não podem ativar a operação clínica.
+3. Confirmar que todos os dados antigos estão com `Organization.mode = individual`
    e registros com `scope = private`.
-3. Como administrador da organização, chamar `POST /api/clinic/activate` com
+4. Como administrador da organização, chamar `POST /api/clinic/activate` com
    `{"mode":"clinic"}` ou `{"mode":"hybrid"}`.
-4. Criar vínculos ativos em `/api/clinic/members`.
-5. Criar acordos de repasse em `/api/payouts/agreements`.
-6. Apresentar aos usuários que eles continuam com dados particulares e passam a
+5. Criar vínculos ativos em `/api/clinic/members`.
+6. Criar acordos de repasse em `/api/payouts/agreements`.
+7. Apresentar aos usuários que eles continuam com dados particulares e passam a
    ter acesso clínico apenas nos vínculos autorizados.
 
 ## Matriz operacional de permissões
 
 | Ação | Quem pode |
 |---|---|
-| Ativar modo clínico | `admin` da organização |
+| Habilitar recurso no plano | `superadmin`, somente no plano clínica |
+| Ativar modo clínico | `admin` da organização com plano habilitado |
 | Criar/editar vínculo clínico | `admin` com vínculo ativo |
 | Suspender/encerrar vínculo | `admin` com vínculo ativo |
 | Compartilhar paciente clínico | `admin`, `secretary`, `professional` com vínculo ativo |

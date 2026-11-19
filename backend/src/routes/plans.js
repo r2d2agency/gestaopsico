@@ -39,7 +39,7 @@ router.get('/admin', async (req, res) => {
 // POST /api/plans
 router.post('/', async (req, res) => {
   try {
-    const { name, slug, description, price, priceWithAi, maxPatients, maxUsers, maxPsychologists, trialDays, hasAiSecretary, hasWhatsapp, isRecommended, features } = req.body;
+    const { name, slug, description, price, priceWithAi, maxPatients, maxUsers, maxPsychologists, trialDays, hasAiSecretary, hasWhatsapp, hasClinicMode, isRecommended, features } = req.body;
     if (!name || !slug || price === undefined) {
       return res.status(400).json({ error: 'Nome, slug e preço são obrigatórios' });
     }
@@ -54,6 +54,7 @@ router.post('/', async (req, res) => {
         trialDays: trialDays || 7,
         hasAiSecretary: hasAiSecretary || false,
         hasWhatsapp: hasWhatsapp || false,
+        hasClinicMode: hasClinicMode || false,
         isRecommended: isRecommended || false,
         features: features || []
       }
@@ -81,6 +82,7 @@ router.put('/:id', async (req, res) => {
     if (trialDays !== undefined) data.trialDays = parseInt(trialDays);
     if (hasAiSecretary !== undefined) data.hasAiSecretary = hasAiSecretary;
     if (hasWhatsapp !== undefined) data.hasWhatsapp = hasWhatsapp;
+    if (hasClinicMode !== undefined) data.hasClinicMode = hasClinicMode;
     if (isRecommended !== undefined) data.isRecommended = isRecommended;
     if (isActive !== undefined) data.isActive = isActive;
     if (features !== undefined) data.features = features;

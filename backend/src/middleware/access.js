@@ -18,7 +18,15 @@ async function loadAccess(req, res, next) {
         role: true,
         status: true,
         organizationId: true,
-        organization: { select: { id: true, mode: true, status: true } },
+        organization: {
+          select: {
+            id: true,
+            mode: true,
+            status: true,
+            planId: true,
+            planRef: { select: { id: true, name: true, slug: true, hasClinicMode: true } },
+          },
+        },
       },
     });
 
@@ -55,6 +63,8 @@ async function loadAccess(req, res, next) {
       role,
       accountRole: user.role,
       mode: user.organization?.mode || 'individual',
+      plan: user.organization?.planRef || null,
+      canActivateClinic: user.organization?.planRef?.hasClinicMode === true,
       hasActiveClinicMember: Boolean(activeClinicMember),
       permissions: activeClinicMember?.permissions || [],
       supervisorId: activeClinicMember?.supervisorId || null,

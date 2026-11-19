@@ -618,10 +618,10 @@ export default function Configuracoes() {
                   <CardDescription>Ative a operação clínica sem misturar dados particulares</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => activateClinic.mutate("clinic")} disabled={activateClinic.isPending || clinicStatus?.organization?.mode === "clinic"}>
+                  <Button size="sm" variant="outline" onClick={() => activateClinic.mutate("clinic")} disabled={activateClinic.isPending || !clinicStatus?.canActivateClinic || clinicStatus?.organization?.mode === "clinic"}>
                     Ativar clínica
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => activateClinic.mutate("hybrid")} disabled={activateClinic.isPending || clinicStatus?.organization?.mode === "hybrid"}>
+                  <Button size="sm" variant="outline" onClick={() => activateClinic.mutate("hybrid")} disabled={activateClinic.isPending || !clinicStatus?.canActivateClinic || clinicStatus?.organization?.mode === "hybrid"}>
                     Ativar híbrido
                   </Button>
                 </div>

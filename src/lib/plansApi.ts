@@ -13,6 +13,7 @@ export interface Plan {
   trialDays: number;
   hasAiSecretary: boolean;
   hasWhatsapp: boolean;
+  hasClinicMode: boolean;
   isRecommended: boolean;
   isActive: boolean;
   features: string[];

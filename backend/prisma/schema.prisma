@@ -37,6 +37,7 @@ model Plan {
   trialDays        Int            @default(7) @map("trial_days")
   hasAiSecretary   Boolean        @default(false) @map("has_ai_secretary")
   hasWhatsapp      Boolean        @default(false) @map("has_whatsapp")
+  hasClinicMode    Boolean        @default(false) @map("has_clinic_mode")
   isRecommended    Boolean        @default(false) @map("is_recommended")
   isActive         Boolean        @default(true) @map("is_active")
   features         String[]       @default([])

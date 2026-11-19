@@ -1,7 +1,14 @@
 import { apiRequest } from "./api";
 
 export interface ClinicStatus {
-  organization: { id: string; name: string; mode: string; status: string } | null;
+  organization: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    planRef?: { id: string; name: string; slug: string; hasClinicMode: boolean } | null;
+  } | null;
+  canActivateClinic: boolean;
   membership: { role: string; permissions: string[]; supervisorId: string | null } | null;
 }
 

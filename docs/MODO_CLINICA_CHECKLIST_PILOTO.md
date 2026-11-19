@@ -78,7 +78,21 @@ npx prisma generate
 - [ ] **2.2** Prisma Client gerado com sucesso.
   Evidência: saída do `prisma generate`.
 
-- [ ] **2.3** Tabelas novas existem.
+- [ ] **2.3** Coluna de habilitação do plano existe.
+
+```sql
+select column_name, column_default
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'plans'
+  and column_name = 'has_clinic_mode';
+```
+
+Resultado esperado: uma linha com default `false`.
+
+Evidência: output.
+
+- [ ] **2.4** Tabelas novas existem.
 
 SQL:
 
@@ -103,7 +117,7 @@ Resultado esperado: 8 linhas.
 
 Evidência: output.
 
-- [ ] **2.4** Colunas de escopo existem.
+- [ ] **2.5** Colunas de escopo existem.
 
 ```sql
 select table_name, column_name, column_default
@@ -165,11 +179,17 @@ Evidência: output completo das consultas.
 
 ---
 
-## 4. Dados de teste
+## 4. Plano e dados de teste
+
+Como superadmin, no admin de planos:
+
+- [ ] **4.0** Ativar `Modo Clínica` somente no plano clínica e salvar.
+  Confirmar que os demais planos permanecem sem o recurso.
+  Evidência: captura do plano editado.
 
 Criar no ambiente piloto:
 
-- [ ] **4.1** Organização piloto com CNPJ fictício.
+- [ ] **4.1** Organização piloto com CNPJ fictício e vinculada ao plano clínica.
   Registrar ID: ______________________
 
 - [ ] **4.2** Usuário administrador da organização.
@@ -211,6 +231,11 @@ Evidência: lista de IDs.
 ---
 
 ## 5. Ativação da clínica
+
+- [ ] **5.0** Confirmar que a API `/clinic/status` retorna
+  `canActivateClinic: true` para a organização com plano clínica e `false`
+  para uma organização com outro plano.
+  Evidência: JSON retornado.
 
 Na interface `/clinica` ou via API com o administrador piloto:
 

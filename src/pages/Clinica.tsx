@@ -66,10 +66,17 @@ export default function Clinica() {
           <CardTitle>Modo de operação</CardTitle>
           <CardDescription>Ativação explícita; dados particulares permanecem separados</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center gap-3">
-          <Badge variant="outline">Atual: {status?.organization?.mode || "individual"}</Badge>
-          <Button size="sm" variant="outline" onClick={() => activate.mutate("clinic")}>Clínica</Button>
-          <Button size="sm" variant="outline" onClick={() => activate.mutate("hybrid")}>Híbrido</Button>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline">Atual: {status?.organization?.mode || "individual"}</Badge>
+            <Badge variant={status?.canActivateClinic ? "default" : "secondary"}>
+              Plano: {status?.canActivateClinic ? "habilita clínica" : "sem modo clínica"}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button size="sm" variant="outline" onClick={() => activate.mutate("clinic")} disabled={!status?.canActivateClinic}>Clínica</Button>
+            <Button size="sm" variant="outline" onClick={() => activate.mutate("hybrid")} disabled={!status?.canActivateClinic}>Híbrido</Button>
+          </div>
         </CardContent>
       </Card>
 
