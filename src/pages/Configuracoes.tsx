@@ -88,7 +88,7 @@ export default function Configuracoes() {
   const { data: clinicStatus } = useQuery({
     queryKey: ["clinic-status"],
     queryFn: () => clinicApi.status(),
-    enabled: isProfessional,
+    enabled: isAdmin,
   });
 
   const activateClinic = useMutation({
@@ -623,7 +623,7 @@ export default function Configuracoes() {
         </motion.div>
       )}
 
-      {isProfessional && (
+      {isAdmin && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>
             <CardHeader>
@@ -652,7 +652,7 @@ export default function Configuracoes() {
         </motion.div>
       )}
 
-      {isProfessional && Boolean(clinicStatus?.organization && clinicStatus.organization.mode !== "individual") && (
+      {isAdmin && Boolean(clinicStatus?.organization && clinicStatus.organization.mode !== "individual") && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>
             <CardHeader>

@@ -108,9 +108,9 @@ const App = () => (
               <Route path="/casais" element={<CasaisPage />} />
               <Route path="/recursos" element={<RecursosPage />} />
               <Route path="/prontuarios" element={<Prontuarios />} />
-              <Route path="/clinica" element={<Clinica />} />
-              <Route path="/repasses" element={<Repasses />} />
-              <Route path="/auditoria" element={<Auditoria />} />
+              <Route path="/clinica" element={<ProtectedRoute allowedRoles={["admin", "professional", "superadmin"]}><Clinica /></ProtectedRoute>} />
+              <Route path="/repasses" element={<ProtectedRoute allowedRoles={["admin", "financial", "superadmin"]}><Repasses /></ProtectedRoute>} />
+              <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><Auditoria /></ProtectedRoute>} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/teleatendimento" element={<Teleatendimento />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
