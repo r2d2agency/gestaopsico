@@ -35,10 +35,14 @@ router.get('/status', async (req, res) => {
   }
 });
 
-// POST /api/clinic/activate - admin ativa o modo clínico para a organização
+// POST /api/clinic/activate - admin ativa o modo clínico para a organização.
+// Não usa requireClinicMember porque o primeiro vínculo é criado aqui.
 router.post('/activate', requireCapability('clinic:manage'), async (req, res) => {
   try {
     if (!req.access.organizationId) return res.status(400).json({ error: 'Organização não encontrada' });
+    if (!['admin', 'superadmin'].includes(req.access.accountRole)) {
+      return res.status(403).json({ error: 'Somente administradores podem ativar o modo clínico' });
+    }
     const mode = req.body?.mode === 'clinic' ? 'clinic' : 'hybrid';
     const organization = await prisma.organization.update({
       where: { id: req.access.organizationId },

@@ -2,8 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 
 const { authMiddleware } = require('../middleware/auth');
-const { loadAccess } = require('../middleware/access');
-const { requireCapability } = require('../middleware/access');
+const { loadAccess, requireAnyCapability } = require('../middleware/access');
 const { logAudit } = require('../services/auditService');
 
 const router = express.Router();
@@ -11,7 +10,8 @@ const prisma = require('../db');
 
 router.use(authMiddleware);
 router.use(loadAccess);
-router.use(requireCapability('team:manage'));
+// A gestão da equipe é uma operação da organização e não depende do modo clínico.
+router.use(requireAnyCapability('team:manage', 'clinic:manage'));
 
 // GET /api/team - list users in the same organization
 router.get('/', async (req, res) => {
