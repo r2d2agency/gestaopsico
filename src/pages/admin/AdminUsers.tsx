@@ -44,6 +44,8 @@ import {
   useToggleUserStatus,
   useChangeUserRole,
   useOrganizations,
+  useResetUserPassword,
+  useAssistedAccess,
 } from "@/hooks/useAdmin";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
@@ -81,6 +83,10 @@ export default function AdminUsers() {
   const createUser = useCreateUser();
   const toggleStatus = useToggleUserStatus();
   const changeRole = useChangeUserRole();
+  const resetPassword = useResetUserPassword();
+  const assistedAccess = useAssistedAccess();
+  const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -309,6 +315,20 @@ export default function AdminUsers() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
+                  {user.role !== "superadmin" && (
+                    <>
+                      <DropdownMenuItem className="gap-2" onClick={() => { setPasswordUserId(user.id); setNewPassword(""); }}>
+                        <Shield className="w-4 h-4" /> Redefinir senha
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onClick={() => assistedAccess.mutate({ id: user.id, reason: prompt("Motivo do acesso assistido") || "Ajuste administrativo" })}
+                      >
+                        <ShieldCheck className="w-4 h-4" /> Acessar conta
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
                   {user.status === "active" ? (
                     <DropdownMenuItem className="gap-2 text-destructive" onClick={() => toggleStatus.mutate({ id: user.id, status: "inactive" })}>
                       <PowerOff className="w-4 h-4" /> Desativar
@@ -324,6 +344,32 @@ export default function AdminUsers() {
           ))}
         </motion.div>
       )}
+
+      <Dialog open={Boolean(passwordUserId)} onOpenChange={(open) => { if (!open) setPasswordUserId(null); }}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div>
+              <Label>Nova senha</Label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPasswordUserId(null)}>Cancelar</Button>
+            <Button
+              disabled={resetPassword.isPending || newPassword.length < 6}
+              onClick={() => {
+                if (!passwordUserId) return;
+                resetPassword.mutate({ id: passwordUserId, password: newPassword }, { onSuccess: () => setPasswordUserId(null) });
+              }}
+            >
+              Salvar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

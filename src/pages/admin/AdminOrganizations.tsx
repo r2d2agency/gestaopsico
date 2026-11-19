@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -41,7 +42,9 @@ import {
   useOrganizations,
   useCreateOrganization,
   useToggleOrgStatus,
+  useUpdateOrganization,
 } from "@/hooks/useAdmin";
+import { plansApi } from "@/lib/plansApi";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Ativa", variant: "default" },
@@ -65,8 +68,18 @@ export default function AdminOrganizations() {
   if (filterStatus && filterStatus !== "all") params.status = filterStatus;
 
   const { data, isLoading, isError, error } = useOrganizations(Object.keys(params).length ? params : undefined);
+  const { data: plans = [] } = useQuery({ queryKey: ["admin", "plans"], queryFn: () => plansApi.listAdmin() });
   const createOrg = useCreateOrganization();
   const toggleStatus = useToggleOrgStatus();
+  const updateOrg = useUpdateOrganization();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editOrgId, setEditOrgId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    planId: "",
+    mode: "individual",
+    maxUsers: 5,
+  });
 
   const [form, setForm] = useState({
     name: "",
@@ -85,6 +98,32 @@ export default function AdminOrganizations() {
         setForm({ name: "", slug: "", type: "clinic", plan: "basic", email: "", phone: "", maxUsers: 5 });
       },
     });
+  };
+
+  const openEdit = (org: any) => {
+    setEditOrgId(org.id);
+    setEditForm({
+      name: org.name,
+      planId: org.planId || "",
+      mode: org.mode || "individual",
+      maxUsers: org.maxUsers,
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = () => {
+    if (!editOrgId) return;
+    const plan = plans.find((item) => item.id === editForm.planId);
+    updateOrg.mutate({
+      id: editOrgId,
+      data: {
+        name: editForm.name,
+        planId: editForm.planId || null,
+        plan: plan?.slug,
+        mode: editForm.mode,
+        maxUsers: Number(editForm.maxUsers),
+      },
+    }, { onSuccess: () => setEditOpen(false) });
   };
 
   const unauthorized = error instanceof Error && error.message === "Unauthorized";
@@ -232,7 +271,7 @@ export default function AdminOrganizations() {
                     <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="gap-2"><Pencil className="w-4 h-4" /> Editar</DropdownMenuItem>
+                    <DropdownMenuItem className="gap-2" onClick={() => openEdit(org)}><Pencil className="w-4 h-4" /> Editar / trocar plano</DropdownMenuItem>
                     {org.status === "active" ? (
                       <DropdownMenuItem className="gap-2 text-destructive" onClick={() => toggleStatus.mutate({ id: org.id, status: "suspended" })}>
                         <PowerOff className="w-4 h-4" /> Suspender
@@ -249,6 +288,52 @@ export default function AdminOrganizations() {
           })}
         </motion.div>
       )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Editar organização</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div>
+              <Label>Nome</Label>
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Plano</Label>
+              <Select value={editForm.planId} onValueChange={(value) => setEditForm({ ...editForm, planId: value })}>
+                <SelectTrigger><SelectValue placeholder="Selecione o plano" /></SelectTrigger>
+                <SelectContent>
+                  {plans.map((plan) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name}{plan.hasClinicMode ? " · Clínica" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Modo de operação</Label>
+              <Select value={editForm.mode} onValueChange={(value) => setEditForm({ ...editForm, mode: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="clinic">Clínica</SelectItem>
+                  <SelectItem value="hybrid">Híbrido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Máximo de usuários</Label>
+              <Input type="number" value={editForm.maxUsers} onChange={(e) => setEditForm({ ...editForm, maxUsers: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={saveEdit} disabled={updateOrg.isPending || !editForm.name}>Salvar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

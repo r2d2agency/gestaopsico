@@ -30,6 +30,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const assistedToken = sessionStorage.getItem("assisted_access_token");
+    if (params.get("assisted_access") === "1" && assistedToken) {
+      localStorage.setItem("auth_token", assistedToken);
+      sessionStorage.removeItem("assisted_access_token");
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setToken(assistedToken);
+    }
+  }, []);
+
+  useEffect(() => {
     if (token) {
       authApi.me().then(setUser).catch(() => {
         localStorage.removeItem("auth_token");
