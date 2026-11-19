@@ -23,7 +23,11 @@ export default function Clinica() {
   const { data: members } = useQuery({
     queryKey: ["clinic-members"],
     queryFn: () => clinicApi.listMembers(),
-    enabled: Boolean(status?.organization && status.organization.mode !== "individual"),
+    enabled: Boolean(
+      status?.membership &&
+      status?.organization &&
+      status.organization.mode !== "individual"
+    ),
   });
   const [form, setForm] = useState({ userId: "", role: "professional", supervisorId: "" });
 

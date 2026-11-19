@@ -23,6 +23,7 @@ async function loadAccess(req, res, next) {
             id: true,
             mode: true,
             status: true,
+            plan: true,
             planId: true,
             planRef: { select: { id: true, name: true, slug: true, hasClinicMode: true } },
           },
@@ -34,6 +35,14 @@ async function loadAccess(req, res, next) {
     if (user.status !== 'active') return deny(res, 403, 'Conta desativada');
     if (user.role !== 'superadmin' && user.organization?.status !== 'active') {
       return deny(res, 403, 'Organização inativa ou suspensa');
+    }
+
+    let planRef = user.organization?.planRef || null;
+    if (!planRef && user.organization?.plan) {
+      planRef = await prisma.plan.findFirst({
+        where: { slug: user.organization.plan },
+        select: { id: true, name: true, slug: true, hasClinicMode: true },
+      });
     }
 
     let clinicMember = null;
@@ -63,8 +72,8 @@ async function loadAccess(req, res, next) {
       role,
       accountRole: user.role,
       mode: user.organization?.mode || 'individual',
-      plan: user.organization?.planRef || null,
-      canActivateClinic: user.organization?.planRef?.hasClinicMode === true,
+      plan: planRef || null,
+      canActivateClinic: planRef?.hasClinicMode === true,
       hasActiveClinicMember: Boolean(activeClinicMember),
       permissions: activeClinicMember?.permissions || [],
       supervisorId: activeClinicMember?.supervisorId || null,

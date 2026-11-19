@@ -114,7 +114,12 @@ export default function Configuracoes() {
   const { data: clinicMembers } = useQuery({
     queryKey: ["clinic-members"],
     queryFn: () => clinicApi.listMembers(),
-    enabled: Boolean(isProfessional && clinicStatus?.organization && clinicStatus.organization.mode !== "individual"),
+    enabled: Boolean(
+      isAdmin &&
+      clinicStatus?.membership &&
+      clinicStatus?.organization &&
+      clinicStatus.organization.mode !== "individual"
+    ),
   });
 
   const [clinicMemberDialogOpen, setClinicMemberDialogOpen] = useState(false);
@@ -174,7 +179,7 @@ export default function Configuracoes() {
   const { data: teamData } = useQuery<{ data: any[]; total: number }>({
     queryKey: ["team"],
     queryFn: () => apiRequest("/team"),
-    enabled: isProfessional,
+    enabled: isAdmin,
   });
 
   const createTeamMember = useMutation({

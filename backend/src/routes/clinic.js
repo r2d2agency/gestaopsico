@@ -122,7 +122,7 @@ router.post('/my-membership', requireCapability('clinic:manage'), async (req, re
 });
 
 // GET /api/clinic/members
-router.get('/members', requireClinicMember, async (req, res) => {
+router.get('/members', requireCapability('team:manage'), async (req, res) => {
   try {
     const members = await prisma.clinicMember.findMany({
       where: { organizationId: req.access.organizationId },
@@ -136,7 +136,7 @@ router.get('/members', requireClinicMember, async (req, res) => {
 });
 
 // POST /api/clinic/members - convida/cria um vínculo clínico
-router.post('/members', requireClinicMember, requireCapability('team:manage'), async (req, res) => {
+router.post('/members', requireCapability('team:manage'), async (req, res) => {
   try {
     const { userId, role, supervisorId, permissions = [] } = req.body || {};
     if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
