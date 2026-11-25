@@ -10,6 +10,7 @@ const { promisify } = require('util');
 
 const router = express.Router();
 const prisma = require('../db');
+const { ensureReceivableForAppointment } = require('../services/billingService');
 const execFileAsync = promisify(execFile);
 
 router.use(authMiddleware);
@@ -447,37 +448,14 @@ router.post('/:id/start', async (req, res) => {
             where: { id: apt.id },
             data: { attended: true, status: 'completed' },
           });
-          // Generate receivable inline (avoid circular require)
-          if (apt.patientId && apt.patient && apt.patient.billingMode !== 'monthly') {
-            const existing = await prisma.account.findFirst({
-              where: {
-                professionalId: req.userId,
-                patientId: apt.patientId,
-                type: 'receivable',
-                notes: { contains: `appointment_id:${apt.id}` },
-              },
-            });
-            if (!existing) {
-              const value = apt.patient.sessionValue
-                ? Number(apt.patient.sessionValue)
-                : (apt.value ? Number(apt.value) : 0);
-              if (value > 0) {
-                await prisma.account.create({
-                  data: {
-                    professionalId: req.userId,
-                    type: 'receivable',
-                    description: `Sessão - ${apt.patient.name} - ${new Date(apt.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`,
-                    value,
-                    dueDate: apt.date,
-                    category: 'Consulta',
-                    patientId: apt.patientId,
-                    status: 'pending',
-                    notes: `appointment_id:${apt.id}`,
-                  },
-                });
-              }
-            }
-          }
+          const fullApt = await prisma.appointment.findFirst({
+            where: { id: apt.id },
+            include: {
+              patient: true,
+              professional: { select: { organizationId: true } },
+            },
+          });
+          if (fullApt) await ensureReceivableForAppointment(fullApt, req.userId, prisma);
         }
       } catch (e) {
         console.warn('Auto-attend failed:', e.message);

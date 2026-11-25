@@ -4,6 +4,12 @@ const { authMiddleware } = require('../middleware/auth');
 const { loadAccess, requireScope } = require('../middleware/access');
 const { canAccessScope } = require('../permissions');
 const { logAudit } = require('../services/auditService');
+const {
+  appointmentIdsFromNotes,
+  sessionIdsFromNotes,
+  sessionBillingValue,
+  syncAppointmentPaymentStatus,
+} = require('../services/billingService');
 
 const router = express.Router();
 const prisma = require('../db');
@@ -246,28 +252,25 @@ router.get('/patient/:patientId/financial', requireScope('private', 'clinic'), a
 
     // Compute totals
     const totalSessions = sessions.length;
-    const totalChargedSessions = sessions.reduce((sum, s) => {
-      const val = s.value ? Number(s.value) : sessionValueDefault;
-      return sum + val;
-    }, 0);
+    const totalChargedSessions = patient.billingMode === 'monthly'
+      ? (patient.monthlyValue ? Number(patient.monthlyValue) : 0)
+      : sessions.reduce((sum, s) => sum + sessionBillingValue(s, patient), 0);
 
     const totalCharged = accounts.reduce((s, a) => s + Number(a.value), 0);
     const totalPaid = accounts.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.value), 0);
     const totalPending = accounts.filter(a => a.status === 'pending').reduce((s, a) => s + Number(a.value), 0);
     const totalOverdue = accounts.filter(a => a.status === 'overdue').reduce((s, a) => s + Number(a.value), 0);
 
-    // Identify which sessions are already in an invoice (account.notes has session_ids:)
+    // Identify which sessions are already billed (single or grouped charges)
     const billedSessionIds = new Set();
     accounts.forEach(a => {
-      if (a.notes) {
-        const m = a.notes.match(/session_ids:([a-f0-9,\-]+)/);
-        if (m) m[1].split(',').forEach(id => billedSessionIds.add(id));
-      }
+      appointmentIdsFromNotes(a.notes).forEach(id => billedSessionIds.add(id));
+      sessionIdsFromNotes(a.notes).forEach(id => billedSessionIds.add(id));
     });
 
     const sessionsWithBilling = sessions.map(s => ({
       ...s,
-      value: s.value ? Number(s.value) : sessionValueDefault,
+      value: sessionBillingValue(s, patient),
       billed: billedSessionIds.has(s.id),
     }));
 
@@ -332,10 +335,16 @@ router.post('/bulk-pay', async (req, res) => {
     });
     if (!accessible.length) return res.status(404).json({ error: 'Contas não encontradas' });
     const date = paidAt ? new Date(paidAt) : new Date();
+    const ids = accessible.map((a) => a.id);
     const result = await prisma.account.updateMany({
-      where: { id: { in: accessible.map((a) => a.id) } },
+      where: { id: { in: ids } },
       data: { status: 'paid', paidAt: date, ...(paymentMethod ? { paymentMethod } : {}) }
     });
+    const paidAccounts = await prisma.account.findMany({
+      where: { id: { in: ids } },
+      select: { type: true, notes: true },
+    });
+    for (const account of paidAccounts) await syncAppointmentPaymentStatus(account, prisma);
     await logAudit(req, 'account.bulk_paid', 'Account', null, { count: result.count, scope });
     res.json({ message: 'Pagamentos registrados', count: result.count });
   } catch (err) {
@@ -466,6 +475,7 @@ router.put('/:id', async (req, res) => {
       data,
       include: { patient: { select: { id: true, name: true } } }
     });
+    if (status !== undefined) await syncAppointmentPaymentStatus(account, prisma);
     await logAudit(req, 'account.updated', 'Account', account.id, { scope: account.scope, status: account.status });
 
     res.json(account);

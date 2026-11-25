@@ -6,6 +6,11 @@ const { canAccessScope, scopedWhere } = require('../permissions');
 const { resolveProfessionalId } = require('../services/accessService');
 const { logAudit } = require('../services/auditService');
 const { notifyUsers } = require('../services/notificationService');
+const {
+  ensureReceivableForAppointment,
+  removeReceivableForAppointment,
+  sessionBillingValue,
+} = require('../services/billingService');
 
 const router = express.Router();
 const prisma = require('../db');
@@ -386,10 +391,11 @@ router.post('/:id/cancel', async (req, res) => {
   try {
     const existing = await assertAppointmentOwnership(req.access, req.params.id, 'agenda:manage');
     if (!existing) return res.status(404).json({ error: 'Consulta não encontrada' });
-    const appointment = await prisma.appointment.updateMany({
+    await prisma.appointment.update({
       where: { id: req.params.id },
-      data: { status: 'cancelled' }
+      data: { status: 'cancelled', attended: false },
     });
+    await removeAppointmentReceivable(existing, existing.professionalId);
     await logAudit(req, 'appointment.cancelled', 'Appointment', req.params.id, { scope: existing.scope });
     res.json({ message: 'Consulta cancelada' });
   } catch (err) {
@@ -397,60 +403,32 @@ router.post('/:id/cancel', async (req, res) => {
   }
 });
 
-// Helper: create receivable for an attended session (skip if monthly or already exists)
-async function ensureReceivableForAppointment(apt, professionalId) {
-  if (!apt.patientId || !apt.patient) return null;
-  const patient = apt.patient;
-  // Monthly billing: don't generate per-session charge
-  if (patient.billingMode === 'monthly') return null;
-
-  // Check if a receivable already exists for this appointment (avoid duplicates)
-  const existing = await prisma.account.findFirst({
-    where: {
-      professionalId,
-      patientId: apt.patientId,
-      type: 'receivable',
-      notes: { contains: `appointment_id:${apt.id}` },
-    },
-  });
-  if (existing) return existing;
-
-  const value = patient.sessionValue
-    ? Number(patient.sessionValue)
-    : (apt.value ? Number(apt.value) : 0);
-  if (!value || value <= 0) return null;
-
-  return prisma.account.create({
-    data: {
-      professionalId,
-      organizationId: apt.organizationId || undefined,
-      scope: apt.scope || 'private',
-      type: 'receivable',
-                    description: `Sessão - ${patient.name} - ${new Date(apt.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`,
-                    value,
-                    dueDate: apt.date,
-      category: 'Consulta',
-      patientId: apt.patientId,
-      status: 'pending',
-      notes: `appointment_id:${apt.id}`,
-    },
-  });
+async function ensureAppointmentReceivable(appointment, professionalId) {
+  const fullAppointment = appointment.patient
+    ? appointment
+    : await prisma.appointment.findFirst({
+        where: { id: appointment.id },
+        include: {
+          patient: true,
+          professional: { select: { organizationId: true } },
+        },
+      });
+  if (!fullAppointment) return null;
+  return ensureReceivableForAppointment(fullAppointment, professionalId, prisma);
 }
 
-// Internal: cancel any auto-receivable linked to this appointment
-async function removeReceivableForAppointment(appointmentId, professionalId) {
-  await prisma.account.deleteMany({
-    where: {
-      professionalId,
-      type: 'receivable',
-      status: { not: 'paid' },
-      notes: { contains: `appointment_id:${appointmentId}` },
-    },
-  });
+async function removeAppointmentReceivable(appointment, professionalId) {
+  const fullAppointment = appointment.patient
+    ? appointment
+    : await prisma.appointment.findFirst({
+        where: { id: appointment.id },
+        include: { patient: true },
+      });
+  const value = fullAppointment?.patient
+    ? sessionBillingValue(fullAppointment, fullAppointment.patient)
+    : (appointment.value ? Number(appointment.value) : 0);
+  await removeReceivableForAppointment(appointment.id, professionalId, value, prisma);
 }
-
-// Expose for cross-module use (telehealth auto-attend)
-router.ensureReceivableForAppointment = ensureReceivableForAppointment;
 
 // POST /api/consultas/:id/attend - mark attendance and auto-create receivable
 router.post('/:id/attend', async (req, res) => {
@@ -467,7 +445,7 @@ router.post('/:id/attend', async (req, res) => {
       data: { attended: true, status: 'completed' }
     });
 
-    const account = await ensureReceivableForAppointment(fullApt, fullApt.professionalId);
+    const account = await ensureAppointmentReceivable(fullApt, fullApt.professionalId);
     await logAudit(req, 'appointment.attended', 'Appointment', req.params.id, { scope: fullApt.scope });
     res.json({
       message: account
@@ -498,9 +476,9 @@ router.post('/:id/miss', async (req, res) => {
     let account = null;
     if (charge) {
       const fullApt = await prisma.appointment.findFirst({ where: { id: req.params.id }, include: { patient: true } });
-      account = await ensureReceivableForAppointment(fullApt, fullApt.professionalId);
+      account = await ensureAppointmentReceivable(fullApt, fullApt.professionalId);
     } else {
-      await removeReceivableForAppointment(apt.id, apt.professionalId);
+      await removeAppointmentReceivable(apt, apt.professionalId);
     }
     await logAudit(req, 'appointment.missed', 'Appointment', req.params.id, { scope: apt.scope, charge });
 
@@ -522,7 +500,7 @@ router.post('/:id/reset-status', async (req, res) => {
       where: { id: apt.id },
       data: { attended: false, status: 'scheduled' },
     });
-    await removeReceivableForAppointment(apt.id, apt.professionalId);
+    await removeAppointmentReceivable(apt, apt.professionalId);
     res.json({ message: 'Status revertido' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao reverter status', details: err.message });

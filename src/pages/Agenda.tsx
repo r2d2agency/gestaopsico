@@ -269,20 +269,27 @@ export default function Agenda() {
     },
   });
 
+  const invalidateBilling = () => {
+    qc.invalidateQueries({ queryKey: ["appointments"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
+    qc.invalidateQueries({ queryKey: ["financeiro"] });
+    qc.invalidateQueries({ queryKey: ["patients"] });
+  };
+
   const attendMutation = useMutation({
     mutationFn: (id: string) => consultasApi.attend(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["appointments"] });
-      toast({ title: "Comparecimento registrado e conta a receber gerada!" });
+    onSuccess: (result) => {
+      invalidateBilling();
+      toast({ title: result.message || "Comparecimento registrado" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
-  
+
   const missMutation = useMutation({
-    mutationFn: (id: string) => consultasApi.miss(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["appointments"] });
-      toast({ title: "Falta registrada e conta a receber gerada!" });
+    mutationFn: ({ id, charge }: { id: string; charge: boolean }) => consultasApi.miss(id, charge),
+    onSuccess: (result) => {
+      invalidateBilling();
+      toast({ title: result.message || "Falta registrada" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -311,7 +318,7 @@ export default function Agenda() {
   const cancelMutation = useMutation({
     mutationFn: (id: string) => consultasApi.cancel(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["appointments"] });
+      invalidateBilling();
       toast({ title: "Consulta cancelada!" });
       setViewApt(null);
     },
@@ -985,11 +992,18 @@ export default function Agenda() {
                   <Button
                     variant="outline"
                     className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => missMutation.mutate(viewApt.id)}
+                    onClick={() => missMutation.mutate({ id: viewApt.id, charge: true })}
                     disabled={missMutation.isPending}
                   >
                     {missMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Ban className="w-4 h-4 mr-2" />}
-                    Faltou
+                    Faltou (cobrar)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => missMutation.mutate({ id: viewApt.id, charge: false })}
+                    disabled={missMutation.isPending}
+                  >
+                    Faltou (sem cobrança)
                   </Button>
                 </div>
               )}

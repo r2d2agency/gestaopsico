@@ -4,6 +4,7 @@ const { loadAccess, requireCapability, requireClinicMember, requireScope } = req
 const { canAccessScope } = require('../permissions');
 const { logAudit } = require('../services/auditService');
 const { notifyUsers } = require('../services/notificationService');
+const { sessionBillingValue } = require('../services/billingService');
 
 const router = express.Router();
 const prisma = require('../db');
@@ -139,7 +140,9 @@ router.post('/runs', requireCapability('payout:manage'), async (req, res) => {
         professional: { organizationId: req.access.organizationId },
         paymentStatus: 'paid',
       },
-      include: { patient: { select: { id: true, name: true } } },
+      include: {
+        patient: { select: { id: true, name: true, sessionValue: true, billingMode: true } },
+      },
     });
 
     const run = await prisma.$transaction(async (tx) => {
@@ -160,7 +163,8 @@ router.post('/runs', requireCapability('payout:manage'), async (req, res) => {
       let netTotal = 0;
       for (const session of sessions) {
         const agreement = await activeAgreement(req.access.organizationId, session.professionalId, session.date);
-        const charged = Number(session.value || session.patientValue || 0);
+        const charged = sessionBillingValue(session, session.patient)
+          || Number(session.value || session.patientValue || 0);
         const calc = calculatePayout(charged, agreement);
         grossTotal += calc.grossAmount;
         deductionTotal += calc.deductionAmount;

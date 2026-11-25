@@ -3,6 +3,11 @@ const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
 const { loadAccess, requireScope } = require('../middleware/access');
 const { canAccessScope } = require('../permissions');
+const {
+  appointmentIdsFromNotes,
+  sessionIdsFromNotes,
+  sessionBillingValue,
+} = require('../services/billingService');
 
 const router = express.Router();
 const prisma = require('../db');
@@ -60,10 +65,8 @@ router.get('/patient-sessions/:patientId', requireScope('private', 'clinic'), as
       });
       const billedSessionIds = new Set();
       accountNotes.forEach(a => {
-        if (a.notes) {
-          const match = a.notes.match(/session_ids:([a-f0-9,\-]+)/);
-          if (match) match[1].split(',').forEach(id => billedSessionIds.add(id));
-        }
+        appointmentIdsFromNotes(a.notes).forEach(id => billedSessionIds.add(id));
+        sessionIdsFromNotes(a.notes).forEach(id => billedSessionIds.add(id));
       });
       result = sessions.filter(s => !billedSessionIds.has(s.id));
     }
@@ -90,42 +93,61 @@ router.post('/generate', requireScope('private', 'clinic'), async (req, res) => 
       where: scope === 'private'
         ? { id: { in: sessionIds }, patientId, scope, professionalId: req.access.userId }
         : { id: { in: sessionIds }, patientId, scope, professional: { organizationId: req.access.organizationId } },
-      include: { patient: { select: { name: true, sessionValue: true } } },
+      include: { patient: { select: { name: true, sessionValue: true, billingMode: true } } },
       orderBy: { date: 'asc' }
     });
 
     if (!sessions.length) return res.status(404).json({ error: 'Nenhuma sessão encontrada' });
 
-    const totalValue = sessions.reduce((sum, s) => {
-      const val = s.patient?.sessionValue ? Number(s.patient.sessionValue) : (s.value ? Number(s.value) : 0);
-      return sum + val;
+    const existingAccounts = await prisma.account.findMany({
+      where: scope === 'private'
+        ? { professionalId: req.access.userId, patientId, scope, type: 'receivable' }
+        : { patientId, scope, type: 'receivable', organizationId: req.access.organizationId },
+      select: { notes: true },
+    });
+    const alreadyBilled = new Set();
+    existingAccounts.forEach(account => {
+      appointmentIdsFromNotes(account.notes).forEach(id => alreadyBilled.add(id));
+      sessionIdsFromNotes(account.notes).forEach(id => alreadyBilled.add(id));
+    });
+    const newSessionIds = sessionIds.filter(id => !alreadyBilled.has(id));
+    if (!newSessionIds.length) {
+      return res.status(409).json({ error: 'Todas as sessões selecionadas já possuem cobrança' });
+    }
+    const billableSessions = sessions.filter(s => newSessionIds.includes(s.id));
+
+    const totalValue = billableSessions.reduce((sum, s) => {
+      return sum + sessionBillingValue(s, s.patient);
     }, 0);
+    if (!totalValue || totalValue <= 0) {
+      return res.status(400).json({ error: 'As sessões selecionadas não possuem valor de cobrança' });
+    }
 
     const account = await prisma.account.create({
       data: {
-        professionalId: sessions[0].professionalId,
+        professionalId: billableSessions[0].professionalId,
         organizationId: req.access.organizationId,
         scope,
         type: 'receivable',
-        description: description || `Fatura - ${sessions[0].patient?.name} (${sessions.length} sessões)`,
+        description: description || `Fatura - ${billableSessions[0].patient?.name} (${billableSessions.length} sessões)`,
         value: totalValue,
         dueDate: dueDate ? new Date(dueDate) : new Date(),
         category: 'Consulta',
         patientId,
         paymentMethod: paymentMethod || null,
         status: 'pending',
-        notes: `session_ids:${sessionIds.join(',')}`
+        notes: `session_ids:${billableSessions.map(s => s.id).join(',')}`
       },
       include: { patient: { select: { id: true, name: true } } }
     });
 
     res.status(201).json({
       account,
-      sessions: sessions.map(s => ({
+      sessions: billableSessions.map(s => ({
         id: s.id,
         date: s.date,
         type: s.type,
-        value: s.patient?.sessionValue ? Number(s.patient.sessionValue) : (s.value ? Number(s.value) : 0),
+        value: sessionBillingValue(s, s.patient),
         duration: s.duration
       })),
       totalValue
@@ -174,10 +196,10 @@ router.get('/monthly-report', requireScope('private', 'clinic'), async (req, res
         attended: true,
         status: 'completed'
       },
-      include: { patient: { select: { id: true, name: true, sessionValue: true, billingMode: true } } }
+      include: { patient: { select: { id: true, name: true, sessionValue: true, monthlyValue: true, billingMode: true } } }
     });
 
-    // Monthly patients: sum sessions per patient
+    // Pacientes mensais contam o valor mensal uma vez; por sessão, soma as sessões.
     const monthlyPatients = {};
     sessions.forEach(s => {
       if (!s.patientId) return;
@@ -190,11 +212,17 @@ router.get('/monthly-report', requireScope('private', 'clinic'), async (req, res
           totalValue: 0
         };
       }
-      const val = s.patient?.sessionValue ? Number(s.patient.sessionValue) : (s.value ? Number(s.value) : 0);
+      const val = sessionBillingValue(s, s.patient);
       monthlyPatients[s.patientId].sessions.push({
         id: s.id, date: s.date, value: val, duration: s.duration, type: s.type
       });
-      monthlyPatients[s.patientId].totalValue += val;
+      if (s.patient?.billingMode !== 'monthly') monthlyPatients[s.patientId].totalValue += val;
+    });
+    Object.values(monthlyPatients).forEach((group) => {
+      if (group.billingMode === 'monthly') {
+        const patient = sessions.find((s) => s.patientId === group.patientId)?.patient;
+        group.totalValue = patient?.monthlyValue ? Number(patient.monthlyValue) : 0;
+      }
     });
 
     const receivables = accounts.filter(a => a.type === 'receivable');
