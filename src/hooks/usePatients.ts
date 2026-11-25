@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pacientesApi, type Patient } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { useScope } from "@/contexts/ScopeContext";
 
 export function usePatients(search?: string) {
+  const { scope } = useScope();
   return useQuery<Patient[]>({
-    queryKey: ["patients", search],
+    queryKey: ["patients", scope, search],
     queryFn: async () => {
       const res = await pacientesApi.list(search ? { search } : undefined);
       return Array.isArray(res) ? res : (res as any).data ?? [];
@@ -19,6 +21,7 @@ export function useCreatePatient() {
     mutationFn: (data: Partial<Patient>) => pacientesApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
       toast({ title: "Paciente cadastrado com sucesso!" });
     },
     onError: (err: Error) =>

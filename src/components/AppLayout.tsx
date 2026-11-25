@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import { Bell, Search, Link2, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useScope } from "@/contexts/ScopeContext";
 import { useQuery } from "@tanstack/react-query";
 import { orgSettingsApi } from "@/lib/portalApi";
 import { toast } from "@/hooks/use-toast";
@@ -15,6 +16,7 @@ import {
 
 export default function AppLayout() {
   const { user } = useAuth();
+  const { scope, canUseClinic, setScope } = useScope();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const initials = user?.name
     ?.split(" ")
@@ -106,6 +108,24 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4 ml-auto">
+            {canUseClinic && (
+              <div className="hidden sm:flex items-center rounded-lg border border-border bg-muted p-0.5" role="group" aria-label="Contexto de dados">
+                <button
+                  type="button"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${scope === "private" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => setScope("private")}
+                >
+                  Particular
+                </button>
+                <button
+                  type="button"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${scope === "clinic" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => setScope("clinic")}
+                >
+                  Clínica
+                </button>
+              </div>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative" onClick={copyPortalLink}>

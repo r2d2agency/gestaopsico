@@ -4,6 +4,34 @@ export const API_BASE_URL =
     ? "http://localhost:3001/api" 
     : "/api");
 
+export type DataScope = "private" | "clinic";
+
+let activeDataScope: DataScope = "private";
+
+export function setActiveDataScope(scope: DataScope): void {
+  activeDataScope = scope;
+}
+
+const SCOPED_ENDPOINTS = [
+  "/pacientes", "/consultas", "/prontuarios", "/financeiro",
+  "/invoices", "/accounts", "/messages", "/events", "/patients",
+];
+
+function withScope(endpoint: string, method: string = "GET", body?: unknown): string {
+  if (activeDataScope !== "clinic") return endpoint;
+  if (!SCOPED_ENDPOINTS.some((prefix) =>
+    endpoint === prefix || endpoint.startsWith(`${prefix}/`) || endpoint.startsWith(`${prefix}?`)
+  )) return endpoint;
+  if (method === "GET") {
+    const separator = endpoint.includes("?") ? "&" : "?";
+    return `${endpoint}${separator}scope=clinic`;
+  }
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    (body as Record<string, unknown>).scope = "clinic";
+  }
+  return endpoint;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -15,7 +43,9 @@ function getAuthToken(): string | null {
 }
 
 export async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, headers = {} } = options;
+  const { method = "GET", headers = {} } = options;
+  const body = options.body;
+  const scopedEndpoint = withScope(endpoint, method, body);
 
   const token = getAuthToken();
   const defaultHeaders: Record<string, string> = {
@@ -26,7 +56,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
     defaultHeaders["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}${scopedEndpoint}`, {
     method,
     headers: { ...defaultHeaders, ...headers },
     body: body ? JSON.stringify(body) : undefined,
