@@ -42,14 +42,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (token) {
-      authApi.me().then(setUser).catch(() => {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("token");
-        setToken(null);
-      }).finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
+      let active = true;
+      setIsLoading(true);
+      authApi.me().then((me) => {
+        if (!active) return;
+        setUser((current) => current && current.id === me.id ? { ...current, ...me } : me);
+      }).catch(() => {
+        if (!active) return;
+        // Só limpa o token se não há usuário confirmado pelo login/registro.
+        setUser((current) => {
+          if (!current) {
+            localStorage.removeItem("auth_token");
+            localStorage.removeItem("token");
+            setToken(null);
+          }
+          return current;
+        });
+      }).finally(() => {
+        if (active) setIsLoading(false);
+      });
+      return () => { active = false; };
     }
+    setIsLoading(false);
   }, [token]);
 
   const login = async (email: string, password: string): Promise<User> => {
