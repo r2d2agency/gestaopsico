@@ -123,7 +123,18 @@ export default function Configuracoes() {
   });
 
   const [clinicMemberDialogOpen, setClinicMemberDialogOpen] = useState(false);
+  const [editingClinicMemberId, setEditingClinicMemberId] = useState<string | null>(null);
   const [clinicMemberForm, setClinicMemberForm] = useState({ userId: "", role: "professional", supervisorId: "" });
+
+  const openClinicMemberDialog = (member?: any) => {
+    setEditingClinicMemberId(member?.id || null);
+    setClinicMemberForm({
+      userId: member?.userId || "",
+      role: member?.role || "professional",
+      supervisorId: member?.supervisorId || "",
+    });
+    setClinicMemberDialogOpen(true);
+  };
 
   const saveClinicMember = useMutation({
     mutationFn: () => clinicApi.saveMember({
@@ -134,8 +145,9 @@ export default function Configuracoes() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clinic-members"] });
       qc.invalidateQueries({ queryKey: ["clinic-status"] });
-      toast({ title: "Vínculo clínico salvo!" });
+      toast({ title: editingClinicMemberId ? "Vínculo clínico atualizado!" : "Vínculo clínico criado!" });
       setClinicMemberDialogOpen(false);
+      setEditingClinicMemberId(null);
       setClinicMemberForm({ userId: "", role: "professional", supervisorId: "" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -666,7 +678,7 @@ export default function Configuracoes() {
                   <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Vínculos da clínica</CardTitle>
                   <CardDescription>Defina papel, supervisor e situação de cada profissional na operação clínica</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setClinicMemberDialogOpen(true)}>
+                <Button size="sm" onClick={() => openClinicMemberDialog()}>
                   <UserPlus className="w-4 h-4 mr-2" />Novo vínculo
                 </Button>
               </div>
@@ -695,6 +707,9 @@ export default function Configuracoes() {
                         <p className="text-xs text-muted-foreground">{member.user?.email}</p>
                       </div>
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openClinicMemberDialog(member)}>
+                          Editar
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => updateClinicMemberStatus.mutate({ id: member.id, status: member.status === "active" ? "suspended" : "active" })}>
                           {member.status === "active" ? <PowerOff className="w-4 h-4 text-destructive" /> : <Power className="w-4 h-4 text-green-600" />}
                         </Button>
@@ -712,13 +727,29 @@ export default function Configuracoes() {
           <Dialog open={clinicMemberDialogOpen} onOpenChange={setClinicMemberDialogOpen}>
             <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
               <DialogHeader>
-                <DialogTitle>Novo vínculo clínico</DialogTitle>
+                <DialogTitle>{editingClinicMemberId ? "Editar vínculo clínico" : "Novo vínculo clínico"}</DialogTitle>
                 <DialogDescription>Selecione um usuário existente da equipe e defina o papel na clínica</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-2">
                 <div>
-                  <Label>Usuário (ID da equipe) *</Label>
-                  <Input value={clinicMemberForm.userId} onChange={(e) => setClinicMemberForm({ ...clinicMemberForm, userId: e.target.value })} placeholder="ID do usuário já cadastrado na equipe" />
+                  <Label>Usuário *</Label>
+                  <Select
+                    value={clinicMemberForm.userId}
+                    onValueChange={(v) => setClinicMemberForm({ ...clinicMemberForm, userId: v })}
+                    disabled={!!editingClinicMemberId}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um usuário da equipe" /></SelectTrigger>
+                    <SelectContent>
+                      {teamData?.data?.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} · {user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {editingClinicMemberId && (
+                    <p className="text-xs text-muted-foreground mt-1">Para trocar o usuário, encerre este vínculo e crie um novo.</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -734,8 +765,23 @@ export default function Configuracoes() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Supervisor (ID, opcional)</Label>
-                    <Input value={clinicMemberForm.supervisorId} onChange={(e) => setClinicMemberForm({ ...clinicMemberForm, supervisorId: e.target.value })} placeholder="ID do supervisor" />
+                    <Label>Supervisor (opcional)</Label>
+                    <Select
+                      value={clinicMemberForm.supervisorId || "none"}
+                      onValueChange={(v) => setClinicMemberForm({ ...clinicMemberForm, supervisorId: v === "none" ? "" : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Sem supervisor" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem supervisor</SelectItem>
+                        {(clinicMembers || [])
+                          .filter((m) => m.status === "active" && ["supervisor", "admin"].includes(m.role))
+                          .map((m) => (
+                            <SelectItem key={m.userId} value={m.userId}>
+                              {m.user?.name || m.userId} · {m.user?.email || ""}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
