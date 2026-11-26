@@ -10,8 +10,12 @@ interface Props {
 
 export default function ProtectedRoute({ children, requiredRole, allowedRoles }: Props) {
   const { user, isLoading, token } = useAuth();
+  const storedToken = typeof window !== "undefined"
+    ? localStorage.getItem("auth_token") || localStorage.getItem("token")
+    : null;
+  const hasToken = Boolean(token || storedToken);
 
-  if (isLoading) {
+  if (isLoading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="space-y-4 w-80">
@@ -23,7 +27,7 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
     );
   }
 
-  if (!token || !user) {
+  if (!hasToken || !user) {
     return <Navigate to="/login" replace />;
   }
 
