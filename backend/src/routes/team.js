@@ -1,6 +1,5 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-
 const { authMiddleware } = require('../middleware/auth');
 const { loadAccess, requireAnyCapability } = require('../middleware/access');
 const { logAudit } = require('../services/auditService');
@@ -83,6 +82,30 @@ router.post('/', async (req, res) => {
     res.status(201).json(user);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar membro da equipe', details: err.message });
+  }
+});
+
+// PATCH /api/team/:id/password - redefine a senha de um membro da equipe
+router.patch('/:id/password', async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres' });
+    }
+    const target = await prisma.user.findFirst({
+      where: { id: req.params.id, organizationId: req.access.organizationId },
+      select: { id: true, name: true, email: true },
+    });
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { passwordHash: await bcrypt.hash(String(password), 10) },
+    });
+    await logAudit(req, 'team.password_reset', 'User', target.id, { email: target.email });
+    res.json({ message: 'Senha redefinida com sucesso' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao redefinir senha', details: err.message });
   }
 });
 

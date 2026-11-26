@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiRequest } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +31,10 @@ export default function Clinica() {
     ),
   });
   const [form, setForm] = useState({ userId: "", role: "professional", supervisorId: "" });
+  const { data: teamData } = useQuery<{ data: any[]; total: number }>({
+    queryKey: ["team"],
+    queryFn: () => apiRequest("/team"),
+  });
 
   const activate = useMutation({
     mutationFn: (mode: "clinic" | "hybrid") => clinicApi.activate(mode),
@@ -111,8 +116,19 @@ export default function Clinica() {
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-4">
               <div>
-                <Label>ID do usuário</Label>
-                <Input value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })} />
+                <Label>Usuário</Label>
+                <Select value={form.userId} onValueChange={(value) => setForm({ ...form, userId: value })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o profissional" /></SelectTrigger>
+                  <SelectContent>
+                    {(teamData?.data || [])
+                      .filter((user) => user.status === "active")
+                      .map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} · {user.email}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Papel</Label>
@@ -127,8 +143,23 @@ export default function Clinica() {
                 </Select>
               </div>
               <div>
-                <Label>Supervisor (ID)</Label>
-                <Input value={form.supervisorId} onChange={(e) => setForm({ ...form, supervisorId: e.target.value })} />
+                <Label>Supervisor</Label>
+                <Select
+                  value={form.supervisorId || "none"}
+                  onValueChange={(value) => setForm({ ...form, supervisorId: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Sem supervisor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem supervisor</SelectItem>
+                    {(members || [])
+                      .filter((m) => m.status === "active" && ["supervisor", "admin"].includes(m.role))
+                      .map((m) => (
+                        <SelectItem key={m.userId} value={m.userId}>
+                          {m.user?.name || m.userId} · {m.user?.email || ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-end">
                 <Button onClick={() => saveMember.mutate()} disabled={saveMember.isPending || !form.userId}>Salvar vínculo</Button>

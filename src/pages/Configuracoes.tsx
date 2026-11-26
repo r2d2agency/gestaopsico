@@ -187,6 +187,8 @@ export default function Configuracoes() {
   // Team management
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", email: "", password: "", role: "professional", crp: "", phone: "", specialty: "" });
+  const [passwordMember, setPasswordMember] = useState<any>(null);
+  const [newMemberPassword, setNewMemberPassword] = useState("");
 
   const { data: teamData } = useQuery<{ data: any[]; total: number }>({
     queryKey: ["team"],
@@ -201,6 +203,17 @@ export default function Configuracoes() {
       toast({ title: "Membro adicionado à equipe!" });
       setTeamDialogOpen(false);
       setTeamForm({ name: "", email: "", password: "", role: "professional", crp: "", phone: "", specialty: "" });
+    },
+    onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const resetMemberPassword = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      apiRequest(`/team/${id}/password`, { method: "PATCH", body: { password } }),
+    onSuccess: () => {
+      toast({ title: "Senha redefinida com sucesso!" });
+      setPasswordMember(null);
+      setNewMemberPassword("");
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -842,6 +855,13 @@ export default function Configuracoes() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => { setPasswordMember(member); setNewMemberPassword(""); }}
+                      >
+                        Trocar senha
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => toggleTeamStatus.mutate({ id: member.id, status: member.status === "active" ? "inactive" : "active" })}
                       >
                         {member.status === "active" ? <PowerOff className="w-4 h-4 text-destructive" /> : <Power className="w-4 h-4 text-green-600" />}
@@ -852,6 +872,34 @@ export default function Configuracoes() {
               )}
             </CardContent>
           </Card>
+
+          <Dialog open={!!passwordMember} onOpenChange={(open) => { if (!open) setPasswordMember(null); }}>
+            <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+              <DialogHeader>
+                <DialogTitle>Trocar senha</DialogTitle>
+                <DialogDescription>Defina uma nova senha de acesso para {passwordMember?.name}</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2 py-2">
+                <Label>Nova senha (mínimo 6 caracteres)</Label>
+                <Input
+                  type="password"
+                  value={newMemberPassword}
+                  onChange={(e) => setNewMemberPassword(e.target.value)}
+                  placeholder="Nova senha"
+                  autoComplete="new-password"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPasswordMember(null)}>Cancelar</Button>
+                <Button
+                  onClick={() => passwordMember && resetMemberPassword.mutate({ id: passwordMember.id, password: newMemberPassword })}
+                  disabled={resetMemberPassword.isPending || newMemberPassword.length < 6}
+                >
+                  Salvar senha
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Create Team Member Dialog */}
           <Dialog open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>

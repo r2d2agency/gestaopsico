@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { payoutsApi } from "@/lib/clinicApi";
+import { apiRequest } from "@/lib/api";
 
 function currentMonth() {
   const now = new Date();
@@ -20,6 +21,10 @@ export default function Repasses() {
   const [agreement, setAgreement] = useState({ professionalId: "", ruleType: "percent", fixedAmount: "", percentage: "60", effectiveFrom: currentMonth() + "-01" });
   const [adjustments, setAdjustments] = useState<Record<string, { netAmount: string; adjustmentReason: string }>>({});
   const { data: runs } = useQuery({ queryKey: ["payout-runs"], queryFn: () => payoutsApi.listRuns() });
+  const { data: teamData } = useQuery<{ data: any[]; total: number }>({
+    queryKey: ["team"],
+    queryFn: () => apiRequest("/team"),
+  });
 
   const generate = useMutation({
     mutationFn: () => payoutsApi.generateRun(month),
@@ -81,8 +86,22 @@ export default function Repasses() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-5">
           <div>
-            <Label>Profissional (ID)</Label>
-            <Input value={agreement.professionalId} onChange={(e) => setAgreement({ ...agreement, professionalId: e.target.value })} />
+            <Label>Profissional</Label>
+            <Select
+              value={agreement.professionalId}
+              onValueChange={(value) => setAgreement({ ...agreement, professionalId: value })}
+            >
+              <SelectTrigger><SelectValue placeholder="Selecione o profissional" /></SelectTrigger>
+              <SelectContent>
+                {(teamData?.data || [])
+                  .filter((user) => user.status === "active")
+                  .map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} · {user.email}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Regra</Label>
