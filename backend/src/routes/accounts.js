@@ -335,13 +335,13 @@ router.post('/bulk-pay', async (req, res) => {
     });
     if (!accessible.length) return res.status(404).json({ error: 'Contas não encontradas' });
     const date = paidAt ? new Date(paidAt) : new Date();
-    const ids = accessible.map((a) => a.id);
+    const accessibleIds = accessible.map((a) => a.id);
     const result = await prisma.account.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
       data: { status: 'paid', paidAt: date, ...(paymentMethod ? { paymentMethod } : {}) }
     });
     const paidAccounts = await prisma.account.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
       select: { type: true, notes: true },
     });
     for (const account of paidAccounts) await syncAppointmentPaymentStatus(account, prisma);
