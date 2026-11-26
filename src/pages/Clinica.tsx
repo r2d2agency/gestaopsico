@@ -30,7 +30,7 @@ export default function Clinica() {
       status.organization.mode !== "individual"
     ),
   });
-  const [form, setForm] = useState({ userId: "", role: "professional", supervisorId: "" });
+  const [form, setForm] = useState({ userId: "", role: "professional", supervisorId: "", permissions: [] as string[] });
   const { data: teamData } = useQuery<{ data: any[]; total: number }>({
     queryKey: ["team"],
     queryFn: () => apiRequest("/team"),
@@ -57,10 +57,15 @@ export default function Clinica() {
   });
 
   const saveMember = useMutation({
-    mutationFn: () => clinicApi.saveMember({ userId: form.userId, role: form.role, supervisorId: form.supervisorId || null }),
+    mutationFn: () => clinicApi.saveMember({
+      userId: form.userId,
+      role: form.role,
+      supervisorId: form.supervisorId || null,
+      permissions: form.permissions,
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clinic-members"] });
-      setForm({ userId: "", role: "professional", supervisorId: "" });
+      setForm({ userId: "", role: "professional", supervisorId: "", permissions: [] });
       toast({ title: "Vínculo salvo!" });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -163,6 +168,34 @@ export default function Clinica() {
               </div>
               <div className="flex items-end">
                 <Button onClick={() => saveMember.mutate()} disabled={saveMember.isPending || !form.userId}>Salvar vínculo</Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Funções adicionais</Label>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {[
+                  { value: "clinic:manage", label: "Administrar clínica" },
+                  { value: "team:manage", label: "Gerenciar equipe" },
+                  { value: "agenda:manage", label: "Gerenciar agenda" },
+                  { value: "finance:manage", label: "Gerenciar financeiro" },
+                  { value: "payout:manage", label: "Gerenciar repasses" },
+                  { value: "audit:read", label: "Ver auditoria" },
+                ].map((permission) => (
+                  <label key={permission.value} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={form.permissions.includes(permission.value)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        permissions: e.target.checked
+                          ? [...prev.permissions, permission.value]
+                          : prev.permissions.filter((p) => p !== permission.value),
+                      }))}
+                    />
+                    {permission.label}
+                  </label>
+                ))}
               </div>
             </div>
             <div className="space-y-2">

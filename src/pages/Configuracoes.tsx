@@ -124,7 +124,7 @@ export default function Configuracoes() {
 
   const [clinicMemberDialogOpen, setClinicMemberDialogOpen] = useState(false);
   const [editingClinicMemberId, setEditingClinicMemberId] = useState<string | null>(null);
-  const [clinicMemberForm, setClinicMemberForm] = useState({ userId: "", role: "professional", supervisorId: "" });
+  const [clinicMemberForm, setClinicMemberForm] = useState({ userId: "", role: "professional", supervisorId: "", permissions: [] as string[] });
 
   const openClinicMemberDialog = (member?: any) => {
     setEditingClinicMemberId(member?.id || null);
@@ -132,6 +132,7 @@ export default function Configuracoes() {
       userId: member?.userId || "",
       role: member?.role || "professional",
       supervisorId: member?.supervisorId || "",
+      permissions: member?.permissions || [],
     });
     setClinicMemberDialogOpen(true);
   };
@@ -141,6 +142,7 @@ export default function Configuracoes() {
       userId: clinicMemberForm.userId,
       role: clinicMemberForm.role,
       supervisorId: clinicMemberForm.supervisorId || null,
+      permissions: clinicMemberForm.permissions,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clinic-members"] });
@@ -148,7 +150,7 @@ export default function Configuracoes() {
       toast({ title: editingClinicMemberId ? "Vínculo clínico atualizado!" : "Vínculo clínico criado!" });
       setClinicMemberDialogOpen(false);
       setEditingClinicMemberId(null);
-      setClinicMemberForm({ userId: "", role: "professional", supervisorId: "" });
+      setClinicMemberForm({ userId: "", role: "professional", supervisorId: "", permissions: [] });
     },
     onError: (err: Error) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
@@ -715,6 +717,9 @@ export default function Configuracoes() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground">{member.user?.name || member.userId}</p>
                           <Badge variant="outline" className="text-xs">{clinicRoleLabels[member.role] || member.role}</Badge>
+                          {member.permissions?.map((permission: string) => (
+                            <Badge key={permission} variant="secondary" className="text-xs">{permission}</Badge>
+                          ))}
                           <Badge variant={member.status === "active" ? "default" : "secondary"} className="text-xs">{member.status}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">{member.user?.email}</p>
@@ -795,6 +800,35 @@ export default function Configuracoes() {
                           ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Funções adicionais</Label>
+                  <p className="text-xs text-muted-foreground">Permite acumular permissões sem perder o papel principal.</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { value: "clinic:manage", label: "Administrar clínica" },
+                      { value: "team:manage", label: "Gerenciar equipe" },
+                      { value: "agenda:manage", label: "Gerenciar agenda" },
+                      { value: "finance:manage", label: "Gerenciar financeiro" },
+                      { value: "payout:manage", label: "Gerenciar repasses" },
+                      { value: "audit:read", label: "Ver auditoria" },
+                    ].map((permission) => (
+                      <label key={permission.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={clinicMemberForm.permissions.includes(permission.value)}
+                          onChange={(e) => setClinicMemberForm((prev) => ({
+                            ...prev,
+                            permissions: e.target.checked
+                              ? [...prev.permissions, permission.value]
+                              : prev.permissions.filter((p) => p !== permission.value),
+                          }))}
+                        />
+                        {permission.label}
+                      </label>
+                    ))}
                   </div>
                 </div>
               </div>
