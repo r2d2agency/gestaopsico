@@ -40,7 +40,12 @@ function appointmentBaseWhere(context, professionalId, scope) {
   const where = scopedWhere(context, 'agenda:read', 'clinic', {}, { clinicOrganizationFilter: false });
   if (!where) return null;
   if (!context.organizationId) return null;
-  return { ...where, professional: { organizationId: context.organizationId } };
+  const professionalFilter = professionalId && professionalId !== 'all' ? professionalId : null;
+  return {
+    ...where,
+    ...(professionalFilter ? { professionalId: professionalFilter } : {}),
+    professional: { organizationId: context.organizationId },
+  };
 }
 
 function normalizeAppointmentInput(body = {}, fallbackProfessionalId) {
